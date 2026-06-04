@@ -125,6 +125,57 @@ const en = {
     communitySplit: 'This split is unusually close.',
     continueToResult: 'Continue',
   },
+  dimensions: {
+    control: 'Control',
+    security: 'Security',
+    risk: 'Risk',
+    emotion: 'Emotion',
+    change: 'Change',
+    independence: 'Independence',
+    connection: 'Connection',
+    curiosity: 'Curiosity',
+  } as Record<string, string>,
+  signalMap: {
+    title: 'Signal Map',
+    empty: 'Answer questions to build your profile.',
+  },
+  humanTwin: {
+    label: 'Human Twin Match',
+    subtext: 'Pattern similarity across all users.',
+  },
+  firstSignal: {
+    badge: 'FIRST SIGNAL DETECTED',
+    topLabel: 'Dominant dimensions:',
+    confidenceLabel: 'Confidence',
+    incomplete: 'This reading is incomplete.',
+    moreAnswers: (n: number): string => `${n} more answers required for full profile.`,
+  },
+  cardNames: {
+    question: 'Hidden Question',
+    secret: 'Dark Mirror',
+    dare: 'Pattern Break',
+    game: 'Social Mirror',
+    riddle: 'Signal Trace',
+  } as Record<string, string>,
+  cardSelectedLabel: (name: string): string => `${name} selected`,
+  feed: {
+    title: 'Recent Discoveries',
+    empty: 'No discoveries yet.',
+    dimensionUp: (dim: string): string => `${dim} increased`,
+    rareSignal: 'Rare signal detected',
+    cardPick: (name: string): string => `${name} chosen`,
+    firstSignal: 'First signal unlocked',
+  },
+  milestones: {
+    title: 'Profile Milestones',
+    items: [
+      { answers: 17, label: 'First Signal', description: 'Initial pattern detected.' },
+      { answers: 34, label: 'Pattern Forming', description: 'Behavioral profile emerging.' },
+      { answers: 51, label: 'Profile Reading', description: 'Full profile available.' },
+      { answers: 68, label: 'Hidden Profile', description: 'Hidden dimensions revealed.' },
+      { answers: 85, label: 'Human Twin', description: 'Maximum twin match unlocked.' },
+    ] as { answers: number; label: string; description: string }[],
+  },
   reward: {
     heading: 'Your answer',
     showNext: 'Show next',
@@ -153,6 +204,12 @@ const en = {
       epic: 'Rare signal. You are entering the realm of the few.',
       legendary: 'High-impact signal. This answer left a mark on your profile.',
     } as Record<string, string>,
+    rarityPercent: (pct: number): string =>
+      pct < 20
+        ? `Only ${pct.toFixed(1)}% generated this signal.`
+        : pct < 40
+        ? `This answer appears in ${pct.toFixed(0)}% of profiles.`
+        : `Less common than ${(100 - pct).toFixed(0)}% of answers.`,
     communityReveal: (n: number) =>
       n >= 50 ? `${n}% of users answered similarly.` : `Only ${n}% chose the same answer.`,
     profileMovement: (axes: string) => `Your profile shifted toward: ${axes}.`,
@@ -311,6 +368,57 @@ const pl: T = {
     communitySplit: 'Ten podział jest wyjątkowo bliski.',
     continueToResult: 'Dalej',
   },
+  dimensions: {
+    control: 'Kontrola',
+    security: 'Bezpieczeństwo',
+    risk: 'Ryzyko',
+    emotion: 'Emocje',
+    change: 'Zmiana',
+    independence: 'Niezależność',
+    connection: 'Połączenie',
+    curiosity: 'Ciekawość',
+  },
+  signalMap: {
+    title: 'Mapa sygnałów',
+    empty: 'Odpowiadaj na pytania, żeby zbudować profil.',
+  },
+  humanTwin: {
+    label: 'Dopasowanie bliźniaka',
+    subtext: 'Podobieństwo wzorca względem wszystkich użytkowników.',
+  },
+  firstSignal: {
+    badge: 'WYKRYTO PIERWSZY SYGNAŁ',
+    topLabel: 'Dominujące wymiary:',
+    confidenceLabel: 'Pewność',
+    incomplete: 'Ten odczyt jest niekompletny.',
+    moreAnswers: (n: number): string => `Wymagane jest jeszcze ${n} odpowiedzi do pełnego profilu.`,
+  },
+  cardNames: {
+    question: 'Ukryte pytanie',
+    secret: 'Ciemne lustro',
+    dare: 'Przełom wzorca',
+    game: 'Zwierciadło społeczne',
+    riddle: 'Ślad sygnału',
+  },
+  cardSelectedLabel: (name: string): string => `Wybrano: ${name}`,
+  feed: {
+    title: 'Ostatnie odkrycia',
+    empty: 'Brak odkryć.',
+    dimensionUp: (dim: string): string => `${dim} wzrósł`,
+    rareSignal: 'Wykryto rzadki sygnał',
+    cardPick: (name: string): string => `Wybrano: ${name}`,
+    firstSignal: 'Odblokowano pierwszy sygnał',
+  },
+  milestones: {
+    title: 'Kamienie milowe profilu',
+    items: [
+      { answers: 17, label: 'Pierwszy sygnał', description: 'Wykryto wstępny wzorzec.' },
+      { answers: 34, label: 'Wzorzec się tworzy', description: 'Wyłania się profil behawioralny.' },
+      { answers: 51, label: 'Odczyt profilu', description: 'Pełny profil dostępny.' },
+      { answers: 68, label: 'Ukryty profil', description: 'Ujawniono ukryte wymiary.' },
+      { answers: 85, label: 'Bliźniak człowieka', description: 'Odblokowano maksymalne dopasowanie.' },
+    ],
+  },
   reward: {
     heading: 'Twoja odpowiedź',
     showNext: 'Pokaż następne',
@@ -339,6 +447,12 @@ const pl: T = {
       epic: 'Rzadki sygnał. Wchodzisz w obszar nielicznych.',
       legendary: 'Sygnał o dużym wpływie. Ta odpowiedź odcisnęła ślad na Twoim profilu.',
     },
+    rarityPercent: (n: number): string =>
+      n < 20
+        ? `Tylko ${n.toFixed(1)}% wygenerowało ten sygnał.`
+        : n < 40
+        ? `Ta odpowiedź pojawia się w ${n.toFixed(0)}% profili.`
+        : `Rzadziej niż ${(100 - n).toFixed(0)}% odpowiedzi.`,
     communityReveal: (n: number) =>
       n >= 50 ? `${n}% użytkowników odpowiedziało podobnie.` : `Tylko ${n}% wybrało tę samą odpowiedź.`,
     profileMovement: (axes: string) => `Twój profil przesunął się w stronę: ${axes}.`,

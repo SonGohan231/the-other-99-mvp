@@ -89,6 +89,7 @@ export type AppScreen =
 export interface ContentBias {
   content_type?: ContentType;
   rarity_tier?: RarityTier;
+  label?: string;
 }
 
 export interface RewardBlock {

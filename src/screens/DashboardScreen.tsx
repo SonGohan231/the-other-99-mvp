@@ -1,9 +1,14 @@
 import { UserProfile } from '../lib/supabase';
+import { ProfileVector, DIMENSIONS, getMaxValue } from '../utils/profileVector';
+import { FeedEvent } from '../utils/eventFeed';
 import { calcProfileProgress } from '../utils/contentSelector';
 import { useT, useLang } from '../context/LangContext';
 
 interface Props {
   userProfile: UserProfile;
+  profileVector: ProfileVector;
+  humanTwinMatch: number;
+  feedEvents: FeedEvent[];
   onStartTest: () => void;
   onTruthOrDare: () => void;
   onMyProfile: () => void;
@@ -17,6 +22,9 @@ const ANSWERS_FOR_READ = 51;
 
 export default function DashboardScreen({
   userProfile,
+  profileVector,
+  humanTwinMatch,
+  feedEvents,
   onStartTest,
   onTruthOrDare,
   onMyProfile,
@@ -32,6 +40,20 @@ export default function DashboardScreen({
   const missingAnswers = Math.max(0, ANSWERS_FOR_READ - total_answers);
   const progress = calcProfileProgress(total_answers);
   const profileReady = total_answers >= ANSWERS_FOR_READ;
+  const maxVec = getMaxValue(profileVector);
+  const hasVectorData = DIMENSIONS.some((d) => profileVector[d] > 0);
+
+  void lang;
+
+  function formatFeedEvent(event: FeedEvent): string {
+    switch (event.type) {
+      case 'dimension_up': return t.feed.dimensionUp(t.dimensions[event.label] ?? event.label);
+      case 'rare_signal': return t.feed.rareSignal;
+      case 'card_pick': return t.feed.cardPick(event.label);
+      case 'first_signal': return t.feed.firstSignal;
+      default: return event.label;
+    }
+  }
 
   return (
     <div className="screen" style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
@@ -119,8 +141,115 @@ export default function DashboardScreen({
           )}
         </div>
 
-        {/* 2. Truth or Dare */}
-        <div className="card animate-in" style={{ animationDelay: '0.05s', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.55 }}>
+        {/* 2. Signal Map + Human Twin Match */}
+        <div className="card animate-in" style={{ animationDelay: '0.04s', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <h2 className="heading-md">{t.signalMap.title}</h2>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '1px' }}>
+                {t.humanTwin.label}
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-light)', lineHeight: 1 }}>
+                {humanTwinMatch}%
+              </div>
+            </div>
+          </div>
+
+          {!hasVectorData ? (
+            <p className="body-sm" style={{ fontStyle: 'italic' }}>{t.signalMap.empty}</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+              {DIMENSIONS.map((dim) => {
+                const val = profileVector[dim];
+                const pct = maxVec > 0 ? (val / maxVec) * 100 : 0;
+                const barColor = pct > 60
+                  ? 'var(--accent-light)'
+                  : pct > 25
+                  ? 'var(--teal-light)'
+                  : 'rgba(255,255,255,0.22)';
+                return (
+                  <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      width: '82px', flexShrink: 0,
+                      fontSize: '0.72rem',
+                      color: val > 0 ? 'var(--text)' : 'var(--text-dim)',
+                    }}>
+                      {t.dimensions[dim]}
+                    </span>
+                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', borderRadius: '2px',
+                        width: `${pct}%`,
+                        background: barColor,
+                        transition: 'width 0.6s ease',
+                        minWidth: val > 0 ? '3px' : '0',
+                      }} />
+                    </div>
+                    <span style={{ width: '22px', fontSize: '0.65rem', color: 'var(--text-dim)', textAlign: 'right' }}>
+                      {val > 0 ? val : ''}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>{t.humanTwin.subtext}</p>
+        </div>
+
+        {/* 3. Progress Milestones */}
+        <div className="card animate-in" style={{ animationDelay: '0.08s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <h2 className="heading-md">{t.milestones.title}</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {t.milestones.items.map((m) => {
+              const unlocked = total_answers >= m.answers;
+              return (
+                <div key={m.answers} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '8px 10px',
+                  background: unlocked ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${unlocked ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)'}`,
+                  borderRadius: '6px',
+                  opacity: unlocked ? 1 : 0.55,
+                }}>
+                  <span style={{ fontSize: '0.85rem', color: unlocked ? 'var(--accent-light)' : 'var(--text-dim)' }}>
+                    {unlocked ? '◉' : '○'}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: unlocked ? 'var(--text)' : 'var(--text-muted)' }}>
+                      {m.label}
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>
+                      {m.description}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.65rem', color: unlocked ? 'var(--teal-light)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                    {unlocked ? '✓' : `${m.answers} answers`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 4. Recent Discoveries */}
+        {feedEvents.length > 0 && (
+          <div className="card animate-in" style={{ animationDelay: '0.12s', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <h2 className="heading-md">{t.feed.title}</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {feedEvents.map((ev, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--accent-light)', opacity: 0.7 }}>▸</span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    {formatFeedEvent(ev)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 5. Truth or Dare */}
+        <div className="card animate-in" style={{ animationDelay: '0.16s', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.55 }}>
           <div>
             <h2 className="heading-md" style={{ marginBottom: '3px' }}>{t.dashboard.truthOrDare}</h2>
             <p className="body-sm">{t.dashboard.truthOrDareSubtitle}</p>
@@ -137,8 +266,8 @@ export default function DashboardScreen({
           </button>
         </div>
 
-        {/* 3. My Profile */}
-        <div className="card animate-in" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* 6. My Profile */}
+        <div className="card animate-in" style={{ animationDelay: '0.2s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <h2 className="heading-md">{t.dashboard.myProfile}</h2>
           {missingAnswers > 0 ? (
             <>
@@ -168,8 +297,8 @@ export default function DashboardScreen({
           </button>
         </div>
 
-        {/* 4. Settings */}
-        <div className="card animate-in" style={{ animationDelay: '0.15s', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* 7. Settings */}
+        <div className="card animate-in" style={{ animationDelay: '0.24s', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h2 className="heading-md" style={{ marginBottom: '4px' }}>{t.dashboard.settings}</h2>
 
           {/* Language switcher */}

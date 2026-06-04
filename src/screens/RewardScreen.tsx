@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ContentItem, ContentBias, ContentType, RarityTier } from '../types';
 import { useT, useLang } from '../context/LangContext';
+import { localizedCsvField } from '../i18n';
+import { getCommunityPercentages } from '../utils/communityStats';
 
 interface Props {
   item: ContentItem;
@@ -20,12 +22,13 @@ interface Card {
   label: string;
 }
 
+// Fallback type names (used only for aria-label when t not yet available)
 const TYPE_NAMES: Record<ContentType, string> = {
-  question: 'Question',
-  secret: 'Secret',
-  dare: 'Dare',
-  game: 'Game',
-  riddle: 'Riddle',
+  question: 'Hidden Question',
+  secret: 'Dark Mirror',
+  dare: 'Pattern Break',
+  game: 'Social Mirror',
+  riddle: 'Signal Trace',
 };
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -82,6 +85,7 @@ function parseAxes(item: ContentItem): { name: string; delta: number }[] {
 
 export default function RewardScreen({
   item,
+  selectedAnswer,
   profileProgress,
   testIndex,
   testTotal,
@@ -99,8 +103,11 @@ export default function RewardScreen({
   const ANSWERS_FOR_READ = 51;
   const profileSignals = Math.min(totalProfileAnswers, ANSWERS_FOR_READ);
 
-  // Suppress TS unused-var warning for lang (used via localizedCsvField if needed in future)
-  void lang;
+  // Community percentage for rarity display
+  const fields = item as unknown as Record<string, string>;
+  const answerOptionsRaw = localizedCsvField(fields, 'answer_options', lang);
+  const answerOptions = answerOptionsRaw.split('|').map((a) => a.trim()).filter(Boolean);
+  const communityPct = getCommunityPercentages(item.id, answerOptions).find((p) => p.option === selectedAnswer)?.pct ?? 0;
 
   function handlePickCard(i: number) {
     if (pickedCard !== null) return;
@@ -110,7 +117,11 @@ export default function RewardScreen({
 
   function handleContinue() {
     const bias: ContentBias | null = pickedCard !== null
-      ? { content_type: cards[pickedCard].content_type, rarity_tier: cards[pickedCard].rarity_tier }
+      ? {
+          content_type: cards[pickedCard].content_type,
+          rarity_tier: cards[pickedCard].rarity_tier,
+          label: t.cardNames[cards[pickedCard].content_type] ?? TYPE_NAMES[cards[pickedCard].content_type],
+        }
       : null;
     onNext(bias);
   }
@@ -164,7 +175,7 @@ export default function RewardScreen({
         {/* ── Rarity signal ── */}
         <div className="reward-block rb-rarity animate-in" style={{ animationDelay: '0.05s' }}>
           <p className="reward-block-label">{t.reward.blockLabel['rarity']}</p>
-          <p className="reward-block-text">{t.reward.rarityText[item.rarity_tier] ?? ''}</p>
+          <p className="reward-block-text">{t.reward.rarityPercent(communityPct)}</p>
         </div>
 
         {/* ── Unlocked ── */}
@@ -253,8 +264,8 @@ export default function RewardScreen({
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: RARITY_COLORS[card.rarity_tier], textTransform: 'capitalize' }}>
                         {card.rarity_tier}
                       </span>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>
-                        {TYPE_NAMES[card.content_type]}
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text)', textAlign: 'center', lineHeight: 1.2 }}>
+                        {t.cardNames[card.content_type] ?? TYPE_NAMES[card.content_type]}
                       </span>
                     </>
                   )}

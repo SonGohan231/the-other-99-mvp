@@ -12,6 +12,10 @@ import {
   resetSession, exportSession,
 } from './utils/storage';
 import {
+  ProfileVector, loadVector, saveVector, applyDeltas, calcHumanTwinMatch,
+} from './utils/profileVector';
+import { FeedEvent, getFeedEvents, addFeedEvent } from './utils/eventFeed';
+import {
   supabase, supabaseConfigured,
   UserProfile,
   getOrCreateProfile, refreshProfile,
@@ -82,6 +86,11 @@ export default function App() {
   const [currentItem, setCurrentItem] = useState<ContentItem | null>(null);
   const [pendingAnswer, setPendingAnswer] = useState('');
   const [profileState, setProfileState] = useState<ProfileState>(getProfileState());
+
+  // Living profile
+  const [profileVector, setProfileVector] = useState<ProfileVector>(loadVector);
+  const [feedEvents, setFeedEvents] = useState<FeedEvent[]>(getFeedEvents);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
   // ─── Load CSV ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -210,7 +219,24 @@ export default function App() {
           }
         }
       }
+
+      // Update profile vector
+      const { next: newVec, changed } = applyDeltas(profileVector, axisDeltas);
+      saveVector(newVec);
+      setProfileVector(newVec);
+
+      // Feed: top changed dimension
+      if (changed.length > 0) {
+        addFeedEvent({ type: 'dimension_up', label: changed[0] });
+      }
     }
+
+    // Feed: rare signal
+    if (currentItem.rarity_tier !== 'standard') {
+      addFeedEvent({ type: 'rare_signal', label: currentItem.rarity_tier });
+    }
+
+    setFeedEvents(getFeedEvents());
 
     saveProfileState(ps);
     setProfileState({ ...ps });
@@ -234,6 +260,15 @@ export default function App() {
 
   async function handleRewardNext(bias: ContentBias | null) {
     const nextIndex = testAnswerIndex;
+
+    // Handle card selection
+    if (bias?.label) {
+      setSelectedCard(bias.label);
+      addFeedEvent({ type: 'card_pick', label: bias.label });
+      setFeedEvents(getFeedEvents());
+    } else {
+      setSelectedCard(null);
+    }
 
     if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
       let items = testContent;
@@ -263,6 +298,12 @@ export default function App() {
 
   async function finishTest() {
     const ps = getProfileState();
+
+    if (testNumber === 1) {
+      addFeedEvent({ type: 'first_signal', label: '' });
+      setFeedEvents(getFeedEvents());
+    }
+
     const summaryJson = {
       test_number: testNumber,
       answers_count: testAnswers.length + 1,
@@ -353,6 +394,9 @@ export default function App() {
       {screen === 'dashboard' && userProfile && (
         <DashboardScreen
           userProfile={userProfile}
+          profileVector={profileVector}
+          humanTwinMatch={calcHumanTwinMatch(profileVector, profileState.total_profile_answers)}
+          feedEvents={feedEvents}
           onStartTest={handleStartTest}
           onTruthOrDare={() => setScreen('truth-or-dare')}
           onMyProfile={() => setScreen('my-profile')}
@@ -369,6 +413,7 @@ export default function App() {
           testIndex={testAnswerIndex}
           testTotal={TEST_TOTAL}
           profileProgress={profileState.profile_progress}
+          selectedCard={selectedCard}
           onAnswer={handleAnswer}
         />
       )}
@@ -391,6 +436,7 @@ export default function App() {
           testNumber={testNumber}
           answers={testAnswers}
           totalProfileAnswers={profileState.total_profile_answers}
+          profileVector={profileVector}
           onBack={async () => { await handleRefreshProfile(); setScreen('dashboard'); }}
           onUnlockPremium={() => setScreen('premium-placeholder')}
         />

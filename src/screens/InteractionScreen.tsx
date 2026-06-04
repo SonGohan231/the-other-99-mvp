@@ -9,12 +9,13 @@ interface Props {
   testIndex: number;
   testTotal: number;
   profileProgress: number;
+  selectedCard?: string | null;
   onAnswer: (answer: string, responseTimeMs: number, changeCount: number) => void;
 }
 
 type Phase = 'question' | 'community';
 
-export default function InteractionScreen({ item, testIndex, testTotal, profileProgress, onAnswer }: Props) {
+export default function InteractionScreen({ item, testIndex, testTotal, profileProgress, selectedCard, onAnswer }: Props) {
   const t = useT();
   const [lang] = useLang();
   const [selected, setSelected] = useState<string | null>(null);
@@ -101,6 +102,24 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
 
       {/* Content */}
       <div className="interaction-content">
+
+        {/* Card selection banner */}
+        {selectedCard && phase === 'question' && (
+          <div className="animate-in" style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '7px 12px',
+            background: 'rgba(124,58,237,0.1)',
+            border: '1px solid rgba(124,58,237,0.25)',
+            borderRadius: '8px',
+            marginBottom: '4px',
+          }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--accent-light)' }}>✦</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-light)', letterSpacing: '0.04em' }}>
+              {t.cardSelectedLabel(selectedCard)}
+            </span>
+          </div>
+        )}
+
         <div className="content-type-row animate-in">
           <span className={`rarity-badge rarity-${item.rarity_tier}`} aria-label={rarityLabel}>
             {rarityLabel}
