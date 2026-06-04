@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { ContentItem, ContentBias, ContentType, RarityTier } from '../types';
+import { ContentItem, NextCard, RarityTier } from '../types';
 import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField } from '../i18n';
 import { getCommunityPercentages } from '../utils/communityStats';
+import { ProfileFragment } from '../utils/profileFragments';
+import { ProfileVector } from '../utils/profileVector';
+import ProfileRadarChart from '../components/ProfileRadarChart';
 
 interface Props {
   item: ContentItem;
@@ -11,25 +14,14 @@ interface Props {
   testIndex: number;
   testTotal: number;
   totalProfileAnswers: number;
-  onNext: (bias: ContentBias | null) => void;
+  newFragment?: ProfileFragment | null;
+  nextCards: NextCard[];
+  profileVector: ProfileVector;
+  changedAxes: string[];
+  onNext: (card: NextCard | null) => void;
+  onChangeAnswer?: () => void;
+  canChangeAnswer?: boolean;
 }
-
-// ─── Card picker ──────────────────────────────────────────────────────────────
-
-interface Card {
-  content_type: ContentType;
-  rarity_tier: RarityTier;
-  label: string;
-}
-
-// Fallback type names (used only for aria-label when t not yet available)
-const TYPE_NAMES: Record<ContentType, string> = {
-  question: 'Hidden Question',
-  secret: 'Dark Mirror',
-  dare: 'Pattern Break',
-  game: 'Social Mirror',
-  riddle: 'Signal Trace',
-};
 
 const RARITY_COLORS: Record<RarityTier, string> = {
   standard: 'rgba(156,163,175,0.9)',
@@ -37,37 +29,6 @@ const RARITY_COLORS: Record<RarityTier, string> = {
   epic: 'rgba(167,139,250,0.9)',
   legendary: 'rgba(251,191,36,0.9)',
 };
-
-function generateCards(contentId: string): Card[] {
-  // Deterministic but varied card selection
-  const h = contentId.split('').reduce((a, c) => Math.imul(31, a) + c.charCodeAt(0), 0) >>> 0;
-  const types: ContentType[] = ['question', 'secret', 'dare', 'game', 'riddle'];
-  const rarities: RarityTier[] = ['standard', 'rare', 'epic', 'legendary'];
-
-  const pick = (arr: string[], seed: number) => arr[seed % arr.length];
-
-  const cards: Card[] = [
-    {
-      content_type: pick(types, h) as ContentType,
-      rarity_tier: pick(rarities, (h >>> 3) % 4) as RarityTier,
-      label: '',
-    },
-    {
-      content_type: pick(types, (h + 2) % types.length) as ContentType,
-      rarity_tier: pick(rarities, (h >>> 6) % 4) as RarityTier,
-      label: '',
-    },
-    {
-      content_type: pick(types, (h + 4) % types.length) as ContentType,
-      rarity_tier: pick(rarities, (h >>> 9) % 4) as RarityTier,
-      label: '',
-    },
-  ];
-
-  return cards.map((c) => ({ ...c, label: `${TYPE_NAMES[c.content_type]} — ${c.rarity_tier}` }));
-}
-
-// ─── Axis chip ────────────────────────────────────────────────────────────────
 
 function parseAxes(item: ContentItem): { name: string; delta: number }[] {
   if (!item.axis_target) return [];
@@ -81,8 +42,6 @@ function parseAxes(item: ContentItem): { name: string; delta: number }[] {
   return axes.map((name) => ({ name, delta: deltas[name] ?? deltas[name.toLowerCase()] ?? 1 }));
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export default function RewardScreen({
   item,
   selectedAnswer,
@@ -90,24 +49,31 @@ export default function RewardScreen({
   testIndex,
   testTotal,
   totalProfileAnswers,
+  newFragment,
+  nextCards,
+  profileVector,
+  changedAxes,
   onNext,
+  onChangeAnswer,
+  canChangeAnswer,
 }: Props) {
   const t = useT();
   const [lang] = useLang();
   const [pickedCard, setPickedCard] = useState<number | null>(null);
   const [cardsDismissed, setCardsDismissed] = useState(false);
+  const [showRadar, setShowRadar] = useState(true);
 
   const axes = parseAxes(item);
-  const cards = generateCards(item.id);
   const answersLeftInTest = Math.max(0, testTotal - testIndex);
   const ANSWERS_FOR_READ = 51;
   const profileSignals = Math.min(totalProfileAnswers, ANSWERS_FOR_READ);
 
-  // Community percentage for rarity display
   const fields = item as unknown as Record<string, string>;
   const answerOptionsRaw = localizedCsvField(fields, 'answer_options', lang);
   const answerOptions = answerOptionsRaw.split('|').map((a) => a.trim()).filter(Boolean);
   const communityPct = getCommunityPercentages(item.id, answerOptions).find((p) => p.option === selectedAnswer)?.pct ?? 0;
+
+  const hasCards = nextCards.length > 0;
 
   function handlePickCard(i: number) {
     if (pickedCard !== null) return;
@@ -116,15 +82,15 @@ export default function RewardScreen({
   }
 
   function handleContinue() {
-    const bias: ContentBias | null = pickedCard !== null
-      ? {
-          content_type: cards[pickedCard].content_type,
-          rarity_tier: cards[pickedCard].rarity_tier,
-          label: t.cardNames[cards[pickedCard].content_type] ?? TYPE_NAMES[cards[pickedCard].content_type],
-        }
-      : null;
-    onNext(bias);
+    if (hasCards && pickedCard !== null) {
+      onNext(nextCards[pickedCard]);
+    } else {
+      onNext(null);
+    }
   }
+
+  // If no cards, auto-show continue button
+  const showContinue = !hasCards || cardsDismissed;
 
   return (
     <div className="reward-screen">
@@ -144,33 +110,90 @@ export default function RewardScreen({
 
       <div className="reward-content">
 
-        {/* ── Your Profile ── */}
-        {axes.length > 0 && (
-          <div className="reward-block rb-profile animate-in">
+        {/* ── Your Profile (radar chart + axis chips) ── */}
+        <div className="reward-block rb-profile animate-in">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <p className="reward-block-label">{t.reward.profileSection}</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '10px' }}>
-              {t.reward.profileShifts}
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {axes.length > 0 && (
+              <button
+                onClick={() => setShowRadar((v) => !v)}
+                style={{
+                  fontSize: '0.65rem',
+                  color: 'var(--text-dim)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                }}
+              >
+                {showRadar ? 'Show as list' : 'Show chart'}
+              </button>
+            )}
+          </div>
+
+          {showRadar ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <ProfileRadarChart
+                vector={profileVector}
+                size={120}
+                variant="mini"
+                highlightedAxes={changedAxes}
+              />
+              {changedAxes.length > 0 && (
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textAlign: 'center' }}>
+                  {t.reward.profileShifts} {changedAxes.join(', ')}
+                </p>
+              )}
+            </div>
+          ) : null}
+
+          {(!showRadar && axes.length > 0) && (
+            <>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '10px' }}>
+                {t.reward.profileShifts}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {axes.map(({ name, delta }) => (
+                  <span
+                    key={name}
+                    style={{
+                      padding: '4px 10px',
+                      background: 'rgba(124,58,237,0.12)',
+                      border: '1px solid rgba(124,58,237,0.3)',
+                      borderRadius: '20px',
+                      fontSize: '0.78rem',
+                      color: 'var(--accent-light)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {name} {delta > 0 ? `+${delta}` : delta}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Supplementary chips (always shown, dim) */}
+          {axes.length > 0 && showRadar && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px', justifyContent: 'center' }}>
               {axes.map(({ name, delta }) => (
                 <span
                   key={name}
                   style={{
-                    padding: '4px 10px',
-                    background: 'rgba(124,58,237,0.12)',
-                    border: '1px solid rgba(124,58,237,0.3)',
+                    padding: '2px 8px',
+                    background: 'rgba(124,58,237,0.06)',
+                    border: '1px solid rgba(124,58,237,0.15)',
                     borderRadius: '20px',
-                    fontSize: '0.78rem',
-                    color: 'var(--accent-light)',
-                    fontWeight: 600,
+                    fontSize: '0.68rem',
+                    color: 'rgba(167,139,250,0.5)',
                   }}
                 >
                   {name} {delta > 0 ? `+${delta}` : delta}
                 </span>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* ── Rarity signal ── */}
         <div className="reward-block rb-rarity animate-in" style={{ animationDelay: '0.05s' }}>
@@ -210,74 +233,110 @@ export default function RewardScreen({
           </div>
         </div>
 
-        {/* ── Card picker ── */}
-        <div className="animate-in" style={{ animationDelay: '0.18s', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', textAlign: 'center' }}>
-            {t.reward.cardPickerTitle}
-          </p>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textAlign: 'center', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            {pickedCard === null ? t.reward.chooseOne : ''}
-          </p>
-
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-            {cards.map((card, i) => {
-              const isPicked = pickedCard === i;
-              const isEliminated = pickedCard !== null && !isPicked;
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => handlePickCard(i)}
-                  disabled={pickedCard !== null}
-                  aria-label={isPicked ? card.label : 'Hidden card'}
-                  style={{
-                    flex: 1,
-                    maxWidth: '110px',
-                    minHeight: '80px',
-                    borderRadius: '8px',
-                    border: `1px solid ${isPicked ? RARITY_COLORS[card.rarity_tier] : 'rgba(255,255,255,0.08)'}`,
-                    background: isPicked
-                      ? `rgba(${card.rarity_tier === 'legendary' ? '251,191,36' : card.rarity_tier === 'epic' ? '167,139,250' : card.rarity_tier === 'rare' ? '96,165,250' : '156,163,175'}, 0.08)`
-                      : 'rgba(255,255,255,0.03)',
-                    opacity: isEliminated ? 0 : 1,
-                    transform: isEliminated ? 'scale(0.8)' : 'scale(1)',
-                    transition: 'all 0.4s ease',
-                    cursor: pickedCard !== null ? 'default' : 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '10px 6px',
-                    color: 'var(--text)',
-                  }}
-                >
-                  {!isPicked || !cardsDismissed ? (
-                    <>
-                      <span style={{ fontSize: '1.2rem', opacity: 0.3 }}>?</span>
-                      {isPicked && !cardsDismissed && (
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', opacity: 0.7 }}>…</span>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: RARITY_COLORS[card.rarity_tier], textTransform: 'capitalize' }}>
-                        {card.rarity_tier}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text)', textAlign: 'center', lineHeight: 1.2 }}>
-                        {t.cardNames[card.content_type] ?? TYPE_NAMES[card.content_type]}
-                      </span>
-                    </>
-                  )}
-                </button>
-              );
-            })}
+        {/* ── Fragment unlock notification ── */}
+        {newFragment && (
+          <div className="reward-block animate-in" style={{ animationDelay: '0.15s', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)' }}>
+            <p className="reward-block-label" style={{ color: 'var(--accent-light)' }}>Fragment unlocked</p>
+            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>
+              {newFragment.title}
+            </p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'capitalize' }}>
+              {newFragment.rarity} signal
+            </p>
           </div>
-        </div>
+        )}
 
-        {/* Continue button — appears after card is revealed */}
-        {cardsDismissed && (
+        {/* ── Card picker ── */}
+        {hasCards && (
+          <div className="animate-in" style={{ animationDelay: '0.18s', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', textAlign: 'center' }}>
+              {t.reward.cardPickerTitle}
+            </p>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textAlign: 'center', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              {pickedCard === null ? t.reward.chooseOne : ''}
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              {nextCards.map((card, i) => {
+                const isPicked = pickedCard === i;
+                const isEliminated = pickedCard !== null && !isPicked;
+
+                return (
+                  <button
+                    key={card.id}
+                    onClick={() => handlePickCard(i)}
+                    disabled={pickedCard !== null}
+                    aria-label={isPicked ? card.title : 'Hidden card'}
+                    style={{
+                      flex: 1,
+                      maxWidth: '110px',
+                      minHeight: '80px',
+                      borderRadius: '8px',
+                      border: `1px solid ${isPicked ? RARITY_COLORS[card.rarityTier] : 'rgba(255,255,255,0.08)'}`,
+                      background: isPicked
+                        ? `rgba(${card.rarityTier === 'legendary' ? '251,191,36' : card.rarityTier === 'epic' ? '167,139,250' : card.rarityTier === 'rare' ? '96,165,250' : '156,163,175'}, 0.08)`
+                        : 'rgba(255,255,255,0.03)',
+                      opacity: isEliminated ? 0 : 1,
+                      transform: isEliminated ? 'scale(0.8)' : 'scale(1)',
+                      transition: 'all 0.4s ease',
+                      cursor: pickedCard !== null ? 'default' : 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '10px 6px',
+                      color: 'var(--text)',
+                    }}
+                  >
+                    {!isPicked || !cardsDismissed ? (
+                      <>
+                        <span style={{ fontSize: '1.2rem', opacity: 0.3 }}>?</span>
+                        {isPicked && !cardsDismissed && (
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', opacity: 0.7 }}>…</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: RARITY_COLORS[card.rarityTier], textTransform: 'capitalize' }}>
+                          {card.rarityTier}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text)', textAlign: 'center', lineHeight: 1.2 }}>
+                          {card.title}
+                        </span>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textAlign: 'center', lineHeight: 1.2 }}>
+                          {card.subtitle}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Continue/Change button */}
+        {showContinue && (
           <div className="reward-actions animate-in">
+            {canChangeAnswer && onChangeAnswer && (
+              <button
+                onClick={onChangeAnswer}
+                style={{
+                  background: 'none',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: 'var(--text-dim)',
+                  fontSize: '0.78rem',
+                  padding: '8px 20px',
+                  cursor: 'pointer',
+                  maxWidth: '320px',
+                  width: '100%',
+                }}
+              >
+                Change answer
+              </button>
+            )}
             <button
               className="btn btn-primary"
               onClick={handleContinue}
@@ -290,7 +349,7 @@ export default function RewardScreen({
         )}
 
         {/* Hidden profile footer */}
-        <div className="reward-block-hidden-footer" style={{ marginTop: cardsDismissed ? '4px' : '16px' }}>
+        <div className="reward-block-hidden-footer" style={{ marginTop: showContinue ? '4px' : '16px' }}>
           {t.reward.hiddenFooter}
         </div>
       </div>
