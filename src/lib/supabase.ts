@@ -22,12 +22,13 @@ export interface UserProfile {
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
-export async function signInWithGoogle(): Promise<void> {
-  if (!supabase) return;
-  await supabase.auth.signInWithOAuth({
+export async function signInWithGoogle(): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Supabase not configured' };
+  const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: window.location.origin },
   });
+  return { error: error?.message ?? null };
 }
 
 export async function signInWithMagicLink(email: string): Promise<{ error: string | null }> {
