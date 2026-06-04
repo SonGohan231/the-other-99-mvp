@@ -12,9 +12,12 @@ import {
   resetSession, exportSession,
 } from './utils/storage';
 import {
-  ProfileVector, loadVector, saveVector, applyDeltas, calcHumanTwinMatch,
+  ProfileVector, loadVector, saveVector, applyDeltas, calcHumanTwinMatch, getTopDimensions,
 } from './utils/profileVector';
 import { FeedEvent, getFeedEvents, addFeedEvent } from './utils/eventFeed';
+import { ProfileFragment, getFragments, checkAndUnlockFragment } from './utils/profileFragments';
+import { TwinFeedEvent, getTwinFeedEvents, checkAndAddTwinEvent } from './utils/twinFeed';
+import { TimelineEvent, getTimeline, addTimelineEvent } from './utils/profileTimeline';
 import {
   supabase, supabaseConfigured,
   UserProfile,
@@ -91,6 +94,10 @@ export default function App() {
   const [profileVector, setProfileVector] = useState<ProfileVector>(loadVector);
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>(getFeedEvents);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [profileFragments, setProfileFragments] = useState<ProfileFragment[]>(getFragments);
+  const [twinFeedEvents, setTwinFeedEvents] = useState<TwinFeedEvent[]>(getTwinFeedEvents);
+  const [timeline, setTimeline] = useState<TimelineEvent[]>(getTimeline);
+  const [newFragment, setNewFragment] = useState<ProfileFragment | null>(null);
 
   // ─── Load CSV ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -208,6 +215,7 @@ export default function App() {
     ps.profile_progress = calcProfileProgress(ps.total_profile_answers);
     ps.rarity_points += parseFloat(currentItem.rarity_score) || 0;
 
+    let updatedVec = profileVector;
     if (axisDeltas) {
       const isHidden = currentItem.profile_reveal_type?.toLowerCase().includes('hidden') ?? false;
       for (const [axis, delta] of Object.entries(axisDeltas)) {
@@ -222,6 +230,7 @@ export default function App() {
 
       // Update profile vector
       const { next: newVec, changed } = applyDeltas(profileVector, axisDeltas);
+      updatedVec = newVec;
       saveVector(newVec);
       setProfileVector(newVec);
 
@@ -235,6 +244,40 @@ export default function App() {
     if (currentItem.rarity_tier !== 'standard') {
       addFeedEvent({ type: 'rare_signal', label: currentItem.rarity_tier });
     }
+
+    // Twin feed + timeline + fragment unlock
+    const oldTwinScore = calcHumanTwinMatch(profileVector, ps.total_profile_answers - 1);
+    const newTwinScore = calcHumanTwinMatch(updatedVec, ps.total_profile_answers);
+    const twinChanged = checkAndAddTwinEvent(oldTwinScore, newTwinScore, currentItem.rarity_tier);
+
+    if (currentItem.rarity_tier !== 'standard') {
+      addTimelineEvent({
+        answerNumber: ps.total_profile_answers,
+        type: 'rare_signal',
+        label: 'rare_signal',
+      });
+    }
+    if (twinChanged) {
+      addTimelineEvent({
+        answerNumber: ps.total_profile_answers,
+        type: 'twin_stage_changed',
+        label: 'twin_stage_changed',
+      });
+    }
+
+    const topDim = getTopDimensions(updatedVec, 1)[0] ?? 'curiosity';
+    const unlocked = checkAndUnlockFragment(ps.total_profile_answers, topDim);
+    if (unlocked) {
+      setNewFragment(unlocked);
+      addTimelineEvent({
+        answerNumber: ps.total_profile_answers,
+        type: 'fragment_unlocked',
+        label: `fragment_unlocked:${unlocked.title}`,
+      });
+    }
+    setTwinFeedEvents(getTwinFeedEvents());
+    setTimeline(getTimeline());
+    setProfileFragments(getFragments());
 
     setFeedEvents(getFeedEvents());
 
@@ -259,6 +302,7 @@ export default function App() {
   }
 
   async function handleRewardNext(bias: ContentBias | null) {
+    setNewFragment(null);
     const nextIndex = testAnswerIndex;
 
     // Handle card selection
@@ -302,6 +346,12 @@ export default function App() {
     if (testNumber === 1) {
       addFeedEvent({ type: 'first_signal', label: '' });
       setFeedEvents(getFeedEvents());
+      addTimelineEvent({
+        answerNumber: ps.total_profile_answers,
+        type: 'first_signal',
+        label: 'first_signal',
+      });
+      setTimeline(getTimeline());
     }
 
     const summaryJson = {
@@ -396,7 +446,11 @@ export default function App() {
           userProfile={userProfile}
           profileVector={profileVector}
           humanTwinMatch={calcHumanTwinMatch(profileVector, profileState.total_profile_answers)}
+          totalProfileAnswers={profileState.total_profile_answers}
           feedEvents={feedEvents}
+          profileFragments={profileFragments}
+          twinFeedEvents={twinFeedEvents}
+          timeline={timeline}
           onStartTest={handleStartTest}
           onTruthOrDare={() => setScreen('truth-or-dare')}
           onMyProfile={() => setScreen('my-profile')}
@@ -427,6 +481,7 @@ export default function App() {
           testIndex={testAnswerIndex}
           testTotal={TEST_TOTAL}
           totalProfileAnswers={profileState.total_profile_answers}
+          newFragment={newFragment}
           onNext={handleRewardNext}
         />
       )}

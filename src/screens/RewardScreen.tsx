@@ -3,6 +3,7 @@ import { ContentItem, ContentBias, ContentType, RarityTier } from '../types';
 import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField } from '../i18n';
 import { getCommunityPercentages } from '../utils/communityStats';
+import { ProfileFragment } from '../utils/profileFragments';
 
 interface Props {
   item: ContentItem;
@@ -11,6 +12,7 @@ interface Props {
   testIndex: number;
   testTotal: number;
   totalProfileAnswers: number;
+  newFragment?: ProfileFragment | null;
   onNext: (bias: ContentBias | null) => void;
 }
 
@@ -90,6 +92,7 @@ export default function RewardScreen({
   testIndex,
   testTotal,
   totalProfileAnswers,
+  newFragment,
   onNext,
 }: Props) {
   const t = useT();
@@ -209,6 +212,19 @@ export default function RewardScreen({
             )}
           </div>
         </div>
+
+        {/* ── Fragment unlock notification ── */}
+        {newFragment && (
+          <div className="reward-block animate-in" style={{ animationDelay: '0.15s', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)' }}>
+            <p className="reward-block-label" style={{ color: 'var(--accent-light)' }}>Fragment unlocked</p>
+            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>
+              {newFragment.title}
+            </p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'capitalize' }}>
+              {newFragment.rarity} signal
+            </p>
+          </div>
+        )}
 
         {/* ── Card picker ── */}
         <div className="animate-in" style={{ animationDelay: '0.18s', display: 'flex', flexDirection: 'column', gap: '12px' }}>

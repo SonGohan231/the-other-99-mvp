@@ -1,6 +1,10 @@
 import { UserProfile } from '../lib/supabase';
 import { ProfileVector, DIMENSIONS, getMaxValue } from '../utils/profileVector';
 import { FeedEvent } from '../utils/eventFeed';
+import { ProfileFragment } from '../utils/profileFragments';
+import { TwinFeedEvent, getTwinStage } from '../utils/twinFeed';
+import { TimelineEvent } from '../utils/profileTimeline';
+import { computeHiddenProfile, isHiddenProfileUnlocked } from '../utils/hiddenProfile';
 import { calcProfileProgress } from '../utils/contentSelector';
 import { useT, useLang } from '../context/LangContext';
 
@@ -8,7 +12,11 @@ interface Props {
   userProfile: UserProfile;
   profileVector: ProfileVector;
   humanTwinMatch: number;
+  totalProfileAnswers: number;
   feedEvents: FeedEvent[];
+  profileFragments: ProfileFragment[];
+  twinFeedEvents: TwinFeedEvent[];
+  timeline: TimelineEvent[];
   onStartTest: () => void;
   onTruthOrDare: () => void;
   onMyProfile: () => void;
@@ -24,7 +32,10 @@ export default function DashboardScreen({
   userProfile,
   profileVector,
   humanTwinMatch,
-  feedEvents,
+  totalProfileAnswers,
+  profileFragments,
+  twinFeedEvents,
+  timeline,
   onStartTest,
   onTruthOrDare,
   onMyProfile,
@@ -43,17 +54,11 @@ export default function DashboardScreen({
   const maxVec = getMaxValue(profileVector);
   const hasVectorData = DIMENSIONS.some((d) => profileVector[d] > 0);
 
-  void lang;
+  const twinStage = getTwinStage(humanTwinMatch);
+  const hiddenUnlocked = isHiddenProfileUnlocked(totalProfileAnswers);
+  const hiddenProfileData = computeHiddenProfile(profileVector, totalProfileAnswers);
 
-  function formatFeedEvent(event: FeedEvent): string {
-    switch (event.type) {
-      case 'dimension_up': return t.feed.dimensionUp(t.dimensions[event.label] ?? event.label);
-      case 'rare_signal': return t.feed.rareSignal;
-      case 'card_pick': return t.feed.cardPick(event.label);
-      case 'first_signal': return t.feed.firstSignal;
-      default: return event.label;
-    }
-  }
+  void lang;
 
   return (
     <div className="screen" style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
@@ -141,7 +146,7 @@ export default function DashboardScreen({
           )}
         </div>
 
-        {/* 2. Signal Map + Human Twin Match */}
+        {/* 2. Signal Map */}
         <div className="card animate-in" style={{ animationDelay: '0.04s', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <h2 className="heading-md">{t.signalMap.title}</h2>
@@ -196,60 +201,155 @@ export default function DashboardScreen({
           <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>{t.humanTwin.subtext}</p>
         </div>
 
-        {/* 3. Progress Milestones */}
+        {/* 3. Human Twin card */}
         <div className="card animate-in" style={{ animationDelay: '0.08s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <h2 className="heading-md">{t.milestones.title}</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {t.milestones.items.map((m) => {
-              const unlocked = total_answers >= m.answers;
-              return (
-                <div key={m.answers} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '8px 10px',
-                  background: unlocked ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${unlocked ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)'}`,
-                  borderRadius: '6px',
-                  opacity: unlocked ? 1 : 0.55,
-                }}>
-                  <span style={{ fontSize: '0.85rem', color: unlocked ? 'var(--accent-light)' : 'var(--text-dim)' }}>
-                    {unlocked ? '◉' : '○'}
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: unlocked ? 'var(--text)' : 'var(--text-muted)' }}>
-                      {m.label}
-                    </div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>
-                      {m.description}
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '0.65rem', color: unlocked ? 'var(--teal-light)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}>
-                    {unlocked ? '✓' : `${m.answers} answers`}
-                  </span>
-                </div>
-              );
-            })}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h2 className="heading-md">{t.twinFeed.title}</h2>
+              <p style={{ fontSize: '0.72rem', color: 'var(--accent-light)', fontWeight: 600 }}>
+                {t.twinFeed.stages[twinStage]}
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-light)', lineHeight: 1 }}>
+                {humanTwinMatch}%
+              </div>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)' }}>
+                {t.twinFeed.microcopy[twinStage]}
+              </div>
+            </div>
           </div>
+          {twinFeedEvents.slice(0, 3).map((ev, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '3px 0' }}>
+              <span style={{ fontSize: '0.6rem', color: 'var(--accent-light)', opacity: 0.7 }}>◈</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {t.twinFeed.events[ev.type] ?? ev.type}
+              </span>
+            </div>
+          ))}
+          {twinFeedEvents.length === 0 && (
+            <p style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'var(--text-dim)' }}>
+              {t.twinFeed.microcopy['no_match']}
+            </p>
+          )}
         </div>
 
-        {/* 4. Recent Discoveries */}
-        {feedEvents.length > 0 && (
-          <div className="card animate-in" style={{ animationDelay: '0.12s', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <h2 className="heading-md">{t.feed.title}</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {feedEvents.map((ev, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
-                  <span style={{ fontSize: '0.6rem', color: 'var(--accent-light)', opacity: 0.7 }}>▸</span>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {formatFeedEvent(ev)}
+        {/* 4. Profile Fragments card */}
+        <div className="card animate-in" style={{ animationDelay: '0.12s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <h2 className="heading-md">{t.fragments.title}</h2>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-light)', fontWeight: 700 }}>
+              {t.fragments.discovered(profileFragments.length)}
+            </span>
+          </div>
+          {profileFragments.length === 0 ? (
+            <p style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'var(--text-dim)' }}>
+              {t.fragments.empty}
+            </p>
+          ) : (
+            <>
+              {profileFragments.slice(-3).reverse().map((frag) => (
+                <div key={frag.id} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)' }}>{frag.title}</span>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                      {t.fragments.rarityLabel[frag.rarity] ?? frag.rarity}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{frag.text}</p>
+                </div>
+              ))}
+              <p style={{ fontSize: '0.65rem', fontStyle: 'italic', color: 'var(--text-dim)' }}>
+                {t.fragments.lockedHint}
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* 5. Hidden Profile card */}
+        <div className="card animate-in" style={{ animationDelay: '0.16s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <h2 className="heading-md">{t.hiddenProfile.title}</h2>
+            {hiddenUnlocked && (
+              <span style={{ fontSize: '0.6rem', color: 'var(--teal-light)', fontWeight: 700 }}>
+                {t.hiddenProfile.confidence}: {hiddenProfileData.confidence}%
+              </span>
+            )}
+          </div>
+          {!hiddenUnlocked ? (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+              {t.hiddenProfile.answersLeft(Math.max(0, 51 - totalProfileAnswers))}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                [t.hiddenProfile.primaryDriver, hiddenProfileData.primaryDriver],
+                [t.hiddenProfile.secondaryDriver, hiddenProfileData.secondaryDriver],
+                [t.hiddenProfile.decisionStyle, hiddenProfileData.decisionStyle],
+                [t.hiddenProfile.socialPattern, hiddenProfileData.socialPattern],
+              ].map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{label}</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-light)' }}>{value}</span>
+                </div>
+              ))}
+              {/* Rarest signal */}
+              <div style={{ padding: '8px 10px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px' }}>
+                  {t.hiddenProfile.rarestSignal}
+                </div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-light)' }}>
+                  {hiddenProfileData.rarestSignal}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                  {t.hiddenProfile.onlyPercent(hiddenProfileData.rarestSignalPercent)}
+                </div>
+              </div>
+              {/* Locked sections */}
+              {hiddenProfileData.lockedSections.map((section) => (
+                <div key={section} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '4px', opacity: 0.5 }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{section}</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {t.hiddenProfile.lockedLabel}
                   </span>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* 5. Truth or Dare */}
-        <div className="card animate-in" style={{ animationDelay: '0.16s', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.55 }}>
+        {/* 6. Discovery Timeline card */}
+        <div className="card animate-in" style={{ animationDelay: '0.2s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <h2 className="heading-md">{t.timeline.title}</h2>
+          {timeline.length === 0 ? (
+            <p style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'var(--text-dim)' }}>
+              {t.timeline.empty}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {timeline.slice(0, 10).map((ev, i) => {
+                const isFragment = ev.type === 'fragment_unlocked';
+                const fragName = isFragment ? ev.label.replace('fragment_unlocked:', '') : null;
+                const eventLabel = isFragment && fragName
+                  ? `${t.timeline.events['fragment_unlocked']}: ${fragName}`
+                  : t.timeline.events[ev.type] ?? ev.type;
+                return (
+                  <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--accent-light)', opacity: 0.6, whiteSpace: 'nowrap', marginTop: '1px' }}>
+                      {t.timeline.answer(ev.answerNumber)}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                      {eventLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 7. Truth or Dare */}
+        <div className="card animate-in" style={{ animationDelay: '0.24s', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.55 }}>
           <div>
             <h2 className="heading-md" style={{ marginBottom: '3px' }}>{t.dashboard.truthOrDare}</h2>
             <p className="body-sm">{t.dashboard.truthOrDareSubtitle}</p>
@@ -266,8 +366,8 @@ export default function DashboardScreen({
           </button>
         </div>
 
-        {/* 6. My Profile */}
-        <div className="card animate-in" style={{ animationDelay: '0.2s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* 8. My Profile */}
+        <div className="card animate-in" style={{ animationDelay: '0.28s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <h2 className="heading-md">{t.dashboard.myProfile}</h2>
           {missingAnswers > 0 ? (
             <>
@@ -297,8 +397,8 @@ export default function DashboardScreen({
           </button>
         </div>
 
-        {/* 7. Settings */}
-        <div className="card animate-in" style={{ animationDelay: '0.24s', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* 9. Settings */}
+        <div className="card animate-in" style={{ animationDelay: '0.32s', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h2 className="heading-md" style={{ marginBottom: '4px' }}>{t.dashboard.settings}</h2>
 
           {/* Language switcher */}
