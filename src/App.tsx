@@ -29,6 +29,7 @@ import InteractionScreen from './screens/InteractionScreen';
 import RewardScreen from './screens/RewardScreen';
 import TestSummaryScreen from './screens/TestSummaryScreen';
 import TruthOrDareScreen from './screens/TruthOrDareScreen';
+import TestIntroScreen from './screens/TestIntroScreen';
 import PremiumPlaceholder from './screens/PremiumPlaceholder';
 import DebugPanel from './screens/DebugPanel';
 
@@ -149,7 +150,7 @@ export default function App() {
 
     const ps = getProfileState();
     setProfileState(ps);
-    setScreen('profile-test');
+    setScreen('test-intro');
   }
 
   async function handleAnswer(answer: string, responseTimeMs: number, changeCount: number) {
@@ -373,6 +374,13 @@ export default function App() {
           totalProfileAnswers={profileState.total_profile_answers}
           onBack={async () => { await handleRefreshProfile(); setScreen('dashboard'); }}
           onUnlockPremium={() => setScreen('premium-placeholder')}
+        />
+      )}
+
+      {screen === 'test-intro' && (
+        <TestIntroScreen
+          testNumber={testNumber}
+          onBegin={() => setScreen('profile-test')}
         />
       )}
 

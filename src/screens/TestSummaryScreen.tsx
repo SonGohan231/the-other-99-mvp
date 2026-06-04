@@ -56,7 +56,7 @@ export default function TestSummaryScreen({ testNumber, answers, totalProfileAns
         <div className="paywall-stats">
           <div className="paywall-stat">
             <span className="paywall-stat-label">{t.testSummary.answersInTest}</span>
-            <span className="paywall-stat-value">{answers.length}&nbsp;/&nbsp;17</span>
+            <span className="paywall-stat-value">{t.testSummary.answersCapture(answers.length)}</span>
           </div>
           <div className="paywall-stat">
             <span className="paywall-stat-label">{t.testSummary.totalAnswers}</span>
@@ -84,7 +84,7 @@ export default function TestSummaryScreen({ testNumber, answers, totalProfileAns
           )}
         </div>
 
-        <p style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.55 }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.65 }}>
           {postMessage}
         </p>
 

@@ -1,4 +1,4 @@
-import { ContentItem, RewardBlock, RewardSequence } from '../types';
+import { ContentItem, RewardBlock } from '../types';
 import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField, Translations } from '../i18n';
 
@@ -22,35 +22,28 @@ const BLOCK_TYPE_CLASS: Record<string, string> = {
   rarity: 'rb-rarity',
 };
 
-const HIDDEN_TYPES = new Set(['hidden_teaser', 'hidden']);
-
-function parseVisibleBlocks(item: ContentItem, t: Translations, lang: string): RewardBlock[] {
-  if (item.reward_sequence_json) {
-    try {
-      const seq = JSON.parse(item.reward_sequence_json) as RewardSequence;
-      if (Array.isArray(seq.blocks) && seq.blocks.length > 0) {
-        return seq.blocks.filter((b) => !HIDDEN_TYPES.has(b.type));
-      }
-    } catch { /* fall through */ }
-  }
-
+function buildBlocks(item: ContentItem, t: Translations, lang: 'en' | 'pl'): RewardBlock[] {
+  const fields = item as unknown as Record<string, string>;
   const blocks: RewardBlock[] = [];
 
+  // Community percentage
   if (item.community_stat_seed_json) {
     try {
       const stat = JSON.parse(item.community_stat_seed_json) as { primary_percent?: number };
       if (stat.primary_percent != null) {
-        blocks.push({ type: 'community_reveal', text: `${stat.primary_percent}%` });
+        blocks.push({ type: 'community_reveal', text: t.reward.communityReveal(stat.primary_percent) });
       }
     } catch {
       if (item.community_reveal_type) {
-        blocks.push({ type: 'community_reveal', text: '' });
+        blocks.push({ type: 'community_reveal', text: t.reward.communityReveal(50) });
       }
     }
   }
 
+  // Rarity signal
   blocks.push({ type: 'rarity', text: t.reward.rarityText[item.rarity_tier] ?? '' });
 
+  // Profile movement
   if (item.axis_target) {
     const axes = item.axis_target.split(';').map((a) => a.trim()).filter(Boolean).slice(0, 2);
     if (axes.length) {
@@ -58,8 +51,8 @@ function parseVisibleBlocks(item: ContentItem, t: Translations, lang: string): R
     }
   }
 
-  const fields = item as unknown as Record<string, string>;
-  const nextHook = localizedCsvField(fields, 'next_hook', lang as 'en' | 'pl');
+  // Next hook (localised from CSV)
+  const nextHook = localizedCsvField(fields, 'next_hook', lang);
   if (nextHook) {
     blocks.push({ type: 'next_hook', text: nextHook });
   }
@@ -70,7 +63,7 @@ function parseVisibleBlocks(item: ContentItem, t: Translations, lang: string): R
 export default function RewardScreen({ item, profileProgress, testIndex, testTotal, onNext }: Props) {
   const t = useT();
   const [lang] = useLang();
-  const blocks = parseVisibleBlocks(item, t, lang);
+  const blocks = buildBlocks(item, t, lang);
 
   return (
     <div className="reward-screen">

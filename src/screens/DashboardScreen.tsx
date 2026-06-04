@@ -59,12 +59,14 @@ export default function DashboardScreen({
         }}
         aria-label={t.dashboard.mainLabel}
       >
-        {/* Profile progress bar */}
+        {/* Profile progress header */}
         <div style={{ marginBottom: '4px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-            <span className="label">{t.dashboard.profileDiscovered}</span>
-            <span className="label" style={{ color: 'var(--accent-light)' }}>{progress.toFixed(0)}%</span>
-          </div>
+          <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
+            {t.dashboard.profileHiddenLabel}
+          </p>
+          <p className="body-sm" style={{ fontSize: '0.72rem', marginBottom: '8px' }}>
+            {t.dashboard.profileSeenSubtext(progress)}
+          </p>
           <div className="progress-bar-track">
             <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
           </div>
@@ -77,11 +79,15 @@ export default function DashboardScreen({
             <p className="body-sm">{t.dashboard.profileReadingSubtitle}</p>
           </div>
 
+          <p className="body-sm" style={{ fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--text-dim)' }}>
+            {t.dashboard.profileReadingSupporting}
+          </p>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div className="dashboard-stat-row">
               <span className="label">{t.dashboard.freeTests}</span>
               <span className="label" style={{ color: free_profile_tests_used >= MAX_FREE_TESTS ? 'var(--text-dim)' : 'var(--accent-light)' }}>
-                {MAX_FREE_TESTS - free_profile_tests_used}&nbsp;/&nbsp;{MAX_FREE_TESTS} {t.dashboard.remaining}
+                {MAX_FREE_TESTS - free_profile_tests_used}&nbsp;/&nbsp;{MAX_FREE_TESTS}
               </span>
             </div>
             <div className="dashboard-stat-row">
@@ -91,7 +97,7 @@ export default function DashboardScreen({
             <div className="dashboard-stat-row">
               <span className="label">{t.dashboard.status}</span>
               <span className="label" style={{ color: profileReady ? 'var(--teal-light)' : 'var(--text-dim)' }}>
-                {profileReady ? t.dashboard.profileReady : t.dashboard.profileNotReady}
+                {t.dashboard.statusLabel(total_answers)}
               </span>
             </div>
           </div>
@@ -100,10 +106,10 @@ export default function DashboardScreen({
             className="btn btn-primary"
             onClick={onStartTest}
             disabled={!canStartTest}
-            aria-label={t.dashboard.startTest}
+            aria-label={t.dashboard.startTestLabel(free_profile_tests_used)}
             style={{ opacity: canStartTest ? 1 : 0.4 }}
           >
-            {canStartTest ? t.dashboard.startTest : t.dashboard.noFreeTests}
+            {canStartTest ? t.dashboard.startTestLabel(free_profile_tests_used) : t.dashboard.noFreeTests}
           </button>
 
           {!canStartTest && (
@@ -119,6 +125,9 @@ export default function DashboardScreen({
             <h2 className="heading-md" style={{ marginBottom: '3px' }}>{t.dashboard.truthOrDare}</h2>
             <p className="body-sm">{t.dashboard.truthOrDareSubtitle}</p>
           </div>
+          <p className="body-sm" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+            {t.dashboard.truthOrDareSubtext}
+          </p>
           <button
             className="btn btn-ghost"
             onClick={onTruthOrDare}
@@ -132,13 +141,23 @@ export default function DashboardScreen({
         <div className="card animate-in" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <h2 className="heading-md">{t.dashboard.myProfile}</h2>
           {missingAnswers > 0 ? (
-            <p className="body-sm">
-              {t.dashboard.answersLeft(missingAnswers)}
-            </p>
+            <>
+              <p className="body-sm">
+                {t.dashboard.answersLeft(missingAnswers)}
+              </p>
+              <p className="body-sm" style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-dim)' }}>
+                {t.dashboard.answersLeftSubtext}
+              </p>
+            </>
           ) : (
-            <p className="body-sm" style={{ color: 'var(--teal-light)' }}>
-              {t.dashboard.profileReadyForRead}
-            </p>
+            <>
+              <p className="body-sm" style={{ color: 'var(--teal-light)' }}>
+                {t.dashboard.profileReadyForRead}
+              </p>
+              <p className="body-sm" style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                {t.dashboard.profileReadyLocked}
+              </p>
+            </>
           )}
           <button
             className="btn btn-ghost"
