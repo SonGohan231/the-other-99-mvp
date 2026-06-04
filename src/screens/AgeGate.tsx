@@ -1,9 +1,11 @@
+import { useT } from '../context/LangContext';
 
 interface Props {
   onConfirm: () => void;
 }
 
 export default function AgeGate({ onConfirm }: Props) {
+  const t = useT();
   return (
     <div className="screen-centered age-gate">
       <div className="age-gate-inner animate-in">
@@ -11,10 +13,10 @@ export default function AgeGate({ onConfirm }: Props) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <p className="age-gate-title" style={{ fontSize: '1.05rem', color: 'var(--text)', fontWeight: 500 }}>
-            The Other 99 jest doświadczeniem psychologicznym dla osób dorosłych.
+            {t.ageGate.description}
           </p>
           <p className="age-gate-title">
-            Niektóre treści mogą być intensywne emocjonalnie.
+            {t.ageGate.intensity}
           </p>
         </div>
 
@@ -28,11 +30,11 @@ export default function AgeGate({ onConfirm }: Props) {
         />
 
         <button className="btn btn-primary" onClick={onConfirm} style={{ marginTop: '4px' }}>
-          Mam 18+ i wchodzę
+          {t.ageGate.button}
         </button>
 
         <p className="body-sm" style={{ fontSize: '0.72rem', maxWidth: '280px', textAlign: 'center' }}>
-          Klikając, potwierdzasz, że masz ukończone 18 lat.
+          {t.ageGate.confirm}
         </p>
       </div>
     </div>

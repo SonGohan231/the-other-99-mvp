@@ -20,6 +20,7 @@ import {
   upsertProfileState, incrementFreeTestsUsed,
   signOut,
 } from './lib/supabase';
+import { useT } from './context/LangContext';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -28,6 +29,7 @@ import InteractionScreen from './screens/InteractionScreen';
 import RewardScreen from './screens/RewardScreen';
 import TestSummaryScreen from './screens/TestSummaryScreen';
 import TruthOrDareScreen from './screens/TruthOrDareScreen';
+import TestIntroScreen from './screens/TestIntroScreen';
 import PremiumPlaceholder from './screens/PremiumPlaceholder';
 import DebugPanel from './screens/DebugPanel';
 
@@ -35,22 +37,22 @@ const TEST_TOTAL = 17;
 
 // ─── Config error screen ──────────────────────────────────────────────────────
 function SupabaseConfigError() {
+  const t = useT();
   return (
     <div className="screen-centered" style={{ background: 'var(--bg)' }}>
       <div className="config-error-inner animate-in">
         <div style={{ padding: '4px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#f87171' }}>
-          Konfiguracja wymagana
+          {t.configError.badge}
         </div>
         <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>
-          Brakuje zmiennych środowiskowych Supabase
+          {t.configError.title}
         </h1>
         <p className="body-sm">
-          Stwórz plik <code style={{ color: 'var(--accent-light)' }}>.env.local</code> w katalogu projektu i dodaj:
+          {t.configError.instruction} <code style={{ color: 'var(--accent-light)' }}>.env.local</code>:
         </p>
         <pre className="config-error-code">{`VITE_SUPABASE_URL=https://xxx.supabase.co\nVITE_SUPABASE_PUBLISHABLE_KEY=eyJ...`}</pre>
         <p className="body-sm">
-          Klucze znajdziesz w panelu Supabase → Project Settings → API.
-          Po dodaniu zmiennych uruchom ponownie <code style={{ color: 'var(--accent-light)' }}>npm run dev</code>.
+          {t.configError.afterNote} <code style={{ color: 'var(--accent-light)' }}>{t.configError.devCmd}</code>.
         </p>
       </div>
     </div>
@@ -59,6 +61,7 @@ function SupabaseConfigError() {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
+  const t = useT();
   const [screen, setScreen] = useState<AppScreen>('age-gate');
   const [content, setContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +73,7 @@ export default function App() {
 
   // Active test state
   const [testContent, setTestContent] = useState<ContentItem[]>([]);
-  const [testAnswerIndex, setTestAnswerIndex] = useState(0);  // how many answered
+  const [testAnswerIndex, setTestAnswerIndex] = useState(0);
   const [testAnswers, setTestAnswers] = useState<TestAnswer[]>([]);
   const [testSessionId, setTestSessionId] = useState<string | null>(null);
   const [testNumber, setTestNumber] = useState(1);
@@ -133,7 +136,6 @@ export default function App() {
     const items = selectProfileTestContent(content, seenIds);
     const tNum = (userProfile.free_profile_tests_used ?? 0) + 1;
 
-    // Create session in Supabase
     let sessionId: string | null = null;
     if (user) {
       sessionId = await createTestSession(user.id, tNum, items.map((i) => i.id));
@@ -148,13 +150,12 @@ export default function App() {
 
     const ps = getProfileState();
     setProfileState(ps);
-    setScreen('profile-test');
+    setScreen('test-intro');
   }
 
   async function handleAnswer(answer: string, responseTimeMs: number, changeCount: number) {
     if (!currentItem) return;
 
-    // Parse axis deltas
     let axisDeltas: Record<string, number> | null = null;
     try {
       if (currentItem.axis_delta_json) {
@@ -172,7 +173,6 @@ export default function App() {
       axis_delta_json: axisDeltas,
     };
 
-    // Save to Supabase
     if (user && testSessionId) {
       await saveAnswerToDb(testSessionId, user.id, {
         ...testAnswer,
@@ -180,7 +180,6 @@ export default function App() {
       });
     }
 
-    // Save to localStorage
     const localInteraction: Interaction = {
       content_id: currentItem.id,
       selected_answer: answer,
@@ -194,7 +193,6 @@ export default function App() {
     addInteraction(localInteraction);
     addSeenId(currentItem.id);
 
-    // Update profile state
     const ps = getProfileState();
     ps.interaction_count += 1;
     ps.total_profile_answers += 1;
@@ -217,7 +215,6 @@ export default function App() {
     saveProfileState(ps);
     setProfileState({ ...ps });
 
-    // Sync profile state to Supabase
     if (user) {
       upsertProfileState(user.id, {
         answers_count: ps.total_profile_answers,
@@ -236,13 +233,12 @@ export default function App() {
   }
 
   async function handleRewardNext() {
-    const nextIndex = testAnswerIndex; // already incremented after answer
+    const nextIndex = testAnswerIndex;
 
     if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
       setCurrentItem(testContent[nextIndex]);
       setScreen('profile-test');
     } else {
-      // Test complete
       await finishTest();
     }
   }
@@ -260,15 +256,12 @@ export default function App() {
       await completeTestSession(testSessionId, summaryJson);
     }
 
-    // Increment free tests used in Supabase + update total_answers
     if (user) {
       const updated = await incrementFreeTestsUsed(user.id, ps.total_profile_answers);
       if (updated) setUserProfile(updated);
     }
 
-    // Mark all test content as seen
     addSeenIds(testContent.map((i) => i.id));
-
     setScreen('test-summary');
   }
 
@@ -291,7 +284,7 @@ export default function App() {
   }
 
   function handleResetSession() {
-    if (window.confirm('Reset lokalnej sesji? Dane w Supabase pozostają nienaruszone.')) {
+    if (window.confirm('Reset local session? Supabase data is not affected.')) {
       resetSession();
       window.location.reload();
     }
@@ -316,7 +309,7 @@ export default function App() {
           <div className="loading-dot" />
           <div className="loading-dot" />
         </div>
-        <p className="loading-text">Ładowanie…</p>
+        <p className="loading-text">{t.loading}</p>
       </div>
     );
   }
@@ -324,7 +317,7 @@ export default function App() {
   if (loadError) {
     return (
       <div className="loading-screen">
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Nie udało się załadować treści. Odśwież stronę.</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t.loadError}</p>
         <p style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>{loadError}</p>
       </div>
     );
@@ -384,6 +377,13 @@ export default function App() {
         />
       )}
 
+      {screen === 'test-intro' && (
+        <TestIntroScreen
+          testNumber={testNumber}
+          onBegin={() => setScreen('profile-test')}
+        />
+      )}
+
       {screen === 'truth-or-dare' && (
         <TruthOrDareScreen onBack={() => setScreen('dashboard')} />
       )}
@@ -392,20 +392,22 @@ export default function App() {
         <div className="screen-centered" style={{ background: 'var(--bg)' }}>
           <div className="premium-inner animate-in">
             <div className="premium-badge">
-              {profileState.total_profile_answers >= 51 ? 'Gotowy' : `${profileState.total_profile_answers} / 51`}
+              {profileState.total_profile_answers >= 51
+                ? t.myProfile.badgeReady
+                : t.myProfile.badgeProgress(profileState.total_profile_answers)}
             </div>
-            <h1 className="premium-title">Mój profil</h1>
+            <h1 className="premium-title">{t.myProfile.title}</h1>
             {profileState.total_profile_answers < 51 ? (
               <p className="premium-note">
-                Brakuje jeszcze <strong>{51 - profileState.total_profile_answers}</strong> odpowiedzi do pierwszego odczytu profilu. Wykonaj kolejny test, żeby zebrać więcej danych.
+                {t.myProfile.answersLeft(51 - profileState.total_profile_answers)}
               </p>
             ) : (
               <>
                 <p className="premium-note" style={{ color: 'var(--teal-light)' }}>
-                  Twój pierwszy odczyt profilu jest gotowy.
+                  {t.myProfile.readyText}
                 </p>
                 <p className="premium-note">
-                  Pełny archetyp, Hidden Profile i Human Twin są dostępne w wersji premium.
+                  {t.myProfile.premiumLocked}
                 </p>
               </>
             )}
@@ -413,9 +415,9 @@ export default function App() {
               className="btn btn-ghost"
               onClick={() => setScreen('dashboard')}
               style={{ maxWidth: '280px' }}
-              aria-label="Wróć do menu"
+              aria-label={t.myProfile.back}
             >
-              ← Wróć
+              {t.myProfile.back}
             </button>
           </div>
         </div>

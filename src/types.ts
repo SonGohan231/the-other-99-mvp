@@ -28,6 +28,13 @@ export interface ContentItem {
   profile_reveal_type: string;
   unlock_type: string;
   next_hook_pl: string;
+  // English content fields (v1.4 EN)
+  prompt_en?: string;
+  answer_options_en?: string;
+  next_hook_en?: string;
+  reward_en?: string;
+  profile_fragment_en?: string;
+  archetype_hint_en?: string;
   community_stat_seed_json: string;
   reward_sequence_json: string;
   sample_reward_screen_pl: string;
@@ -71,6 +78,7 @@ export type AppScreen =
   | 'age-gate'
   | 'auth'
   | 'dashboard'
+  | 'test-intro'
   | 'profile-test'
   | 'reward'
   | 'test-summary'

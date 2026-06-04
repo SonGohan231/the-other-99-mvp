@@ -1,10 +1,12 @@
-import { ContentItem, RewardBlock, RewardSequence } from '../types';
+import { ContentItem, RewardBlock } from '../types';
+import { useT, useLang } from '../context/LangContext';
+import { localizedCsvField, Translations } from '../i18n';
 
 interface Props {
   item: ContentItem;
   selectedAnswer: string;
   profileProgress: number;
-  testIndex: number;   // how many answered so far (1-based after answer)
+  testIndex: number;
   testTotal: number;
   onNext: () => void;
 }
@@ -20,76 +22,55 @@ const BLOCK_TYPE_CLASS: Record<string, string> = {
   rarity: 'rb-rarity',
 };
 
-const BLOCK_TYPE_LABEL: Record<string, string> = {
-  community_reveal: 'społeczność',
-  community: 'społeczność',
-  profile_movement: 'twój profil',
-  profile: 'twój profil',
-  next_hook: 'co dalej',
-  hook: 'co dalej',
-  unlock: 'odblokowano',
-  rarity: 'rzadkość',
-};
-
-// Blocks that belong to the hidden profile — kept separate and shown at bottom
-const HIDDEN_TYPES = new Set(['hidden_teaser', 'hidden']);
-
-function parseVisibleBlocks(item: ContentItem): RewardBlock[] {
-  if (item.reward_sequence_json) {
-    try {
-      const seq = JSON.parse(item.reward_sequence_json) as RewardSequence;
-      if (Array.isArray(seq.blocks) && seq.blocks.length > 0) {
-        return seq.blocks.filter((b) => !HIDDEN_TYPES.has(b.type));
-      }
-    } catch { /* fall through */ }
-  }
-
+function buildBlocks(item: ContentItem, t: Translations, lang: 'en' | 'pl'): RewardBlock[] {
+  const fields = item as unknown as Record<string, string>;
   const blocks: RewardBlock[] = [];
 
+  // Community percentage
   if (item.community_stat_seed_json) {
     try {
       const stat = JSON.parse(item.community_stat_seed_json) as { primary_percent?: number };
       if (stat.primary_percent != null) {
-        blocks.push({ type: 'community_reveal', text: `${stat.primary_percent}% użytkowników wybrało podobnie.` });
+        blocks.push({ type: 'community_reveal', text: t.reward.communityReveal(stat.primary_percent) });
       }
     } catch {
       if (item.community_reveal_type) {
-        blocks.push({ type: 'community_reveal', text: 'Twoja odpowiedź wpisuje się w nieoczekiwany wzorzec grupowy.' });
+        blocks.push({ type: 'community_reveal', text: t.reward.communityReveal(50) });
       }
     }
   }
 
-  const rarityTexts: Record<string, string> = {
-    standard: 'Typowa odpowiedź. Każda jest ważna.',
-    rare: 'To rzadka odpowiedź — widuje się ją u mniejszości.',
-    epic: 'Rzadki wybór. Wchodzisz w obszar nielicznych.',
-    legendary: 'Niezwykle rzadka odpowiedź. Odcisnęła ślad na Twoim profilu.',
-  };
-  blocks.push({ type: 'rarity', text: rarityTexts[item.rarity_tier] ?? '' });
+  // Rarity signal
+  blocks.push({ type: 'rarity', text: t.reward.rarityText[item.rarity_tier] ?? '' });
 
+  // Profile movement
   if (item.axis_target) {
     const axes = item.axis_target.split(';').map((a) => a.trim()).filter(Boolean).slice(0, 2);
     if (axes.length) {
-      blocks.push({ type: 'profile_movement', text: `Twój profil przesuwa się w stronę: ${axes.join(', ')}.` });
+      blocks.push({ type: 'profile_movement', text: t.reward.profileMovement(axes.join(', ')) });
     }
   }
 
-  if (item.next_hook_pl) {
-    blocks.push({ type: 'next_hook', text: item.next_hook_pl });
+  // Next hook (localised from CSV)
+  const nextHook = localizedCsvField(fields, 'next_hook', lang);
+  if (nextHook) {
+    blocks.push({ type: 'next_hook', text: nextHook });
   }
 
   return blocks;
 }
 
 export default function RewardScreen({ item, profileProgress, testIndex, testTotal, onNext }: Props) {
-  const blocks = parseVisibleBlocks(item);
+  const t = useT();
+  const [lang] = useLang();
+  const blocks = buildBlocks(item, t, lang);
 
   return (
     <div className="reward-screen">
       {/* Status bar */}
       <div className="status-bar" role="status">
         <div className="status-bar-left">
-          <span className="status-label">Profil odkryty</span>
+          <span className="status-label">{t.interaction.profileDiscovered}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div className="progress-bar-track" style={{ flex: 1 }}>
               <div className="progress-bar-fill" style={{ width: `${Math.min(100, (profileProgress / 85) * 100)}%` }} />
@@ -101,12 +82,12 @@ export default function RewardScreen({ item, profileProgress, testIndex, testTot
       </div>
 
       <div className="reward-content">
-        <p className="reward-heading animate-in">Twoja odpowiedź</p>
+        <p className="reward-heading animate-in">{t.reward.heading}</p>
 
         {blocks.map((block, i) => (
           <div key={i} className={`reward-block ${BLOCK_TYPE_CLASS[block.type] ?? 'rb-plain'}`}>
-            {BLOCK_TYPE_LABEL[block.type] && (
-              <p className="reward-block-label">{BLOCK_TYPE_LABEL[block.type]}</p>
+            {t.reward.blockLabel[block.type] && (
+              <p className="reward-block-label">{t.reward.blockLabel[block.type]}</p>
             )}
             <p className="reward-block-text">{block.text}</p>
           </div>
@@ -114,7 +95,7 @@ export default function RewardScreen({ item, profileProgress, testIndex, testTot
 
         {/* Hidden profile — bottom, secondary */}
         <div className="reward-block-hidden-footer">
-          Dodano nową informację do ukrytego profilu.
+          {t.reward.hiddenFooter}
         </div>
 
         <div className="reward-actions">
@@ -122,9 +103,9 @@ export default function RewardScreen({ item, profileProgress, testIndex, testTot
             className="btn btn-primary"
             onClick={onNext}
             style={{ maxWidth: '320px' }}
-            aria-label={testIndex < testTotal ? 'Pokaż następne pytanie' : 'Pokaż podsumowanie testu'}
+            aria-label={t.reward.showNext}
           >
-            Pokaż następne
+            {t.reward.showNext}
           </button>
         </div>
       </div>

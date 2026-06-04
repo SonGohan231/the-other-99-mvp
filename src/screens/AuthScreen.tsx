@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { signInWithGoogle, signInWithMagicLink } from '../lib/supabase';
+import { useT } from '../context/LangContext';
 
 export default function AuthScreen() {
+  const t = useT();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export default function AuthScreen() {
       }
       setSent(true);
     } catch (err) {
-      setEmailError(err instanceof Error ? err.message : 'Wystąpił błąd. Spróbuj ponownie.');
+      setEmailError(err instanceof Error ? err.message : t.auth.genericError);
     } finally {
       setEmailLoading(false);
     }
@@ -34,12 +36,10 @@ export default function AuthScreen() {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
-        // Provider not enabled or other config error — show inline message
-        setGoogleError('Logowanie Google nie jest jeszcze skonfigurowane.');
+        setGoogleError(t.auth.googleNotConfigured);
       }
-      // On success signInWithOAuth redirects the page — we never reach here
     } catch {
-      setGoogleError('Logowanie Google nie jest jeszcze skonfigurowane.');
+      setGoogleError(t.auth.googleNotConfigured);
     } finally {
       setGoogleLoading(false);
     }
@@ -47,26 +47,26 @@ export default function AuthScreen() {
 
   return (
     <div className="screen-centered" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 65%), var(--bg)' }}>
-      <main className="auth-inner animate-up" aria-label="Logowanie">
+      <main className="auth-inner animate-up" aria-label={t.auth.emailLabel}>
         <div className="age-gate-logo">The Other 99</div>
 
         {sent ? (
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)' }}>
-              Sprawdź skrzynkę e-mail.
+              {t.auth.sentTitle}
             </p>
             <p className="body-sm">
-              Wysłaliśmy link logowania na{' '}
+              {t.auth.sentBody}{' '}
               <strong style={{ color: 'var(--text)' }}>{email}</strong>.
-              <br />Kliknij go, żeby wejść do aplikacji.
+              <br />{t.auth.sentNote}
             </p>
             <button
               className="btn btn-ghost"
               onClick={() => setSent(false)}
               style={{ marginTop: '8px' }}
-              aria-label="Wróć do formularza logowania"
+              aria-label={t.auth.back}
             >
-              Wróć
+              {t.auth.back}
             </button>
           </div>
         ) : (
@@ -76,10 +76,10 @@ export default function AuthScreen() {
                 className="btn btn-primary"
                 onClick={handleGoogle}
                 disabled={googleLoading || emailLoading}
-                aria-label="Zaloguj się przez Google"
+                aria-label={t.auth.googleButton}
               >
                 {googleLoading ? (
-                  'Łączenie…'
+                  t.auth.googleConnecting
                 ) : (
                   <>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -88,7 +88,7 @@ export default function AuthScreen() {
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    Zaloguj się przez Google
+                    {t.auth.googleButton}
                   </>
                 )}
               </button>
@@ -102,7 +102,7 @@ export default function AuthScreen() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', maxWidth: '360px' }}>
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-              <span className="label">lub</span>
+              <span className="label">{t.auth.orDivider}</span>
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
             </div>
 
@@ -112,14 +112,14 @@ export default function AuthScreen() {
               noValidate
             >
               <label htmlFor="auth-email" className="label" style={{ textAlign: 'left' }}>
-                Email — otrzymasz link logowania
+                {t.auth.emailLabel}
               </label>
               <input
                 id="auth-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="twoj@email.com"
+                placeholder={t.auth.emailPlaceholder}
                 required
                 autoComplete="email"
                 disabled={emailLoading}
@@ -146,14 +146,14 @@ export default function AuthScreen() {
                 className="btn btn-ghost"
                 type="submit"
                 disabled={emailLoading || googleLoading || !email.trim()}
-                aria-label="Wyślij link logowania na podany adres e-mail"
+                aria-label={t.auth.sendButton}
               >
-                {emailLoading ? 'Wysyłanie…' : 'Wyślij link logowania'}
+                {emailLoading ? t.auth.sending : t.auth.sendButton}
               </button>
             </form>
 
             <p className="body-sm" style={{ textAlign: 'center', fontSize: '0.7rem' }}>
-              Aplikacja 18+. Rejestracja = akceptacja warunków testowania MVP.
+              {t.auth.footer}
             </p>
           </>
         )}

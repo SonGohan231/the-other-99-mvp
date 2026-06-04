@@ -1,23 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { ContentItem } from '../types';
+import { useT, useLang } from '../context/LangContext';
+import { localizedCsvField } from '../i18n';
 
 interface Props {
   item: ContentItem;
-  testIndex: number;    // 0-based: which question we're on
-  testTotal: number;    // 17
+  testIndex: number;
+  testTotal: number;
   profileProgress: number;
   onAnswer: (answer: string, responseTimeMs: number, changeCount: number) => void;
 }
 
-const RARITY_LABELS: Record<string, string> = {
-  standard: 'standard', rare: 'rzadkie', epic: 'epik', legendary: 'legendarne',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  question: 'pytanie', secret: 'sekret', dare: 'wyzwanie', game: 'gra', riddle: 'zagadka',
-};
-
 export default function InteractionScreen({ item, testIndex, testTotal, profileProgress, onAnswer }: Props) {
+  const t = useT();
+  const [lang] = useLang();
   const [selected, setSelected] = useState<string | null>(null);
   const [changeCount, setChangeCount] = useState(0);
   const startTimeRef = useRef<number>(Date.now());
@@ -28,10 +24,10 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
     setChangeCount(0);
   }, [item.id]);
 
-  const answers = item.answer_options_pl
-    .split('|')
-    .map((a) => a.trim())
-    .filter(Boolean);
+  const fields = item as unknown as Record<string, string>;
+  const promptText = localizedCsvField(fields, 'prompt', lang);
+  const answerOptionsRaw = localizedCsvField(fields, 'answer_options', lang);
+  const answers = answerOptionsRaw.split('|').map((a) => a.trim()).filter(Boolean);
 
   function handleSelect(answer: string) {
     if (selected !== null && answer !== selected) setChangeCount((c: number) => c + 1);
@@ -44,13 +40,15 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
   }
 
   const questionNum = testIndex + 1;
+  const rarityLabel = t.interaction.rarityLabel[item.rarity_tier] ?? item.rarity_tier;
+  const typeLabel = t.interaction.typeLabel[item.content_type] ?? item.content_type;
 
   return (
     <div className="interaction-screen">
       {/* Status bar */}
-      <div className="status-bar" role="status" aria-label={`Pytanie ${questionNum} z ${testTotal}. Profil odkryty ${profileProgress.toFixed(1)}%`}>
+      <div className="status-bar" role="status" aria-label={`${t.interaction.questionOf(questionNum, testTotal)}. ${t.interaction.profileDiscovered} ${profileProgress.toFixed(1)}%`}>
         <div className="status-bar-left">
-          <span className="status-label">Profil odkryty</span>
+          <span className="status-label">{t.interaction.profileDiscovered}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div className="progress-bar-track" style={{ flex: 1 }}>
               <div
@@ -62,26 +60,26 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
           </div>
         </div>
         <span className="status-interaction">
-          Pytanie&nbsp;{questionNum}&nbsp;/&nbsp;{testTotal}
+          {t.interaction.questionOf(questionNum, testTotal)}
         </span>
       </div>
 
       {/* Content */}
       <div className="interaction-content">
         <div className="content-type-row animate-in">
-          <span className={`rarity-badge rarity-${item.rarity_tier}`} aria-label={`Rzadkość: ${RARITY_LABELS[item.rarity_tier] ?? item.rarity_tier}`}>
-            {RARITY_LABELS[item.rarity_tier] ?? item.rarity_tier}
+          <span className={`rarity-badge rarity-${item.rarity_tier}`} aria-label={rarityLabel}>
+            {rarityLabel}
           </span>
           <span className="content-type-label">
-            {TYPE_LABELS[item.content_type] ?? item.content_type}
+            {typeLabel}
           </span>
         </div>
 
         <div className="prompt-block animate-in" style={{ animationDelay: '0.05s' }}>
-          <p className="prompt-text">{item.prompt_pl}</p>
+          <p className="prompt-text">{promptText}</p>
         </div>
 
-        <div className="answers-block animate-in" style={{ animationDelay: '0.1s' }} role="group" aria-label="Opcje odpowiedzi">
+        <div className="answers-block animate-in" style={{ animationDelay: '0.1s' }} role="group" aria-label="answers">
           {answers.map((answer, i) => (
             <button
               key={i}
@@ -105,8 +103,8 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
 
         {selected && (
           <div className="animate-in" style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
-            <button className="btn btn-teal" onClick={handleConfirm} style={{ maxWidth: '320px' }} aria-label="Potwierdź wybraną odpowiedź">
-              Potwierdź odpowiedź
+            <button className="btn btn-teal" onClick={handleConfirm} style={{ maxWidth: '320px' }} aria-label={t.interaction.confirmAnswer}>
+              {t.interaction.confirmAnswer}
             </button>
           </div>
         )}
