@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import {
-  AppScreen, ContentItem, ProfileState, Interaction, TestAnswer,
+  AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, ContentBias,
 } from './types';
 import { loadContent } from './utils/csvLoader';
 import { selectProfileTestContent, calcProfileProgress } from './utils/contentSelector';
@@ -232,11 +232,29 @@ export default function App() {
     setScreen('reward');
   }
 
-  async function handleRewardNext() {
+  async function handleRewardNext(bias: ContentBias | null) {
     const nextIndex = testAnswerIndex;
 
     if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
-      setCurrentItem(testContent[nextIndex]);
+      let items = testContent;
+
+      if (bias && (bias.content_type || bias.rarity_tier)) {
+        const matchIdx = items.findIndex((item, idx) => {
+          if (idx <= nextIndex) return false;
+          const typeMatch = !bias.content_type || item.content_type === bias.content_type;
+          const rarityMatch = !bias.rarity_tier || item.rarity_tier === bias.rarity_tier;
+          return typeMatch && rarityMatch;
+        });
+
+        if (matchIdx > nextIndex) {
+          const newItems = [...items];
+          [newItems[nextIndex], newItems[matchIdx]] = [newItems[matchIdx], newItems[nextIndex]];
+          setTestContent(newItems);
+          items = newItems;
+        }
+      }
+
+      setCurrentItem(items[nextIndex]);
       setScreen('profile-test');
     } else {
       await finishTest();
@@ -363,6 +381,7 @@ export default function App() {
           profileProgress={profileState.profile_progress}
           testIndex={testAnswerIndex}
           testTotal={TEST_TOTAL}
+          totalProfileAnswers={profileState.total_profile_answers}
           onNext={handleRewardNext}
         />
       )}

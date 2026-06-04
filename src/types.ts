@@ -86,6 +86,11 @@ export type AppScreen =
   | 'my-profile'
   | 'premium-placeholder';
 
+export interface ContentBias {
+  content_type?: ContentType;
+  rarity_tier?: RarityTier;
+}
+
 export interface RewardBlock {
   type: string;
   text: string;
