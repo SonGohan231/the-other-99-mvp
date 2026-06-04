@@ -1,12 +1,12 @@
 import { ProfileState, Interaction } from '../types';
 
-const KEYS = {
-  AGE_CONFIRMED: 'to99_age_confirmed',
-  STARTED: 'to99_started',
-  SEEN_IDS: 'to99_seen_content_ids',
-  INTERACTIONS: 'to99_interactions',
-  PROFILE_STATE: 'to99_profile_state',
-  PAYWALL_SHOWN: 'to99_paywall_shown',
+export const KEYS = {
+  AGE_CONFIRMED:  'to99_age_confirmed',
+  STARTED:        'to99_started',
+  SEEN_IDS:       'to99_seen_content_ids',
+  INTERACTIONS:   'to99_interactions',
+  PROFILE_STATE:  'to99_profile_state',
+  PAYWALL_SHOWN:  'to99_paywall_shown',
 };
 
 function getInitialProfileState(): ProfileState {
@@ -19,6 +19,7 @@ function getInitialProfileState(): ProfileState {
     archetype_teasers: [],
     legendary_count: 0,
     paywall_trigger: Math.floor(Math.random() * 6) + 25,
+    total_profile_answers: 0,
   };
 }
 
@@ -39,11 +40,8 @@ export function setStarted(): void {
 }
 
 export function getSeenIds(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEYS.SEEN_IDS) || '[]');
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(KEYS.SEEN_IDS) || '[]'); }
+  catch { return []; }
 }
 
 export function addSeenId(id: string): void {
@@ -54,12 +52,15 @@ export function addSeenId(id: string): void {
   }
 }
 
+export function addSeenIds(ids: string[]): void {
+  const seen = getSeenIds();
+  ids.forEach((id) => { if (!seen.includes(id)) seen.push(id); });
+  localStorage.setItem(KEYS.SEEN_IDS, JSON.stringify(seen));
+}
+
 export function getInteractions(): Interaction[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEYS.INTERACTIONS) || '[]');
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(KEYS.INTERACTIONS) || '[]'); }
+  catch { return []; }
 }
 
 export function addInteraction(interaction: Interaction): void {
@@ -73,9 +74,8 @@ export function getProfileState(): ProfileState {
     const raw = localStorage.getItem(KEYS.PROFILE_STATE);
     if (!raw) return getInitialProfileState();
     const parsed = JSON.parse(raw) as ProfileState;
-    if (parsed.paywall_trigger == null) {
-      parsed.paywall_trigger = Math.floor(Math.random() * 6) + 25;
-    }
+    if (parsed.paywall_trigger == null) parsed.paywall_trigger = Math.floor(Math.random() * 6) + 25;
+    if (parsed.total_profile_answers == null) parsed.total_profile_answers = 0;
     return parsed;
   } catch {
     return getInitialProfileState();
@@ -95,7 +95,7 @@ export function setPaywallShown(): void {
 }
 
 export function resetSession(): void {
-  Object.values(KEYS).forEach(key => localStorage.removeItem(key));
+  Object.values(KEYS).forEach((key) => localStorage.removeItem(key));
 }
 
 export function exportSession(): string {

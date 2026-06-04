@@ -35,26 +35,22 @@ export default function DebugPanel({ onReset }: Props) {
 
   return (
     <>
+      {/* Positioned bottom-left to avoid overlapping centered CTAs */}
       <button
         className="debug-toggle"
         onClick={() => setOpen((o: boolean) => !o)}
-        title="Debug panel"
-        aria-label="Debug panel"
+        aria-label={open ? 'Zamknij debug panel' : 'Otwórz debug panel'}
+        aria-expanded={open}
       >
         {open ? '×' : 'DBG'}
       </button>
 
       {open && (
-        <div className="debug-panel">
+        <div className="debug-panel" role="complementary" aria-label="Debug panel">
           <p className="debug-panel-title">Debug Panel</p>
-
           <div className="debug-panel-actions">
-            <button className="debug-btn" onClick={handleExport}>
-              ↓ Export session JSON
-            </button>
-            <button className="debug-btn" onClick={handleShowProfile}>
-              👁 Show profile state
-            </button>
+            <button className="debug-btn" onClick={handleExport}>↓ Export session JSON</button>
+            <button className="debug-btn" onClick={handleShowProfile}>👁 Show profile state</button>
             <button
               className="debug-btn"
               onClick={handleReset}
@@ -63,7 +59,6 @@ export default function DebugPanel({ onReset }: Props) {
               ✕ Reset session
             </button>
           </div>
-
           {profileJson && (
             <>
               <div className="divider" />

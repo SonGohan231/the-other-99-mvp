@@ -42,6 +42,7 @@ export interface ProfileState {
   archetype_teasers: string[];
   legendary_count: number;
   paywall_trigger: number;
+  total_profile_answers: number;
 }
 
 export interface Interaction {
@@ -55,12 +56,26 @@ export interface Interaction {
   content_type: string;
 }
 
+export interface TestAnswer {
+  content_id: string;
+  content_type: string;
+  rarity_tier: string;
+  selected_answer: string;
+  response_time_ms: number;
+  answer_changes_count: number;
+  axis_delta_json: Record<string, number> | null;
+}
+
 export type AppScreen =
+  | 'supabase-config-error'
   | 'age-gate'
-  | 'landing'
-  | 'interaction'
+  | 'auth'
+  | 'dashboard'
+  | 'profile-test'
   | 'reward'
-  | 'paywall'
+  | 'test-summary'
+  | 'truth-or-dare'
+  | 'my-profile'
   | 'premium-placeholder';
 
 export interface RewardBlock {
