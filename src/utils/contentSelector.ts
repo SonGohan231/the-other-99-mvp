@@ -91,9 +91,12 @@ const PROFILE_TEST_RARITY_BUDGET: Record<RarityTier, number> = {
 
 export function selectProfileTestContent(
   allContent: ContentItem[],
-  seenIds: string[]
+  seenIds: string[],
+  isPremium: boolean = false,
 ): ContentItem[] {
-  const available = allContent.filter((i) => !seenIds.includes(i.id));
+  const available = allContent.filter((i) =>
+    !seenIds.includes(i.id) && (isPremium || i.access_tier !== 'premium')
+  );
 
   const rarityBudget = { ...PROFILE_TEST_RARITY_BUDGET };
   const selected: ContentItem[] = [];
@@ -133,7 +136,9 @@ export function selectProfileTestContent(
 
     // Last resort: ignore seenIds to never crash
     if (added < count) {
-      const lastResort = allContent.filter((i) => i.content_type === type && !usedIds.has(i.id));
+      const lastResort = allContent.filter((i) =>
+        i.content_type === type && !usedIds.has(i.id) && (isPremium || i.access_tier !== 'premium')
+      );
       while (added < count && lastResort.length > 0) {
         const idx = Math.floor(Math.random() * lastResort.length);
         const item = lastResort.splice(idx, 1)[0];

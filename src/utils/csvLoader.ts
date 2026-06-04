@@ -1,7 +1,10 @@
 import Papa from 'papaparse';
 import { ContentItem } from '../types';
 
-async function parseCSV(text: string): Promise<ContentItem[]> {
+async function loadFile(path: string): Promise<ContentItem[]> {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Failed to load ${path}`);
+  const text = await response.text();
   const result = Papa.parse<ContentItem>(text, {
     delimiter: ';',
     header: true,
@@ -9,38 +12,31 @@ async function parseCSV(text: string): Promise<ContentItem[]> {
     transformHeader: (h) => h.trim().replace(/^﻿/, ''),
     transform: (v) => v.trim(),
   });
-  return result.data.filter((item) => item.id && (item.prompt_pl || item.prompt_en));
+  return result.data;
 }
 
 export async function loadContent(): Promise<ContentItem[]> {
-  const response = await fetch('/content.csv');
-  if (!response.ok) throw new Error('Failed to load content.csv');
-  const text = await response.text();
-  const primary = await parseCSV(text);
+  // Load primary content
+  const primary = await loadFile('/content.csv');
 
-  // Try to load secondary content file (English-first v2)
-  let secondary: ContentItem[] = [];
+  // Try loading v2 (English-first)
+  let v2: ContentItem[] = [];
+  try { v2 = await loadFile('/content_en_v2.csv'); } catch { /* ok */ }
+
+  // Try loading premium content
+  let premium: ContentItem[] = [];
   try {
-    const res2 = await fetch('/content_en_v2.csv');
-    if (res2.ok) {
-      const text2 = await res2.text();
-      secondary = await parseCSV(text2);
-    }
-  } catch {
-    // Secondary file is optional
-  }
+    const raw = await loadFile('/content_premium_en_v1.csv');
+    premium = raw.map(item => ({ ...item, access_tier: 'premium' as const }));
+  } catch { /* ok */ }
 
-  if (secondary.length === 0) return primary;
-
-  // Merge and deduplicate by id
-  const seen = new Set<string>(primary.map((i) => i.id));
-  const merged = [...primary];
-  for (const item of secondary) {
-    if (item.id && !seen.has(item.id)) {
-      seen.add(item.id);
-      merged.push(item);
-    }
-  }
-
-  return merged;
+  // Merge, deduplicate by id
+  const all = [...primary, ...v2, ...premium];
+  const seen = new Set<string>();
+  return all.filter(item => {
+    if (!item.id || seen.has(item.id)) return false;
+    if (!item.prompt_pl && !item.prompt_en) return false;
+    seen.add(item.id);
+    return true;
+  });
 }

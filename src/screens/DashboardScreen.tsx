@@ -7,8 +7,9 @@ import { TwinFeedEvent, getTwinStage } from '../utils/twinFeed';
 import { TimelineEvent } from '../utils/profileTimeline';
 import { computeHiddenProfile, isHiddenProfileUnlocked } from '../utils/hiddenProfile';
 import { calcProfileProgress } from '../utils/contentSelector';
-import { canContinueTest, getNextMilestone } from '../utils/premiumProgression';
+import { canContinueTest, MILESTONES } from '../utils/premiumProgression';
 import { computeArchetypeMix, isArchetypeMixUnlocked } from '../utils/archetypes';
+import { getCuriosities } from '../utils/curiosities';
 import { useT, useLang } from '../context/LangContext';
 import ProfileRadarChart from '../components/ProfileRadarChart';
 
@@ -21,12 +22,16 @@ interface Props {
   profileFragments: ProfileFragment[];
   twinFeedEvents: TwinFeedEvent[];
   timeline: TimelineEvent[];
+  isPremium: boolean;
   onStartTest: () => void;
   onTruthOrDare: () => void;
   onMyProfile: () => void;
   onExportJson: () => void;
   onResetSession: () => void;
   onLogout: () => void;
+  onProfileSnapshot: () => void;
+  onFullProfile: () => void;
+  onHiddenParams: () => void;
 }
 
 const ANSWERS_FOR_READ = 51;
@@ -39,18 +44,21 @@ export default function DashboardScreen({
   profileFragments,
   twinFeedEvents,
   timeline,
+  isPremium,
   onStartTest,
   onTruthOrDare,
   onMyProfile,
   onExportJson,
   onResetSession,
   onLogout,
+  onProfileSnapshot,
+  onFullProfile,
+  onHiddenParams,
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
   const [showRadarInSignalMap, setShowRadarInSignalMap] = useState(true);
-  const { free_profile_tests_used, total_answers, premium_status } = userProfile;
-  const isPremium = premium_status === 'premium';
+  const { free_profile_tests_used, total_answers } = userProfile;
   const freeTestsUsed = free_profile_tests_used ?? 0;
   const canStartTest = canContinueTest(freeTestsUsed, isPremium);
   const missingAnswers = Math.max(0, ANSWERS_FOR_READ - total_answers);
@@ -65,8 +73,6 @@ export default function DashboardScreen({
 
   const archetypeMixUnlocked = isArchetypeMixUnlocked(totalProfileAnswers);
   const archetypeMix = computeArchetypeMix(profileVector, totalProfileAnswers);
-
-  const nextMilestone = getNextMilestone(totalProfileAnswers);
 
   void lang;
 
@@ -107,12 +113,28 @@ export default function DashboardScreen({
           <div className="progress-bar-track">
             <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
           </div>
-          {/* Milestone hint */}
-          {nextMilestone && (
-            <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-              {t.premium.nextMilestone(nextMilestone.label, nextMilestone.answers)}
-            </p>
-          )}
+          {/* Milestones strip — compact locked chips */}
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+            {MILESTONES.map((m) => {
+              const reached = totalProfileAnswers >= m.answers;
+              return (
+                <span
+                  key={m.answers}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '12px',
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    background: reached ? 'rgba(45,212,191,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${reached ? 'rgba(45,212,191,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                    color: reached ? 'var(--teal-light)' : 'var(--text-dim)',
+                  }}
+                >
+                  {reached ? '✓ ' : ''}{m.label}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         {/* 1. Profile Reading */}
@@ -163,6 +185,21 @@ export default function DashboardScreen({
             </p>
           )}
         </div>
+
+        {/* Profile Snapshot CTA */}
+        {totalProfileAnswers >= 51 && !isPremium && (
+          <div className="card animate-in" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(45,212,191,0.08) 100%)', border: '1px solid rgba(124,58,237,0.4)' }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--accent-light)', textTransform: 'uppercase' }}>
+              PROFILE SNAPSHOT READY
+            </p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text)', margin: '6px 0 12px' }}>
+              The system has enough to show one clear pattern.
+            </p>
+            <button className="btn btn-primary" onClick={onProfileSnapshot} style={{ fontSize: '0.82rem', padding: '10px 20px' }}>
+              See Profile Snapshot
+            </button>
+          </div>
+        )}
 
         {/* 2. Signal Map */}
         <div className="card animate-in" style={{ animationDelay: '0.04s', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -359,6 +396,24 @@ export default function DashboardScreen({
           )}
         </div>
 
+        {/* Premium Features card */}
+        {isPremium && (
+          <div className="card animate-in" style={{ animationDelay: '0.22s' }}>
+            <p className="heading-md">Premium Access</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+              <button className="btn btn-ghost" onClick={onFullProfile} style={{ textAlign: 'left', fontSize: '0.82rem' }}>
+                Full Profile Analysis →
+              </button>
+              <button className="btn btn-ghost" onClick={onHiddenParams} style={{ textAlign: 'left', fontSize: '0.82rem' }}>
+                Hidden Parameters →
+              </button>
+              <button className="btn btn-ghost" onClick={onProfileSnapshot} style={{ textAlign: 'left', fontSize: '0.82rem' }}>
+                Profile Snapshot →
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 6. Archetype Mix card */}
         <div className="card animate-in" style={{ animationDelay: '0.2s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -464,6 +519,21 @@ export default function DashboardScreen({
             {missingAnswers > 0 ? t.dashboard.gatherMore : t.dashboard.readProfile}
           </button>
         </div>
+
+        {/* Curiosity */}
+        {totalProfileAnswers > 0 && (() => {
+          const c = getCuriosities(profileVector, totalProfileAnswers)[0];
+          return c ? (
+            <div className="card animate-in" style={{ animationDelay: '0.3s', background: 'rgba(255,255,255,0.02)' }}>
+              <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                CURIOSITY
+              </p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5, fontStyle: 'italic' }}>
+                "{c.text}"
+              </p>
+            </div>
+          ) : null;
+        })()}
 
         {/* 10. Settings */}
         <div className="card animate-in" style={{ animationDelay: '0.36s', display: 'flex', flexDirection: 'column', gap: '8px' }}>

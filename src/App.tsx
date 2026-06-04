@@ -30,7 +30,10 @@ import {
 } from './lib/supabase';
 import { useT } from './context/LangContext';
 import { deriveCardPath, deriveThemeCategory, CARD_PATH_DEFINITIONS } from './utils/contentTaxonomy';
-import { canContinueTest } from './utils/premiumProgression';
+import { canContinueTest, isPremiumUnlocked, unlockPremium } from './utils/premiumProgression';
+import ProfileSnapshotScreen from './screens/ProfileSnapshotScreen';
+import FullProfileScreen from './screens/FullProfileScreen';
+import HiddenParametersScreen from './screens/HiddenParametersScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
 
 import AgeGate from './screens/AgeGate';
@@ -149,6 +152,12 @@ export default function App() {
   // Undo state
   const [canUndoAnswer, setCanUndoAnswer] = useState(false);
 
+  // Test mode (isTestMode used to track test mode state)
+  const [, setIsTestMode] = useState(false);
+
+  // Computed premium status
+  const isPremium = isPremiumUnlocked(userProfile?.premium_status ?? null);
+
   // ─── Load CSV ──────────────────────────────────────────────────────────────
   useEffect(() => {
     loadContent()
@@ -199,7 +208,6 @@ export default function App() {
   async function handleStartTest() {
     if (!userProfile) return;
 
-    const isPremium = userProfile.premium_status === 'premium';
     const freeTestsUsed = userProfile.free_profile_tests_used ?? 0;
     if (!canContinueTest(freeTestsUsed, isPremium)) {
       setScreen('premium-placeholder');
@@ -207,7 +215,7 @@ export default function App() {
     }
 
     const seenIds = getSeenIds();
-    const items = selectProfileTestContent(content, seenIds);
+    const items = selectProfileTestContent(content, seenIds, isPremium);
     const tNum = freeTestsUsed + 1;
 
     let sessionId: string | null = null;
@@ -521,6 +529,25 @@ export default function App() {
     if (p) setUserProfile(p);
   }
 
+  function handleTestMode() {
+    const fakeProfile: UserProfile = {
+      id: 'test_user',
+      email: 'test@local',
+      display_name: null,
+      free_profile_tests_used: 0,
+      total_answers: 0,
+      premium_status: 'free',
+    };
+    setUserProfile(fakeProfile);
+    setIsTestMode(true);
+    setScreen('dashboard');
+  }
+
+  function handleUnlockFull() {
+    unlockPremium();
+    setScreen('full-profile');
+  }
+
   // ─── Loading ───────────────────────────────────────────────────────────────
   if (loading || authLoading) {
     return (
@@ -551,7 +578,7 @@ export default function App() {
 
       {screen === 'age-gate' && <AgeGate onConfirm={handleAgeConfirm} />}
 
-      {screen === 'auth' && <AuthScreen />}
+      {screen === 'auth' && <AuthScreen onTestMode={handleTestMode} />}
 
       {screen === 'dashboard' && userProfile && (
         <DashboardScreen
@@ -563,12 +590,16 @@ export default function App() {
           profileFragments={profileFragments}
           twinFeedEvents={twinFeedEvents}
           timeline={timeline}
+          isPremium={isPremium}
           onStartTest={handleStartTest}
           onTruthOrDare={() => setScreen('truth-or-dare')}
           onMyProfile={() => setScreen('my-profile')}
           onExportJson={handleExportJson}
           onResetSession={handleResetSession}
           onLogout={handleLogout}
+          onProfileSnapshot={() => setScreen('profile-snapshot')}
+          onFullProfile={() => setScreen('full-profile')}
+          onHiddenParams={() => setScreen('hidden-parameters')}
         />
       )}
 
@@ -611,8 +642,22 @@ export default function App() {
           answers={testAnswers}
           totalProfileAnswers={profileState.total_profile_answers}
           profileVector={profileVector}
-          onBack={async () => { await handleRefreshProfile(); setScreen('dashboard'); }}
-          onUnlockPremium={() => setScreen('premium-placeholder')}
+          onBack={async () => {
+            await handleRefreshProfile();
+            const ps = getProfileState();
+            const snapshotSeen = localStorage.getItem('to99_snapshot_seen') === 'true';
+            if (ps.total_profile_answers >= 51 && !snapshotSeen && !isPremium) {
+              localStorage.setItem('to99_snapshot_seen', 'true');
+              setScreen('profile-snapshot');
+            } else {
+              setScreen('dashboard');
+            }
+          }}
+          onUnlockPremium={() => {
+            const snapshotSeen = localStorage.getItem('to99_snapshot_seen') === 'true';
+            if (!snapshotSeen) { localStorage.setItem('to99_snapshot_seen', 'true'); }
+            setScreen('profile-snapshot');
+          }}
         />
       )}
 
@@ -664,6 +709,31 @@ export default function App() {
 
       {screen === 'premium-placeholder' && (
         <PremiumPlaceholder onBack={() => setScreen(testNumber >= 3 ? 'test-summary' : 'dashboard')} />
+      )}
+
+      {screen === 'profile-snapshot' && (
+        <ProfileSnapshotScreen
+          profileVector={profileVector}
+          totalAnswers={profileState.total_profile_answers}
+          profileFragments={profileFragments}
+          onUnlockFull={handleUnlockFull}
+          onDashboard={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'full-profile' && (
+        <FullProfileScreen
+          profileVector={profileVector}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'hidden-parameters' && (
+        <HiddenParametersScreen
+          profileVector={profileVector}
+          onBack={() => setScreen('dashboard')}
+        />
       )}
 
       <DebugPanel onReset={handleDebugReset} />

@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { signInWithGoogle, signInWithMagicLink } from '../lib/supabase';
 import { useT } from '../context/LangContext';
 
-export default function AuthScreen() {
+interface Props {
+  onTestMode?: () => void;
+}
+
+export default function AuthScreen({ onTestMode }: Props) {
   const t = useT();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
@@ -44,6 +48,12 @@ export default function AuthScreen() {
       setGoogleLoading(false);
     }
   }
+
+  const isRateLimit = emailError != null && (
+    emailError.toLowerCase().includes('rate') ||
+    emailError.includes('429') ||
+    emailError.toLowerCase().includes('too many')
+  );
 
   return (
     <div className="screen-centered" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 65%), var(--bg)' }}>
@@ -138,8 +148,10 @@ export default function AuthScreen() {
                 onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
               />
               {emailError && (
-                <p style={{ fontSize: '0.78rem', color: '#f87171' }} role="alert">
-                  {emailError}
+                <p style={{ color: '#f87171', fontSize: '0.75rem' }} role="alert">
+                  {isRateLimit
+                    ? t.auth.rateLimitError
+                    : emailError}
                 </p>
               )}
               <button
@@ -155,6 +167,24 @@ export default function AuthScreen() {
             <p className="body-sm" style={{ textAlign: 'center', fontSize: '0.7rem' }}>
               {t.auth.footer}
             </p>
+
+            {(() => {
+              const debugMode = typeof localStorage !== 'undefined' && localStorage.getItem('to99_debug_mode') === 'true';
+              return debugMode && onTestMode ? (
+                <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', width: '100%', maxWidth: '360px' }}>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textAlign: 'center', marginBottom: '8px' }}>
+                    {t.auth.testModeNote}
+                  </p>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={onTestMode}
+                    style={{ width: '100%', fontSize: '0.78rem', color: 'var(--text-dim)' }}
+                  >
+                    {t.auth.testModeButton}
+                  </button>
+                </div>
+              ) : null;
+            })()}
           </>
         )}
       </main>

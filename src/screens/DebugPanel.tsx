@@ -59,6 +59,40 @@ export default function DebugPanel({ onReset }: Props) {
               ✕ Reset session
             </button>
           </div>
+
+          {/* Debug mode toggle */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text)' }}>Debug / test mode</span>
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: '0.72rem' }}
+              onClick={() => {
+                const current = localStorage.getItem('to99_debug_mode') === 'true';
+                if (current) { localStorage.removeItem('to99_debug_mode'); }
+                else { localStorage.setItem('to99_debug_mode', 'true'); }
+                window.location.reload();
+              }}
+            >
+              {localStorage.getItem('to99_debug_mode') === 'true' ? 'ON — disable' : 'OFF — enable'}
+            </button>
+          </div>
+
+          {/* Premium unlock toggle */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text)' }}>Premium unlock</span>
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: '0.72rem' }}
+              onClick={() => {
+                const current = localStorage.getItem('to99_premium_unlocked') === 'true';
+                if (current) { localStorage.removeItem('to99_premium_unlocked'); }
+                else { localStorage.setItem('to99_premium_unlocked', 'true'); }
+                window.location.reload();
+              }}
+            >
+              {localStorage.getItem('to99_premium_unlocked') === 'true' ? 'ON — disable' : 'OFF — enable'}
+            </button>
+          </div>
           {profileJson && (
             <>
               <div className="divider" />
