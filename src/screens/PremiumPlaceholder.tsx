@@ -1,20 +1,19 @@
+import { useT } from '../context/LangContext';
 
 interface Props {
   onBack: () => void;
 }
 
 export default function PremiumPlaceholder({ onBack }: Props) {
+  const t = useT();
   return (
     <div className="screen-centered premium-placeholder">
       <div className="premium-inner animate-in">
-        <div className="premium-badge">Wkrótce</div>
+        <div className="premium-badge">{t.premium.badge}</div>
 
-        <h2 className="premium-title">Pełny profil w przygotowaniu</h2>
+        <h2 className="premium-title">{t.premium.title}</h2>
 
-        <p className="premium-note">
-          Premium nie jest jeszcze aktywne. Ten ekran służy do testowania
-          zainteresowania.
-        </p>
+        <p className="premium-note">{t.premium.note}</p>
 
         <p
           style={{
@@ -24,12 +23,11 @@ export default function PremiumPlaceholder({ onBack }: Props) {
             textAlign: 'center',
           }}
         >
-          Dziękujemy za udział w teście MVP. Twoja sesja i odpowiedzi zostały
-          zapisane lokalnie.
+          {t.premium.thanks}
         </p>
 
         <button className="btn btn-ghost" onClick={onBack} style={{ maxWidth: '280px', marginTop: '8px' }}>
-          ← Wróć
+          {t.premium.back}
         </button>
       </div>
     </div>

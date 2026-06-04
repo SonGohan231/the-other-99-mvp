@@ -1,19 +1,20 @@
+import { useT } from '../context/LangContext';
+
 interface Props {
   onBack: () => void;
 }
 
 export default function TruthOrDareScreen({ onBack }: Props) {
+  const t = useT();
   return (
     <div className="screen-centered" style={{ background: 'var(--bg)' }}>
-      <main className="premium-inner animate-in" aria-label="Prawda czy wyzwanie">
-        <div className="premium-badge">Wkrótce</div>
+      <main className="premium-inner animate-in" aria-label={t.truthOrDare.ariaLabel}>
+        <div className="premium-badge">{t.truthOrDare.badge}</div>
 
-        <h1 className="premium-title">Prawda czy wyzwanie</h1>
+        <h1 className="premium-title">{t.truthOrDare.title}</h1>
 
-        <p className="premium-note" style={{ textAlign: 'left' }}>
-          Tryb towarzyski z weryfikacją online, zdjęciami i trybem dla wielu graczy jest w przygotowaniu.
-          <br /><br />
-          Na razie dostępny jest tylko tryb odczytu profilu.
+        <p className="premium-note" style={{ textAlign: 'left', whiteSpace: 'pre-line' }}>
+          {t.truthOrDare.description}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '320px' }}>
@@ -28,7 +29,7 @@ export default function TruthOrDareScreen({ onBack }: Props) {
             }}
           >
             <span style={{ opacity: 0.5 }}>🔒</span>
-            <span>Tryb online</span>
+            <span>{t.truthOrDare.onlineMode}</span>
           </div>
           <div
             style={{
@@ -41,7 +42,7 @@ export default function TruthOrDareScreen({ onBack }: Props) {
             }}
           >
             <span style={{ opacity: 0.5 }}>🔒</span>
-            <span>Weryfikacja zdjęciami</span>
+            <span>{t.truthOrDare.photoVerification}</span>
           </div>
         </div>
 
@@ -49,9 +50,9 @@ export default function TruthOrDareScreen({ onBack }: Props) {
           className="btn btn-ghost"
           onClick={onBack}
           style={{ maxWidth: '280px', marginTop: '8px' }}
-          aria-label="Wróć do menu"
+          aria-label={t.truthOrDare.back}
         >
-          ← Wróć
+          {t.truthOrDare.back}
         </button>
       </main>
     </div>

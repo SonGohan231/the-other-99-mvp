@@ -1,5 +1,6 @@
 import { TestAnswer } from '../types';
 import { calcProfileProgress } from '../utils/contentSelector';
+import { useT } from '../context/LangContext';
 
 interface Props {
   testNumber: number;
@@ -24,22 +25,18 @@ function getStrongestAxis(answers: TestAnswer[]): string | null {
   return Object.entries(axes).sort(([, a], [, b]) => b - a)[0][0];
 }
 
-const POST_TEST_MESSAGES: Record<number, string> = {
-  1: 'Następny test odblokuje drugi fragment profilu.',
-  2: 'Jeszcze jeden darmowy test do pierwszego odczytu profilu.',
-  3: 'Pierwszy odczyt profilu jest gotowy.',
-};
-
 export default function TestSummaryScreen({ testNumber, answers, totalProfileAnswers, onBack, onUnlockPremium }: Props) {
+  const t = useT();
   const strongestAxis = getStrongestAxis(answers);
   const missingAnswers = Math.max(0, ANSWERS_FOR_READ - totalProfileAnswers);
   const progress = calcProfileProgress(totalProfileAnswers);
   const isThirdTest = testNumber >= MAX_FREE_TESTS;
-  const postMessage = POST_TEST_MESSAGES[testNumber] ?? POST_TEST_MESSAGES[3];
+  const afterTestIndex = Math.min(testNumber - 1, t.testSummary.afterTest.length - 1);
+  const postMessage = t.testSummary.afterTest[afterTestIndex];
 
   return (
     <div className="screen-centered" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(8,145,178,0.08) 0%, transparent 65%), var(--bg)' }}>
-      <main className="paywall-inner animate-up" style={{ gap: '18px' }} aria-label="Podsumowanie testu">
+      <main className="paywall-inner animate-up" style={{ gap: '18px' }} aria-label={t.testSummary.ariaLabel}>
         <div
           style={{
             padding: '4px 12px',
@@ -51,27 +48,27 @@ export default function TestSummaryScreen({ testNumber, answers, totalProfileAns
             alignSelf: 'flex-start',
           }}
         >
-          Test {testNumber} ukończony
+          {t.testSummary.badge(testNumber)}
         </div>
 
-        <h1 className="paywall-title">Zebrano nowy fragment profilu.</h1>
+        <h1 className="paywall-title">{t.testSummary.title}</h1>
 
         <div className="paywall-stats">
           <div className="paywall-stat">
-            <span className="paywall-stat-label">Odpowiedzi w tym teście</span>
+            <span className="paywall-stat-label">{t.testSummary.answersInTest}</span>
             <span className="paywall-stat-value">{answers.length}&nbsp;/&nbsp;17</span>
           </div>
           <div className="paywall-stat">
-            <span className="paywall-stat-label">Łącznie odpowiedzi profilu</span>
+            <span className="paywall-stat-label">{t.testSummary.totalAnswers}</span>
             <span className="paywall-stat-value">{totalProfileAnswers}&nbsp;/&nbsp;{ANSWERS_FOR_READ}</span>
           </div>
           <div className="paywall-stat">
-            <span className="paywall-stat-label">Profil odkryty</span>
+            <span className="paywall-stat-label">{t.testSummary.profileDiscovered}</span>
             <span className="paywall-stat-value">{progress.toFixed(1)}%</span>
           </div>
           {strongestAxis && (
             <div className="paywall-stat">
-              <span className="paywall-stat-label">Najsilniejszy ślad testu</span>
+              <span className="paywall-stat-label">{t.testSummary.strongestSignal}</span>
               <span className="paywall-stat-value" style={{ color: 'var(--accent-light)', textTransform: 'capitalize' }}>
                 {strongestAxis}
               </span>
@@ -79,9 +76,9 @@ export default function TestSummaryScreen({ testNumber, answers, totalProfileAns
           )}
           {missingAnswers > 0 && (
             <div className="paywall-stat">
-              <span className="paywall-stat-label">Do pierwszego odczytu</span>
+              <span className="paywall-stat-label">{t.testSummary.untilFirstReading}</span>
               <span className="paywall-stat-value" style={{ color: 'var(--text-muted)' }}>
-                jeszcze {missingAnswers} odpowiedzi
+                {t.testSummary.moreAnswers(missingAnswers)}
               </span>
             </div>
           )}
@@ -105,31 +102,31 @@ export default function TestSummaryScreen({ testNumber, answers, totalProfileAns
                 textAlign: 'center',
               }}
             >
-              Pełny odczyt profilu, Hidden Profile i Human Twin są zablokowane w tej wersji testowej.
+              {t.testSummary.lockedNote}
             </div>
             <button
               className="btn btn-primary"
               onClick={onUnlockPremium}
-              aria-label="Odblokuj pełny profil"
+              aria-label={t.testSummary.unlockButton}
             >
-              Odblokuj pełny profil
+              {t.testSummary.unlockButton}
             </button>
             <button
               className="btn btn-ghost"
               onClick={onBack}
               style={{ maxWidth: '280px' }}
-              aria-label="Wróć do menu"
+              aria-label={t.testSummary.backToMenu}
             >
-              Wróć do menu
+              {t.testSummary.backToMenu}
             </button>
           </div>
         ) : (
           <button
             className="btn btn-primary"
             onClick={onBack}
-            aria-label="Wróć do menu"
+            aria-label={t.testSummary.backToMenu}
           >
-            Wróć do menu
+            {t.testSummary.backToMenu}
           </button>
         )}
       </main>
