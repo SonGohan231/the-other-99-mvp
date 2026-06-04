@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import {
-  AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, ContentBias,
+  AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, NextCard,
 } from './types';
 import { loadContent } from './utils/csvLoader';
 import { selectProfileTestContent, calcProfileProgress } from './utils/contentSelector';
@@ -10,6 +10,7 @@ import {
   getSeenIds, addSeenId, addSeenIds,
   addInteraction, getProfileState, saveProfileState,
   resetSession, exportSession,
+  removeSeenId, removeLastInteraction,
 } from './utils/storage';
 import {
   ProfileVector, loadVector, saveVector, applyDeltas, calcHumanTwinMatch, getTopDimensions,
@@ -28,6 +29,9 @@ import {
   signOut,
 } from './lib/supabase';
 import { useT } from './context/LangContext';
+import { deriveCardPath, deriveThemeCategory, CARD_PATH_DEFINITIONS } from './utils/contentTaxonomy';
+import { canContinueTest } from './utils/premiumProgression';
+import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -66,6 +70,47 @@ function SupabaseConfigError() {
   );
 }
 
+// ─── Helper: build NextCard from ContentItem ──────────────────────────────────
+function buildNextCard(item: ContentItem): NextCard {
+  const cp = deriveCardPath(item);
+  const def = CARD_PATH_DEFINITIONS.find((d) => d.path === cp) ?? CARD_PATH_DEFINITIONS[0];
+  return {
+    id: `nc_${item.id}_${Date.now()}`,
+    linkedContentId: item.id,
+    contentType: item.content_type,
+    rarityTier: item.rarity_tier,
+    cardPath: cp,
+    themeCategory: deriveThemeCategory(item),
+    title: def.displayLabel,
+    subtitle: def.displaySubtitle,
+  };
+}
+
+// ─── Helper: pick 3 candidate items with rarity variety ──────────────────────
+function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
+  const available = pool.slice(fromIndex);
+  if (available.length === 0) return [];
+
+  const standard = available.filter((i) => i.rarity_tier === 'standard');
+  const rare = available.filter((i) => i.rarity_tier === 'rare');
+  const epicLegendary = available.filter((i) => i.rarity_tier === 'epic' || i.rarity_tier === 'legendary');
+
+  const picks: ContentItem[] = [];
+
+  // Try to get a standard, rare, and epic/legendary spread
+  if (standard.length > 0) picks.push(standard[0]);
+  if (rare.length > 0) picks.push(rare[0]);
+  if (epicLegendary.length > 0) picks.push(epicLegendary[0]);
+
+  // Fill remaining slots from available items if not enough variety
+  for (const item of available) {
+    if (picks.length >= 3) break;
+    if (!picks.includes(item)) picks.push(item);
+  }
+
+  return picks.slice(0, 3).map(buildNextCard);
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const t = useT();
@@ -89,6 +134,8 @@ export default function App() {
   const [currentItem, setCurrentItem] = useState<ContentItem | null>(null);
   const [pendingAnswer, setPendingAnswer] = useState('');
   const [profileState, setProfileState] = useState<ProfileState>(getProfileState());
+  const [nextCards, setNextCards] = useState<NextCard[]>([]);
+  const [changedAxes, setChangedAxes] = useState<string[]>([]);
 
   // Living profile
   const [profileVector, setProfileVector] = useState<ProfileVector>(loadVector);
@@ -98,6 +145,9 @@ export default function App() {
   const [twinFeedEvents, setTwinFeedEvents] = useState<TwinFeedEvent[]>(getTwinFeedEvents);
   const [timeline, setTimeline] = useState<TimelineEvent[]>(getTimeline);
   const [newFragment, setNewFragment] = useState<ProfileFragment | null>(null);
+
+  // Undo state
+  const [canUndoAnswer, setCanUndoAnswer] = useState(false);
 
   // ─── Load CSV ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -148,21 +198,31 @@ export default function App() {
 
   async function handleStartTest() {
     if (!userProfile) return;
+
+    const isPremium = userProfile.premium_status === 'premium';
+    const freeTestsUsed = userProfile.free_profile_tests_used ?? 0;
+    if (!canContinueTest(freeTestsUsed, isPremium)) {
+      setScreen('premium-placeholder');
+      return;
+    }
+
     const seenIds = getSeenIds();
     const items = selectProfileTestContent(content, seenIds);
-    const tNum = (userProfile.free_profile_tests_used ?? 0) + 1;
+    const tNum = freeTestsUsed + 1;
 
     let sessionId: string | null = null;
     if (user) {
       sessionId = await createTestSession(user.id, tNum, items.map((i) => i.id));
     }
 
+    clearUndoStack();
     setTestContent(items);
     setTestAnswerIndex(0);
     setTestAnswers([]);
     setTestSessionId(sessionId);
     setTestNumber(tNum);
     setCurrentItem(items[0]);
+    setCanUndoAnswer(false);
 
     const ps = getProfileState();
     setProfileState(ps);
@@ -215,7 +275,12 @@ export default function App() {
     ps.profile_progress = calcProfileProgress(ps.total_profile_answers);
     ps.rarity_points += parseFloat(currentItem.rarity_score) || 0;
 
+    // Snapshot BEFORE applying deltas (for undo)
+    const vectorSnapshot = { ...profileVector };
+
     let updatedVec = profileVector;
+    const newChangedAxes: string[] = [];
+
     if (axisDeltas) {
       const isHidden = currentItem.profile_reveal_type?.toLowerCase().includes('hidden') ?? false;
       for (const [axis, delta] of Object.entries(axisDeltas)) {
@@ -228,24 +293,23 @@ export default function App() {
         }
       }
 
-      // Update profile vector
       const { next: newVec, changed } = applyDeltas(profileVector, axisDeltas);
       updatedVec = newVec;
       saveVector(newVec);
       setProfileVector(newVec);
+      newChangedAxes.push(...changed);
 
-      // Feed: top changed dimension
       if (changed.length > 0) {
         addFeedEvent({ type: 'dimension_up', label: changed[0] });
       }
     }
 
-    // Feed: rare signal
+    setChangedAxes(newChangedAxes);
+
     if (currentItem.rarity_tier !== 'standard') {
       addFeedEvent({ type: 'rare_signal', label: currentItem.rarity_tier });
     }
 
-    // Twin feed + timeline + fragment unlock
     const oldTwinScore = calcHumanTwinMatch(profileVector, ps.total_profile_answers - 1);
     const newTwinScore = calcHumanTwinMatch(updatedVec, ps.total_profile_answers);
     const twinChanged = checkAndAddTwinEvent(oldTwinScore, newTwinScore, currentItem.rarity_tier);
@@ -278,7 +342,6 @@ export default function App() {
     setTwinFeedEvents(getTwinFeedEvents());
     setTimeline(getTimeline());
     setProfileFragments(getFragments());
-
     setFeedEvents(getFeedEvents());
 
     saveProfileState(ps);
@@ -294,21 +357,38 @@ export default function App() {
       });
     }
 
+    // Push undo entry AFTER applying deltas, with BEFORE snapshot
+    const undoEntry: UndoEntry = {
+      contentId: currentItem.id,
+      selectedAnswer: answer,
+      axisDeltas,
+      profileVectorSnapshot: vectorSnapshot,
+      answerNumber: ps.total_profile_answers,
+      changeCount,
+      createdAt: new Date().toISOString(),
+    };
+    pushUndoEntry(undoEntry);
+    setCanUndoAnswer(canUndoFn());
+
     const newAnswers = [...testAnswers, testAnswer];
     setTestAnswers(newAnswers);
     setPendingAnswer(answer);
     setTestAnswerIndex(testAnswerIndex + 1);
+
+    // Pre-select next cards
+    const cards = pickNextCards(testContent, testAnswerIndex + 1);
+    setNextCards(cards);
+
     setScreen('reward');
   }
 
-  async function handleRewardNext(bias: ContentBias | null) {
+  async function handleRewardNext(card: NextCard | null) {
     setNewFragment(null);
     const nextIndex = testAnswerIndex;
 
-    // Handle card selection
-    if (bias?.label) {
-      setSelectedCard(bias.label);
-      addFeedEvent({ type: 'card_pick', label: bias.label });
+    if (card !== null) {
+      setSelectedCard(card.title);
+      addFeedEvent({ type: 'card_pick', label: card.title });
       setFeedEvents(getFeedEvents());
     } else {
       setSelectedCard(null);
@@ -317,12 +397,10 @@ export default function App() {
     if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
       let items = testContent;
 
-      if (bias && (bias.content_type || bias.rarity_tier)) {
+      if (card !== null) {
+        // Find the linked content item and try to swap it to next position
         const matchIdx = items.findIndex((item, idx) => {
-          if (idx <= nextIndex) return false;
-          const typeMatch = !bias.content_type || item.content_type === bias.content_type;
-          const rarityMatch = !bias.rarity_tier || item.rarity_tier === bias.rarity_tier;
-          return typeMatch && rarityMatch;
+          return idx > nextIndex && item.id === card.linkedContentId;
         });
 
         if (matchIdx > nextIndex) {
@@ -338,6 +416,40 @@ export default function App() {
     } else {
       await finishTest();
     }
+  }
+
+  function handleUndoAnswer() {
+    const entry = popUndoEntry();
+    if (!entry) return;
+
+    // Restore profile vector
+    saveVector(entry.profileVectorSnapshot);
+    setProfileVector({ ...entry.profileVectorSnapshot });
+
+    // Restore profile state
+    const ps = getProfileState();
+    ps.total_profile_answers = Math.max(0, ps.total_profile_answers - 1);
+    ps.interaction_count = Math.max(0, ps.interaction_count - 1);
+    ps.profile_progress = calcProfileProgress(ps.total_profile_answers);
+    saveProfileState(ps);
+    setProfileState({ ...ps });
+
+    // Remove seen id and last interaction
+    removeSeenId(entry.contentId);
+    removeLastInteraction();
+
+    // Reload living profile data
+    setTwinFeedEvents(getTwinFeedEvents());
+    setTimeline(getTimeline());
+    setProfileFragments(getFragments());
+    setFeedEvents(getFeedEvents());
+
+    // Go back to previous question
+    const prevIndex = Math.max(0, testAnswerIndex - 1);
+    setTestAnswerIndex(prevIndex);
+    setCurrentItem(testContent[prevIndex]);
+    setCanUndoAnswer(canUndoFn());
+    setScreen('profile-test');
   }
 
   async function finishTest() {
@@ -469,6 +581,8 @@ export default function App() {
           profileProgress={profileState.profile_progress}
           selectedCard={selectedCard}
           onAnswer={handleAnswer}
+          onUndo={handleUndoAnswer}
+          canUndo={canUndoAnswer}
         />
       )}
 
@@ -482,7 +596,12 @@ export default function App() {
           testTotal={TEST_TOTAL}
           totalProfileAnswers={profileState.total_profile_answers}
           newFragment={newFragment}
+          nextCards={nextCards}
+          profileVector={profileVector}
+          changedAxes={changedAxes}
           onNext={handleRewardNext}
+          onChangeAnswer={handleUndoAnswer}
+          canChangeAnswer={canUndoAnswer}
         />
       )}
 

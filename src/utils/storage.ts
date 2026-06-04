@@ -58,6 +58,19 @@ export function addSeenIds(ids: string[]): void {
   localStorage.setItem(KEYS.SEEN_IDS, JSON.stringify(seen));
 }
 
+export function removeSeenId(id: string): void {
+  const seen = getSeenIds().filter((s) => s !== id);
+  localStorage.setItem(KEYS.SEEN_IDS, JSON.stringify(seen));
+}
+
+export function removeLastInteraction(): void {
+  const interactions = getInteractions();
+  if (interactions.length > 0) {
+    interactions.pop();
+    localStorage.setItem(KEYS.INTERACTIONS, JSON.stringify(interactions));
+  }
+}
+
 export function getInteractions(): Interaction[] {
   try { return JSON.parse(localStorage.getItem(KEYS.INTERACTIONS) || '[]'); }
   catch { return []; }

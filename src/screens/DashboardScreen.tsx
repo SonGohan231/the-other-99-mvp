@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { UserProfile } from '../lib/supabase';
 import { ProfileVector, DIMENSIONS, getMaxValue } from '../utils/profileVector';
 import { FeedEvent } from '../utils/eventFeed';
@@ -6,7 +7,10 @@ import { TwinFeedEvent, getTwinStage } from '../utils/twinFeed';
 import { TimelineEvent } from '../utils/profileTimeline';
 import { computeHiddenProfile, isHiddenProfileUnlocked } from '../utils/hiddenProfile';
 import { calcProfileProgress } from '../utils/contentSelector';
+import { canContinueTest, getNextMilestone } from '../utils/premiumProgression';
+import { computeArchetypeMix, isArchetypeMixUnlocked } from '../utils/archetypes';
 import { useT, useLang } from '../context/LangContext';
+import ProfileRadarChart from '../components/ProfileRadarChart';
 
 interface Props {
   userProfile: UserProfile;
@@ -25,7 +29,6 @@ interface Props {
   onLogout: () => void;
 }
 
-const MAX_FREE_TESTS = 3;
 const ANSWERS_FOR_READ = 51;
 
 export default function DashboardScreen({
@@ -45,9 +48,11 @@ export default function DashboardScreen({
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
+  const [showRadarInSignalMap, setShowRadarInSignalMap] = useState(true);
   const { free_profile_tests_used, total_answers, premium_status } = userProfile;
   const isPremium = premium_status === 'premium';
-  const canStartTest = isPremium || free_profile_tests_used < MAX_FREE_TESTS;
+  const freeTestsUsed = free_profile_tests_used ?? 0;
+  const canStartTest = canContinueTest(freeTestsUsed, isPremium);
   const missingAnswers = Math.max(0, ANSWERS_FOR_READ - total_answers);
   const progress = calcProfileProgress(total_answers);
   const profileReady = total_answers >= ANSWERS_FOR_READ;
@@ -57,6 +62,11 @@ export default function DashboardScreen({
   const twinStage = getTwinStage(humanTwinMatch);
   const hiddenUnlocked = isHiddenProfileUnlocked(totalProfileAnswers);
   const hiddenProfileData = computeHiddenProfile(profileVector, totalProfileAnswers);
+
+  const archetypeMixUnlocked = isArchetypeMixUnlocked(totalProfileAnswers);
+  const archetypeMix = computeArchetypeMix(profileVector, totalProfileAnswers);
+
+  const nextMilestone = getNextMilestone(totalProfileAnswers);
 
   void lang;
 
@@ -97,6 +107,12 @@ export default function DashboardScreen({
           <div className="progress-bar-track">
             <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
           </div>
+          {/* Milestone hint */}
+          {nextMilestone && (
+            <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+              {t.premium.nextMilestone(nextMilestone.label, nextMilestone.answers)}
+            </p>
+          )}
         </div>
 
         {/* 1. Profile Reading */}
@@ -113,8 +129,8 @@ export default function DashboardScreen({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div className="dashboard-stat-row">
               <span className="label">{t.dashboard.freeTests}</span>
-              <span className="label" style={{ color: free_profile_tests_used >= MAX_FREE_TESTS ? 'var(--text-dim)' : 'var(--accent-light)' }}>
-                {MAX_FREE_TESTS - free_profile_tests_used}&nbsp;/&nbsp;{MAX_FREE_TESTS}
+              <span className="label" style={{ color: freeTestsUsed >= 3 ? 'var(--text-dim)' : 'var(--accent-light)' }}>
+                {Math.max(0, 3 - freeTestsUsed)}&nbsp;/&nbsp;3
               </span>
             </div>
             <div className="dashboard-stat-row">
@@ -133,10 +149,12 @@ export default function DashboardScreen({
             className="btn btn-primary"
             onClick={onStartTest}
             disabled={!canStartTest}
-            aria-label={t.dashboard.startTestLabel(free_profile_tests_used)}
+            aria-label={t.dashboard.startTestLabel(freeTestsUsed)}
             style={{ opacity: canStartTest ? 1 : 0.4 }}
           >
-            {canStartTest ? t.dashboard.startTestLabel(free_profile_tests_used) : t.dashboard.noFreeTests}
+            {canStartTest
+              ? (totalProfileAnswers > 0 ? t.premium.continueDiscovery : t.dashboard.startTestLabel(freeTestsUsed))
+              : t.dashboard.noFreeTests}
           </button>
 
           {!canStartTest && (
@@ -150,18 +168,43 @@ export default function DashboardScreen({
         <div className="card animate-in" style={{ animationDelay: '0.04s', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <h2 className="heading-md">{t.signalMap.title}</h2>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '1px' }}>
-                {t.humanTwin.label}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '1px' }}>
+                  {t.humanTwin.label}
+                </div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-light)', lineHeight: 1 }}>
+                  {humanTwinMatch}%
+                </div>
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-light)', lineHeight: 1 }}>
-                {humanTwinMatch}%
-              </div>
+              {hasVectorData && (
+                <button
+                  onClick={() => setShowRadarInSignalMap((v) => !v)}
+                  style={{
+                    fontSize: '0.62rem',
+                    color: 'var(--text-dim)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '2px 4px',
+                  }}
+                >
+                  {showRadarInSignalMap ? 'Show as list' : 'Show chart'}
+                </button>
+              )}
             </div>
           </div>
 
           {!hasVectorData ? (
             <p className="body-sm" style={{ fontStyle: 'italic' }}>{t.signalMap.empty}</p>
+          ) : showRadarInSignalMap ? (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <ProfileRadarChart
+                vector={profileVector}
+                size={200}
+                variant="full"
+              />
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
               {DIMENSIONS.map((dim) => {
@@ -293,7 +336,6 @@ export default function DashboardScreen({
                   <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-light)' }}>{value}</span>
                 </div>
               ))}
-              {/* Rarest signal */}
               <div style={{ padding: '8px 10px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '6px' }}>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px' }}>
                   {t.hiddenProfile.rarestSignal}
@@ -305,7 +347,6 @@ export default function DashboardScreen({
                   {t.hiddenProfile.onlyPercent(hiddenProfileData.rarestSignalPercent)}
                 </div>
               </div>
-              {/* Locked sections */}
               {hiddenProfileData.lockedSections.map((section) => (
                 <div key={section} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '4px', opacity: 0.5 }}>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{section}</span>
@@ -318,8 +359,35 @@ export default function DashboardScreen({
           )}
         </div>
 
-        {/* 6. Discovery Timeline card */}
+        {/* 6. Archetype Mix card */}
         <div className="card animate-in" style={{ animationDelay: '0.2s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <h2 className="heading-md">{t.archetypes.title}</h2>
+            {archetypeMixUnlocked && (
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)' }}>
+                {t.archetypes.confidence}: {archetypeMix.confidence}%
+              </span>
+            )}
+          </div>
+          {!archetypeMixUnlocked ? (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+              {t.archetypes.forming(Math.max(0, 100 - totalProfileAnswers))}
+            </p>
+          ) : (
+            archetypeMix.mix.slice(0, 3).map((arch) => (
+              <div key={arch.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={{ width: '90px', fontSize: '0.75rem', color: 'var(--text)' }}>{arch.name}</span>
+                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${arch.pct}%`, background: arch.color, transition: 'width 0.6s ease', borderRadius: '2px' }} />
+                </div>
+                <span style={{ width: '32px', fontSize: '0.65rem', color: 'var(--text-dim)', textAlign: 'right' }}>{arch.pct}%</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* 7. Discovery Timeline card */}
+        <div className="card animate-in" style={{ animationDelay: '0.24s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <h2 className="heading-md">{t.timeline.title}</h2>
           {timeline.length === 0 ? (
             <p style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'var(--text-dim)' }}>
@@ -348,8 +416,8 @@ export default function DashboardScreen({
           )}
         </div>
 
-        {/* 7. Truth or Dare */}
-        <div className="card animate-in" style={{ animationDelay: '0.24s', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.55 }}>
+        {/* 8. Truth or Dare */}
+        <div className="card animate-in" style={{ animationDelay: '0.28s', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.55 }}>
           <div>
             <h2 className="heading-md" style={{ marginBottom: '3px' }}>{t.dashboard.truthOrDare}</h2>
             <p className="body-sm">{t.dashboard.truthOrDareSubtitle}</p>
@@ -366,8 +434,8 @@ export default function DashboardScreen({
           </button>
         </div>
 
-        {/* 8. My Profile */}
-        <div className="card animate-in" style={{ animationDelay: '0.28s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* 9. My Profile */}
+        <div className="card animate-in" style={{ animationDelay: '0.32s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <h2 className="heading-md">{t.dashboard.myProfile}</h2>
           {missingAnswers > 0 ? (
             <>
@@ -397,8 +465,8 @@ export default function DashboardScreen({
           </button>
         </div>
 
-        {/* 9. Settings */}
-        <div className="card animate-in" style={{ animationDelay: '0.32s', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* 10. Settings */}
+        <div className="card animate-in" style={{ animationDelay: '0.36s', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h2 className="heading-md" style={{ marginBottom: '4px' }}>{t.dashboard.settings}</h2>
 
           {/* Language switcher */}

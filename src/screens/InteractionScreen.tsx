@@ -11,11 +11,13 @@ interface Props {
   profileProgress: number;
   selectedCard?: string | null;
   onAnswer: (answer: string, responseTimeMs: number, changeCount: number) => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
 }
 
 type Phase = 'question' | 'community';
 
-export default function InteractionScreen({ item, testIndex, testTotal, profileProgress, selectedCard, onAnswer }: Props) {
+export default function InteractionScreen({ item, testIndex, testTotal, profileProgress, selectedCard, onAnswer, onUndo, canUndo }: Props) {
   const t = useT();
   const [lang] = useLang();
   const [selected, setSelected] = useState<string | null>(null);
@@ -83,7 +85,28 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
   }
 
   return (
-    <div className="interaction-screen">
+    <div className="interaction-screen" style={{ position: 'relative' }}>
+      {/* Back / Undo button */}
+      {canUndo && onUndo && (
+        <button
+          onClick={onUndo}
+          style={{
+            position: 'absolute',
+            top: '12px',
+            left: '12px',
+            fontSize: '0.72rem',
+            color: 'var(--text-dim)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            zIndex: 10,
+          }}
+          aria-label="Go back to previous question"
+        >
+          ← Back
+        </button>
+      )}
       {/* Status bar */}
       <div className="status-bar" role="status" aria-label={`${t.interaction.questionOf(questionNum, testTotal)}. ${t.interaction.profileDiscovered} ${profileProgress.toFixed(1)}%`}>
         <div className="status-bar-left">

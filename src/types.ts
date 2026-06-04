@@ -1,6 +1,20 @@
 export type ContentType = 'question' | 'secret' | 'dare' | 'game' | 'riddle';
 export type RarityTier = 'standard' | 'rare' | 'epic' | 'legendary';
 
+export type CardPath =
+  | 'Social Mirror'
+  | 'Shadow Question'
+  | 'Control Gate'
+  | 'Risk Gate'
+  | 'Future Self'
+  | 'Memory Trace'
+  | 'Moral Dilemma'
+  | 'Pattern Break'
+  | 'Secret Human'
+  | 'Object Choice'
+  | 'Hidden Contradiction'
+  | 'Threshold Card';
+
 export interface ContentItem {
   id: string;
   version: string;
@@ -35,6 +49,8 @@ export interface ContentItem {
   reward_en?: string;
   profile_fragment_en?: string;
   archetype_hint_en?: string;
+  card_path?: string;
+  theme_category?: string;
   community_stat_seed_json: string;
   reward_sequence_json: string;
   sample_reward_screen_pl: string;
@@ -90,6 +106,17 @@ export interface ContentBias {
   content_type?: ContentType;
   rarity_tier?: RarityTier;
   label?: string;
+}
+
+export interface NextCard {
+  id: string;
+  linkedContentId: string;
+  contentType: ContentType;
+  rarityTier: RarityTier;
+  cardPath: CardPath;
+  themeCategory: string;
+  title: string;
+  subtitle: string;
 }
 
 export interface RewardBlock {
