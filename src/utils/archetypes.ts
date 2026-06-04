@@ -20,16 +20,16 @@ export type HiddenAxisId =
 export type ArchetypeId =
   | 'explorer'
   | 'architect'
-  | 'creator'
-  | 'builder'
-  | 'guardian'
-  | 'sage'
-  | 'visionary'
-  | 'adventurer'
-  | 'naturalist'
-  | 'technologist'
   | 'rebel'
-  | 'harmonizer';
+  | 'guardian'
+  | 'mirror'
+  | 'strategist'
+  | 'seeker'
+  | 'anchor'
+  | 'catalyst'
+  | 'observer'
+  | 'alchemist'
+  | 'pathfinder';
 
 export interface ArchetypeDefinition {
   id: ArchetypeId;
@@ -57,7 +57,7 @@ export interface ArchetypeMix {
 export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
   explorer: {
     id: 'explorer',
-    name: 'Explorer',
+    name: 'The Explorer',
     shortName: 'Explorer',
     symbol: '◎',
     color: '#60a5fa',
@@ -88,7 +88,7 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
   },
   architect: {
     id: 'architect',
-    name: 'Architect',
+    name: 'The Architect',
     shortName: 'Architect',
     symbol: '⬡',
     color: '#a78bfa',
@@ -117,10 +117,10 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     workPattern: 'Meticulous, long-horizon planning.',
     rarityBias: 0.35,
   },
-  creator: {
-    id: 'creator',
-    name: 'Creator',
-    shortName: 'Creator',
+  alchemist: {
+    id: 'alchemist',
+    name: 'The Alchemist',
+    shortName: 'Alchemist',
     symbol: '✦',
     color: '#f472b6',
     axisSignature: {
@@ -140,18 +140,18 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       openness_guardedness: 50,
       consistency_contradiction: -50,
     },
-    coreDrive: 'Expression and originality.',
-    strength: 'Makes something from nothing.',
-    shadow: 'Perfectionism that prevents finishing.',
-    underPressure: 'Creates to process — sometimes obsessively.',
+    coreDrive: 'Transform raw material into something new.',
+    strength: 'Creative synthesis.',
+    shadow: 'Confuses transformation with destruction.',
+    underPressure: 'Becomes scattered.',
     relationshipPattern: 'Deep connection through shared creative vision.',
     workPattern: 'Bursts of intense focus, fallow periods.',
     rarityBias: 0.3,
   },
-  builder: {
-    id: 'builder',
-    name: 'Builder',
-    shortName: 'Builder',
+  pathfinder: {
+    id: 'pathfinder',
+    name: 'The Pathfinder',
+    shortName: 'Pathfinder',
     symbol: '▣',
     color: '#34d399',
     axisSignature: {
@@ -171,17 +171,17 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       openness_guardedness: -30,
       consistency_contradiction: 60,
     },
-    coreDrive: 'Tangible results.',
-    strength: 'Turns ideas into concrete reality.',
-    shadow: 'Can miss the bigger picture.',
-    underPressure: 'Focuses on execution, avoids reflection.',
+    coreDrive: 'Build lasting, reliable structures.',
+    strength: 'Practicality and execution.',
+    shadow: 'Confuses stability with stagnation.',
+    underPressure: 'Becomes rigid.',
     relationshipPattern: 'Loyal, dependable, sometimes rigid.',
     workPattern: 'Steady progress, strong follow-through.',
     rarityBias: 0.45,
   },
   guardian: {
     id: 'guardian',
-    name: 'Guardian',
+    name: 'The Guardian',
     shortName: 'Guardian',
     symbol: '◈',
     color: '#fbbf24',
@@ -210,10 +210,10 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     workPattern: 'Consistent, thorough, institutional.',
     rarityBias: 0.5,
   },
-  sage: {
-    id: 'sage',
-    name: 'Sage',
-    shortName: 'Sage',
+  observer: {
+    id: 'observer',
+    name: 'The Observer',
+    shortName: 'Observer',
     symbol: '◉',
     color: '#67e8f9',
     axisSignature: {
@@ -233,18 +233,18 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       openness_guardedness: 20,
       consistency_contradiction: 40,
     },
-    coreDrive: 'Understanding and insight.',
-    strength: 'Sees patterns others miss.',
-    shadow: 'Can intellectualize to avoid feeling.',
-    underPressure: 'Retreats into analysis.',
+    coreDrive: 'Understand deeply before acting.',
+    strength: 'Insight and depth.',
+    shadow: 'Watches without ever fully entering.',
+    underPressure: 'Becomes detached.',
     relationshipPattern: 'Valued for wisdom, sometimes emotionally distant.',
     workPattern: 'Deep research, careful synthesis.',
     rarityBias: 0.25,
   },
-  visionary: {
-    id: 'visionary',
-    name: 'Visionary',
-    shortName: 'Visionary',
+  seeker: {
+    id: 'seeker',
+    name: 'The Seeker',
+    shortName: 'Seeker',
     symbol: '◬',
     color: '#c084fc',
     axisSignature: {
@@ -264,18 +264,18 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       openness_guardedness: 40,
       consistency_contradiction: -60,
     },
-    coreDrive: 'Transforming the possible.',
-    strength: 'Sees what doesn\'t exist yet.',
-    shadow: 'Impatience with the present.',
-    underPressure: 'Leaps to new visions rather than executing.',
+    coreDrive: 'Discover meaning and future possibility.',
+    strength: 'Vision and inspiration.',
+    shadow: 'Lives in imagination more than action.',
+    underPressure: 'Becomes unrealistic.',
     relationshipPattern: 'Inspiring, sometimes elusive.',
     workPattern: 'Big-picture orientation, needs implementers.',
     rarityBias: 0.2,
   },
-  adventurer: {
-    id: 'adventurer',
-    name: 'Adventurer',
-    shortName: 'Adventurer',
+  catalyst: {
+    id: 'catalyst',
+    name: 'The Catalyst',
+    shortName: 'Catalyst',
     symbol: '▲',
     color: '#fb923c',
     axisSignature: {
@@ -295,18 +295,18 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       openness_guardedness: 50,
       consistency_contradiction: -40,
     },
-    coreDrive: 'Experience and sensation.',
-    strength: 'Lives fully in the moment.',
-    shadow: 'Avoids depth and commitment.',
-    underPressure: 'Seeks new stimulation to escape.',
+    coreDrive: 'Initiate change and ignite movement.',
+    strength: 'Energy and initiation.',
+    shadow: 'Starts without finishing.',
+    underPressure: 'Becomes chaotic.',
     relationshipPattern: 'Magnetic but unpredictable.',
     workPattern: 'High-energy starts, struggles with maintenance.',
     rarityBias: 0.35,
   },
-  naturalist: {
-    id: 'naturalist',
-    name: 'Naturalist',
-    shortName: 'Naturalist',
+  mirror: {
+    id: 'mirror',
+    name: 'The Mirror',
+    shortName: 'Mirror',
     symbol: '◌',
     color: '#4ade80',
     axisSignature: {
@@ -326,18 +326,18 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       openness_guardedness: 30,
       consistency_contradiction: 40,
     },
-    coreDrive: 'Harmony with what exists.',
-    strength: 'Deeply attuned to patterns in nature and people.',
-    shadow: 'Can resist progress as disruption.',
-    underPressure: 'Returns to physical or natural environments.',
+    coreDrive: 'Reflect and understand others at depth.',
+    strength: 'Empathy and perspective.',
+    shadow: 'Losing self in others.',
+    underPressure: 'Becomes undefined without external reference.',
     relationshipPattern: 'Patient, grounded, non-confrontational.',
     workPattern: 'Observational, holistic, environmental.',
     rarityBias: 0.3,
   },
-  technologist: {
-    id: 'technologist',
-    name: 'Technologist',
-    shortName: 'Technologist',
+  strategist: {
+    id: 'strategist',
+    name: 'The Strategist',
+    shortName: 'Strategist',
     symbol: '⬢',
     color: '#38bdf8',
     axisSignature: {
@@ -357,17 +357,17 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       openness_guardedness: -20,
       consistency_contradiction: 50,
     },
-    coreDrive: 'Optimization through systems.',
-    strength: 'Bridges human need and technical solution.',
-    shadow: 'Dehumanizes problems.',
-    underPressure: 'Falls back on data and logic.',
+    coreDrive: 'Optimize systems and outcomes.',
+    strength: 'Clarity and strategic thinking.',
+    shadow: 'Optimizes at the cost of relationship.',
+    underPressure: 'Becomes cold and mechanical.',
     relationshipPattern: 'Efficient, logical, sometimes cold.',
     workPattern: 'Iterative, data-driven, scalable.',
     rarityBias: 0.3,
   },
   rebel: {
     id: 'rebel',
-    name: 'Rebel',
+    name: 'The Rebel',
     shortName: 'Rebel',
     symbol: '✕',
     color: '#f87171',
@@ -396,10 +396,10 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     workPattern: 'Disruptive, iconoclastic, short-tenured.',
     rarityBias: 0.2,
   },
-  harmonizer: {
-    id: 'harmonizer',
-    name: 'Harmonizer',
-    shortName: 'Harmonizer',
+  anchor: {
+    id: 'anchor',
+    name: 'The Anchor',
+    shortName: 'Anchor',
     symbol: '◎',
     color: '#86efac',
     axisSignature: {
@@ -419,10 +419,10 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       openness_guardedness: 40,
       consistency_contradiction: 30,
     },
-    coreDrive: 'Keeping people together.',
-    strength: 'Navigates complex social dynamics with ease.',
-    shadow: 'Loses self in others\' needs.',
-    underPressure: 'Appeases rather than addresses.',
+    coreDrive: 'Create harmony and hold the group together.',
+    strength: 'Stability and cohesion.',
+    shadow: 'Sacrifices own needs for group harmony.',
+    underPressure: 'Becomes accommodating to the point of disappearing.',
     relationshipPattern: 'Deeply invested, sometimes self-effacing.',
     workPattern: 'Collaborative, mediating, team-oriented.',
     rarityBias: 0.45,

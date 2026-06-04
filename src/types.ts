@@ -51,6 +51,7 @@ export interface ContentItem {
   archetype_hint_en?: string;
   card_path?: string;
   theme_category?: string;
+  access_tier?: 'free' | 'premium';
   community_stat_seed_json: string;
   reward_sequence_json: string;
   sample_reward_screen_pl: string;
@@ -100,7 +101,10 @@ export type AppScreen =
   | 'test-summary'
   | 'truth-or-dare'
   | 'my-profile'
-  | 'premium-placeholder';
+  | 'premium-placeholder'
+  | 'profile-snapshot'
+  | 'full-profile'
+  | 'hidden-parameters';
 
 export interface ContentBias {
   content_type?: ContentType;
