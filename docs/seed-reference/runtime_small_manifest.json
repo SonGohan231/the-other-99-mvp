@@ -1,0 +1,17 @@
+{
+  "name": "The Other 99 Semantic Seed Database v3 Runtime Small",
+  "created_from": "the_other_99_SEMANTIC_SEED_DATABASE_v3_SOCIETY_PROJECTED",
+  "default_scenario": "early_app_userbase_projected",
+  "included_rows": {
+    "default_percentages": 500,
+    "all_scenarios": 1500
+  },
+  "excluded": [
+    "600k raw votes",
+    "27k synthetic population",
+    "27k synthetic user profiles"
+  ],
+  "runtime_purpose": "projected percentage baseline only",
+  "requires_mapping_to_real_content_id": true,
+  "seed_label": "Projected distribution"
+}

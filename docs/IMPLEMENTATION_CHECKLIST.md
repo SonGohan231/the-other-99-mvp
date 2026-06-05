@@ -441,3 +441,49 @@ Seed package status:
 - content_id_mapping_REQUIRED.csv: all 300 rows NEEDS_REAL_CONTENT_ID
 - Seed import: BLOCKED until mapping populated
 - Active seed baseline: hash-based (communityVotes.ts)
+
+---
+
+## Phase E — V3 Society-Projected Semantic Baseline
+
+### Summary
+
+Replaced old hash-based seed distribution with the V3 Society-Projected Semantic Baseline (early_app_userbase_projected scenario). The runtime uses theme-based mapping to assign v3 projected percentages to real content items.
+
+**Mapping status: THEME_BASED (807/865 items mapped; 58 open-text items correctly excluded)**
+
+### V3 Runtime Checklist
+
+| ID | Item | Status |
+|----|------|--------|
+| V3-RUNTIME-001 | Old random seed runtime (hash-based) is no longer the primary source | IMPLEMENTED — hash is fallback only if v3 lookup fails |
+| V3-RUNTIME-002 | Small v3 runtime package added to repo | VERIFIED — public/seed/semantic-v3/runtime_seed.json (87 KB); docs/seed-reference/ |
+| V3-RUNTIME-003 | Default scenario is early_app_userbase_projected | VERIFIED — runtime_seed.json generated from this scenario |
+| V3-RUNTIME-004 | Runtime JSON is loaded lazily on first access | IMPLEMENTED — fetch('/seed/semantic-v3/runtime_seed.json') pre-fetched on module load |
+| V3-RUNTIME-005 | semantic_content_id mapped to real app content_id | PARTIAL — THEME_BASED mapping (not item-level); 807/865 real IDs have v3 distributions |
+| V3-RUNTIME-006 | Unmapped / open-text items are skipped | VERIFIED — 58 open-type items excluded; hash fallback for any miss |
+| V3-RUNTIME-007 | Projected distribution label used for seed-only data | VERIFIED — realVotes < 30 → "Projected distribution" |
+| V3-RUNTIME-008 | Every answer saves/updates real vote | VERIFIED — submitVote persists real votes in localStorage |
+| V3-RUNTIME-009 | Real votes combine with projected baseline | VERIFIED — VoteStore.byAnswer tracks seed+real per option |
+| V3-RUNTIME-010 | DebugPanel shows distribution source and mapping state | VERIFIED — seedSource (v3/hash), isMapped, semanticId, semanticTheme, scenarioId |
+| V3-RUNTIME-011 | Build passes | VERIFIED — npm run build ✓ |
+| V3-RUNTIME-012 | validate:content passes | VERIFIED — npm run validate:content ✓ (865 IDs) |
+
+### Mapping notes
+
+Theme-based mapping: each real content item's Polish/English category is mapped to one of 20 semantic themes (e.g. `relacje` → `belonging_autonomy`). Items within each category are assigned round-robin to semantic items in their theme pool. This ensures representative projected distributions without requiring human-curated question-level mapping.
+
+Semantic ID mapping file (`content_id_mapping_to_real_app_REQUIRED.csv`) still has all 500 entries as `NEEDS_REAL_CONTENT_ID` — this is the item-level mapping for future manual curation. The theme-based runtime works independently.
+
+To improve mapping fidelity: edit `content_id_mapping_to_real_app_REQUIRED.csv` with actual semantic→real question matches, then re-run the generation script.
+
+### Files added/changed
+
+- `public/seed/semantic-v3/runtime_seed.json` — NEW: 807-item theme-mapped v3 distributions (87 KB)
+- `public/seed/semantic-v3/content_id_mapping_to_real_app_REQUIRED.csv` — NEW: blank item-level mapping (for future manual curation)
+- `docs/seed-reference/` — NEW: 8 reference files (archetype_definitions_v3.csv, axis_distribution_summary_v3.csv, calibration_targets_v3.csv, community_votes_semantic_v3_schema_template.sql, semantic_content_vectors_v3_500.csv, projected_percentages_early_app_userbase.json, projected_percentages_by_scenario_compact.json, README_RUNTIME_SMALL.txt, runtime_small_manifest.json, CLAUDE_RUNTIME_SMALL_IMPORT_PROMPT.txt)
+- `src/utils/communityVotes.ts` — MODIFIED: V3SeedItem/V3RuntimeSeed types; loadV3Seed() fetch; computeSeedCounts() uses v3 when available, hash as fallback; VoteResult+VoteDebugInfo extended with seedSource/semanticId/semanticTheme/scenarioId/isMapped
+- `src/screens/DebugPanel.tsx` — MODIFIED: Community Votes section shows seedSource, isMapped, semanticId, semanticTheme, scenarioId
+
+**Date:** 2026-06-05
+**Status:** IMPLEMENTED (theme-based mapping active; item-level mapping PARTIAL — blank, for future curation)
