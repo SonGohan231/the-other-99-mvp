@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import {
   AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, NextCard, BehavioralMetadata,
@@ -140,6 +140,11 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Tracks whether an in-progress test was restored on load (prevents initial-screen effect from overriding it)
+  const restoredInProgressRef = useRef(false);
+  // Tracks whether the current question was restored from an interrupted session
+  const [wasRestoredFromInterrupt, setWasRestoredFromInterrupt] = useState(false);
+
   // Active test state
   const [testContent, setTestContent] = useState<ContentItem[]>([]);
   const [testAnswerIndex, setTestAnswerIndex] = useState(0);
@@ -246,10 +251,12 @@ export default function App() {
                   ? restoredContent.find((i) => i.id === saved.currentItemId) ?? null
                   : null;
                 if (itemToRestore) {
+                  restoredInProgressRef.current = true;
                   setCurrentItem(itemToRestore);
                   if (saved.pendingAnswer && saved.testAnswerIndex > 0) {
                     setScreen('reward');
                   } else {
+                    setWasRestoredFromInterrupt(true);
                     setScreen('profile-test');
                   }
                 }
@@ -308,6 +315,7 @@ export default function App() {
   // ─── Determine initial screen ────────────────────────────────────────────────────────
   useEffect(() => {
     if (loading || authLoading) return;
+    if (restoredInProgressRef.current) return; // in-progress test restored — don't redirect to dashboard
     if (isTestMode || isGuestMode) {
       if (!isAgeConfirmed()) { setScreen('age-gate'); return; }
       setScreen('dashboard');
@@ -381,10 +389,12 @@ export default function App() {
       changeCount,
       wasSkipped: false,
       wasUndone: false,
+      wasReturned: wasRestoredFromInterrupt,
       axisDeltas,
       profileVector,
       contentProfile,
     });
+    if (wasRestoredFromInterrupt) setWasRestoredFromInterrupt(false);
     setLastBehavioralMetadata(behavioralMeta);
 
     const testAnswer: TestAnswer = {
