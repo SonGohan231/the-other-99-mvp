@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ContentItem } from '../types';
 import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField } from '../i18n';
-import { registerVote } from '../utils/communityStats';
+import { submitVote, VoteResult, getDistributionLabel } from '../utils/communityVotes';
 
 interface Props {
   item: ContentItem;
@@ -10,6 +10,7 @@ interface Props {
   testTotal: number;
   profileProgress: number;
   selectedCard?: string | null;
+  userId?: string | null;
   onAnswer: (answer: string, responseTimeMs: number, changeCount: number, firstReactionMs: number | null) => void;
   onUndo?: () => void;
   canUndo?: boolean;
@@ -17,13 +18,13 @@ interface Props {
 
 type Phase = 'question' | 'community';
 
-export default function InteractionScreen({ item, testIndex, testTotal, profileProgress: _profileProgress, selectedCard, onAnswer, onUndo, canUndo }: Props) {
+export default function InteractionScreen({ item, testIndex, testTotal, profileProgress: _profileProgress, selectedCard, userId, onAnswer, onUndo, canUndo }: Props) {
   const t = useT();
   const [lang] = useLang();
   const [selected, setSelected] = useState<string | null>(null);
   const [changeCount, setChangeCount] = useState(0);
   const [phase, setPhase] = useState<Phase>('question');
-  const [communityPercs, setCommunityPercs] = useState<{ option: string; pct: number }[]>([]);
+  const [voteResult, setVoteResult] = useState<VoteResult | null>(null);
   const [barsVisible, setBarsVisible] = useState(false);
   const startTimeRef = useRef<number>(Date.now());
   const answerTimeRef = useRef<number>(0);
@@ -35,7 +36,7 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
     setSelected(null);
     setChangeCount(0);
     setPhase('question');
-    setCommunityPercs([]);
+    setVoteResult(null);
     setBarsVisible(false);
     firstReactionRef.current = null;
   }, [item.id]);
@@ -58,15 +59,11 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
     answerTimeRef.current = Date.now() - startTimeRef.current;
     changeCountRef.current = changeCount;
 
-    // Register vote and compute percentages BEFORE showing community
-    const updatedVotes = registerVote(item.id, selected, answers);
-    const total = Math.max(1, Object.values(updatedVotes).reduce((a, b) => a + b, 0));
-    const percs = answers.map((o) => ({ option: o, pct: Math.round(((updatedVotes[o] ?? 0) / total) * 100) }));
-    setCommunityPercs(percs);
+    // Submit vote and get updated distribution BEFORE showing community phase
+    const result = submitVote(item.id, selected, answers, userId ?? null);
+    setVoteResult(result);
 
     setPhase('community');
-
-    // Animate bars in after 600ms
     setTimeout(() => setBarsVisible(true), 600);
   }
 
@@ -79,7 +76,11 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
   const rarityLabel = t.interaction.rarityLabel[item.rarity_tier] ?? item.rarity_tier;
   const typeLabel = t.interaction.typeLabel[item.content_type] ?? item.content_type;
 
-  // Community copy
+  const communityPercs = voteResult?.percs ?? [];
+  const distributionLabel = voteResult
+    ? voteResult.distributionLabel
+    : getDistributionLabel(0);
+
   function getCommunityMicrocopy(): string {
     if (!selected || communityPercs.length === 0) return t.interaction.communityShifted;
     const selectedPct = communityPercs.find((p) => p.option === selected)?.pct ?? 0;
@@ -112,6 +113,7 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
           ← Back
         </button>
       )}
+
       {/* Status bar */}
       <div className="status-bar" role="status" aria-label={`${t.interaction.questionOf(questionNum, testTotal)}`}>
         <div className="status-bar-left">
@@ -194,8 +196,9 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
         {/* Community phase */}
         {phase === 'community' && (
           <div className="animate-in" style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Distribution label */}
             <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-dim)', textAlign: 'center' }}>
-              {t.interaction.communityTitle}
+              {distributionLabel}
             </p>
 
             {/* Bars */}
@@ -237,7 +240,7 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
               </p>
             )}
 
-            {barsVisible && (
+            {barsVisible && (voteResult?.realVotes ?? 0) < 30 && (
               <p style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic', opacity: 0.6 }}>
                 {t.interaction.communityDisclaimer ?? 'Projected estimate — not yet real user data'}
               </p>
