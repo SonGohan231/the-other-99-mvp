@@ -78,7 +78,13 @@ export default function AuthScreen({ onTestMode, onGuest }: Props) {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
-        setGoogleError(error === 'Supabase not configured' ? t.auth.googleNotConfigured : error);
+        if (error === 'Supabase not configured') {
+          setGoogleError(t.auth.googleNotConfigured);
+        } else if (error.toLowerCase().includes('provider') || error.toLowerCase().includes('not enabled')) {
+          setGoogleError(t.auth.googleProviderDisabled);
+        } else {
+          setGoogleError(error);
+        }
       }
     } catch (err) {
       setGoogleError(err instanceof Error ? err.message : t.auth.genericError);
