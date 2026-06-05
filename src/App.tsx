@@ -60,6 +60,7 @@ import TestSummaryScreen from './screens/TestSummaryScreen';
 import TruthOrDareScreen from './screens/TruthOrDareScreen';
 import TestIntroScreen from './screens/TestIntroScreen';
 import PremiumPlaceholder from './screens/PremiumPlaceholder';
+import ArchetypeMixScreen from './screens/ArchetypeMixScreen';
 import DebugPanel from './screens/DebugPanel';
 
 const TEST_TOTAL = 17;
@@ -824,6 +825,15 @@ export default function App() {
           onHiddenParams={() => setScreen('hidden-parameters')}
           onAccount={() => setScreen('account')}
           onPremiumDepth={() => setScreen('premium-depth')}
+          onArchetypes={() => setScreen('archetypes')}
+        />
+      )}
+
+      {screen === 'archetypes' && (
+        <ArchetypeMixScreen
+          profileVector={profileVector}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
         />
       )}
 
