@@ -11,14 +11,14 @@ interface Props {
 }
 
 const AXIS_LABELS: Record<string, { mini: string; full: string }> = {
-  control:      { mini: 'CTL',  full: 'Control'   },
-  security:     { mini: 'SEC',  full: 'Security'  },
-  risk:         { mini: 'RSK',  full: 'Risk'       },
-  emotion:      { mini: 'EMO',  full: 'Emotion'   },
-  change:       { mini: 'CHG',  full: 'Change'    },
-  independence: { mini: 'IND',  full: 'Independ.' },
-  connection:   { mini: 'CON',  full: 'Connect.'  },
-  curiosity:    { mini: 'CUR',  full: 'Curiosity' },
+  control:      { mini: 'Control',   full: 'Control'      },
+  security:     { mini: 'Security',  full: 'Security'     },
+  risk:         { mini: 'Risk',      full: 'Risk'         },
+  emotion:      { mini: 'Emotion',   full: 'Emotion'      },
+  change:       { mini: 'Change',    full: 'Change'       },
+  independence: { mini: 'Indep.',    full: 'Independence' },
+  connection:   { mini: 'Connect.',  full: 'Connection'   },
+  curiosity:    { mini: 'Curiosity', full: 'Curiosity'    },
 };
 
 const MAX_VALUE = 20;
@@ -37,7 +37,7 @@ export default function ProfileRadarChart({
   const cy = size / 2;
   const outerR = size * 0.38;
   const labelR = size * 0.47;
-  const fontSize = variant === 'mini' ? size * 0.07 : size * 0.065;
+  const fontSize = variant === 'mini' ? size * 0.055 : size * 0.065;
 
   const hasData = dims.some((d) => vector[d as keyof ProfileVector] > 0);
 

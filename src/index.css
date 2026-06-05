@@ -3,8 +3,8 @@
   --bg-card: #111118;
   --bg-elevated: #1a1a24;
   --text: #e8e4dc;
-  --text-muted: #7a7585;
-  --text-dim: #4a4555;
+  --text-muted: #8a8494;
+  --text-dim: #605a6e;
   --accent: #7c3aed;
   --accent-light: #a855f7;
   --accent-glow: rgba(124, 58, 237, 0.25);
@@ -909,5 +909,22 @@ body {
   color: var(--accent-light);
   width: 100%;
   white-space: pre;
+}
+
+/* ─── Reduced motion ─────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Safe area support for debug toggle ─────── */
+
+.debug-toggle {
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: calc(8px + env(safe-area-inset-left, 0px));
 }
 
