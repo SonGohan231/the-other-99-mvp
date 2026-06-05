@@ -51,15 +51,15 @@ import TestIntroScreen from './screens/TestIntroScreen';
 import PremiumPlaceholder from './screens/PremiumPlaceholder';
 import DebugPanel from './screens/DebugPanel';
 
+// ─── Local test mode auth bypass ─────────────────────────────────────────────
+
 const TEST_TOTAL = 17;
 
-// ─── Local test mode auth bypass ─────────────────────────────────────────────
 const TEST_USER_ID = 'local-test-user';
 
-const isTestModeRequested = () =>
-  new URLSearchParams(window.location.search).get('test') === '1' ||
-  new URLSearchParams(window.location.search).get('debug') === '1' ||
-  localStorage.getItem('to99_test_session') === 'true';
+const isTestModeRequested = () => {
+  return window.location.search.includes('testMode=true');
+};
 
 const enableTestMode = () => {
   localStorage.setItem('to99_test_session', 'true');
@@ -76,7 +76,9 @@ const disableTestMode = () => {
 const TEST_USER = {
   id: TEST_USER_ID,
   email: 'test@theother99.local',
-  user_metadata: { full_name: 'Local Test User' },
+  user_metadata: {
+    full_name: 'Local Test User',
+  },
 } as unknown as User;
 
 const TEST_PROFILE = {
@@ -88,45 +90,7 @@ const TEST_PROFILE = {
   premium_status: 'premium',
 } as UserProfile;
 
-import isLocalTestUser = (u: User | null) => u?.id === TEST_USER_ID;
-
-
-// ─── Config error screen ──────────────────────────────────────────────────────
-function SupabaseConfigError() {
-  const t = useT();
-  return (
-    <div className="screen-centered" style={{ background: 'var(--bg)' }}>
-      <div className="config-error-inner animate-in">
-        <div style={{ padding: '4px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#f87171' }}>
-          {t.configError.badge}
-        </div>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>
-          {t.configError.title}
-        </h1>
-        <p className="body-sm">
-          {t.configError.instruction} <code style={{ color: 'var(--accent-light)' }}>.env.local</code>:
-        </p>
-        <pre className="config-error-code">{`VITE_SUPABASE_URL=https://xxx.supabase.co\nVITE_SUPABASE_PUBLISHABLE_KEY=eyJ...`}</pre>
-        <p className="body-sm">
-          {t.configError.afterNote} <code style={{ color: 'var(--accent-light)' }}>{t.configError.devCmd}</code>.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Helper: build NextCard from ContentItem ──────────────────────────────────
-function buildNextCard(item: ContentItem): NextCard {
-  const cp = deriveCardPath(item);
-  const def = CARD_PATH_DEFINITIONS.find((d) => d.path === cp) ?? CARD_PATH_DEFINITIONS[0];
-  return {
-    id: `nc_${item.id}_${Date.now()}`,
-    linkedContentId: item.id,
-    contentType: item.content_type,
-    rarityTier: item.rarity_tier,
-    cardPath: cp,
-    themeCategory: deriveThemeCategory(item),
-    title: def.displayLabel,
+const isLocalTestUser = (u: User | null) => u?.id === TEST_USER_ID;gorytitle: def.displayLabel,
     subtitle: def.displaySubtitle,
   };
 }
@@ -192,18 +156,15 @@ export default function App() {
   const [newFragment, setNewFragment] = useState<ProfileFragment | null>(null);
 
   // Undo state
-  const [canUndoAnswer, setCanUndoAnswer] = useState(false);
-
-  // Test mode
+  const [canUndoAnswer, setCanUndoAnswer] = useState(falTestest mode
+  // Test mode 
   const [isTestMode] = useState<boolean>(() => {
-    if (isTestModeRequested()) {
-      enableTestSession();
-      return true;
-    }
-    return isTestSessionActive();
-  });
-
-  // Computed premium status
+  if (isTestModeRequested()) {
+    enableTestSession();
+    return true;
+  }
+  return isTestSessionActive();
+});ssionActiveuted premium status
   const isPremium = isPremiumUnlocked(userProfile?.premium_status ?? null);
 
   // ─── Persist in-progress test ─────────────────────────────────────────────
