@@ -20,6 +20,8 @@ Capacitor is installed and the Android platform has been added. A debug APK was 
 This is the easiest way to get an installable APK without setting up Android Studio locally.
 
 > **Node.js requirement:** The GitHub Actions workflow uses Node.js 22. Capacitor CLI 8.x requires Node ≥22.0.0 — earlier Node versions will fail at `npx cap sync android`.
+>
+> **Java requirement:** The GitHub Actions workflow uses Java 21 (Temurin). AGP 8.13.0 + compileSdk 36 + Capacitor 8.x all require JDK 21 — Java 17 will fail with `invalid source release: 21` during Gradle compilation.
 
 1. Go to the GitHub repository.
 2. Click **Actions** in the top navigation.
@@ -43,7 +45,7 @@ This is the easiest way to get an installable APK without setting up Android Stu
 ### Prerequisites
 
 - **Node.js 22+** (LTS) — required by Capacitor CLI 8.x. Install via [nvm](https://github.com/nvm-sh/nvm): `nvm install 22 && nvm use 22`
-- Java 17+ (JDK)
+- **JDK 21+** — required by AGP 8.13.0 + compileSdk 36 + Capacitor 8.x. Install via [SDKMAN](https://sdkman.io/): `sdk install java 21-tem` or download [Temurin 21](https://adoptium.net/)
 - Android Studio with Android SDK (or Android command-line tools)
 - `ANDROID_HOME` environment variable pointing to your SDK
 

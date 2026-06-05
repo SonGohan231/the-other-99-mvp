@@ -200,7 +200,7 @@
 | MOBILE-007 | Mobile | Android platform added | VERIFIED | android/ | npx cap add android ran OK | 52 files committed |
 | MOBILE-008 | Mobile | Android sync works | VERIFIED | android/app/src/main/assets/ | npx cap sync android | Assets synced |
 | MOBILE-009 | Mobile | Debug APK workflow exists | VERIFIED | .github/workflows/android-debug-apk.yml | File check | workflow_dispatch trigger |
-| MOBILE-010 | Mobile | Debug APK artifact via GitHub Actions | PENDING | .github/workflows/android-debug-apk.yml | Actions run + artifact download | Prior run FAILED: Node 20 < required 22; fixed to Node 22; rerun needed to confirm artifact |
+| MOBILE-010 | Mobile | Debug APK artifact via GitHub Actions | PENDING | .github/workflows/android-debug-apk.yml | Actions run + artifact download | Run 1 FAILED: Node 20 < 22; Run 2 FAILED: Java 17, invalid source release 21 (AGP 8.13.0 requires JDK 21); fixed to Java 21 + Node 22; rerun needed |
 | MOBILE-011 | Mobile | APK download instructions exist | VERIFIED | docs/MOBILE_APP_ROADMAP.md | Doc review | GitHub Actions steps documented |
 | MOBILE-012 | Mobile | Release AAB instructions exist | VERIFIED | docs/MOBILE_APP_ROADMAP.md | Doc review | Signing/AAB documented |
 | MOBILE-013 | Mobile | PWA manifest exists | VERIFIED | public/manifest.webmanifest | File check | |
