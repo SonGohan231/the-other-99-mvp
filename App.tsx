@@ -35,10 +35,6 @@ import ProfileSnapshotScreen from './screens/ProfileSnapshotScreen';
 import FullProfileScreen from './screens/FullProfileScreen';
 import HiddenParametersScreen from './screens/HiddenParametersScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
-import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
-import { saveInProgressTest, loadInProgressTest, clearInProgressTest } from './utils/inProgressTest';
-import { debugLog, debugError } from './utils/debugStore';
-import { isAdminEmail } from './config/admin';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -194,90 +190,29 @@ export default function App() {
   // Undo state
   const [canUndoAnswer, setCanUndoAnswer] = useState(false);
 
-  // Test mode
-  const [isTestMode] = useState<boolean>(() => {
-    if (isTestModeRequested()) {
-      enableTestSession();
-      return true;
-    }
-    return isTestSessionActive();
-  });
+  // Test mode (isTestMode used to track test mode state)
+  const [, setIsTestMode] = useState(false);
 
   // Computed premium status
   const isPremium = isPremiumUnlocked(userProfile?.premium_status ?? null);
 
-  // ─── Persist in-progress test ─────────────────────────────────────────────
-  function persistInProgress() {
-    if (!testContent.length) return;
-    saveInProgressTest({
-      testNumber,
-      testSessionId,
-      testAnswerIndex,
-      testContentIds: testContent.map((i) => i.id),
-      currentItemId: currentItem?.id ?? null,
-      pendingAnswer,
-      selectedCard,
-      canUndoAnswer,
-    });
-  }
-
   // ─── Load CSV ──────────────────────────────────────────────────────────────
   useEffect(() => {
     loadContent()
-      .then((items) => {
-        setContent(items);
-        setLoading(false);
-
-        // Restore in-progress test if age confirmed
-        if (isAgeConfirmed()) {
-          try {
-            const saved = loadInProgressTest();
-            if (saved && saved.testContentIds.length > 0) {
-              const restoredContent = saved.testContentIds
-                .map((id: string) => items.find((i) => i.id === id))
-                .filter(Boolean) as ContentItem[];
-              if (restoredContent.length > 0) {
-                setTestContent(restoredContent);
-                setTestAnswerIndex(saved.testAnswerIndex);
-                setTestNumber(saved.testNumber);
-                setTestSessionId(saved.testSessionId);
-                setPendingAnswer(saved.pendingAnswer);
-                setSelectedCard(saved.selectedCard);
-                setCanUndoAnswer(saved.canUndoAnswer);
-                const itemToRestore = saved.currentItemId
-                  ? restoredContent.find((i) => i.id === saved.currentItemId) ?? null
-                  : null;
-                if (itemToRestore) {
-                  setCurrentItem(itemToRestore);
-                  if (saved.pendingAnswer && saved.testAnswerIndex > 0) {
-                    setScreen('reward');
-                  } else {
-                    setScreen('profile-test');
-                  }
-                }
-              }
-            }
-          } catch (err) {
-            debugError('restore_in_progress_failed', err);
-          }
-        }
-      })
+      .then((items) => { setContent(items); setLoading(false); })
       .catch((err) => { setLoadError(String(err)); setLoading(false); });
   }, []);
 
   // ─── Auth listener ─────────────────────────────────────────────────────────
   useEffect(() => {
-if (isTestMode || isTestModeRequested()) {
-  enableTestMode();
-  enableTestSession();
-
-  setUser(TEST_USER);
-  setUserProfile(TEST_PROFILE);
-  setIsTestMode(true);
-
-  setAuthLoading(false);
-  return;
-}
+    if (isTestModeRequested()) {
+      enableTestMode();
+      setUser(TEST_USER);
+      setUserProfile(TEST_PROFILE);
+      setIsTestMode(true);
+      setAuthLoading(false);
+      return;
+    }
 
     if (!supabaseConfigured || !supabase) {
       setAuthLoading(false);
@@ -294,14 +229,10 @@ if (isTestMode || isTestModeRequested()) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isTestMode]);
+  }, []);
 
   // ─── Load profile after user changes ──────────────────────────────────────
   useEffect(() => {
-    if (isTestMode) {
-      setUserProfile(TEST_PROFILE as UserProfile);
-      return;
-    }
     if (!user) { setUserProfile(null); return; }
 
     if (isLocalTestUser(user)) {
@@ -311,31 +242,16 @@ if (isTestMode || isTestModeRequested()) {
     }
 
     getOrCreateProfile(user).then((p) => { if (p) setUserProfile(p); });
-  }, [user, isTestMode]);
+  }, [user]);
 
   // ─── Determine initial screen ──────────────────────────────────────────────
   useEffect(() => {
     if (loading || authLoading) return;
-const testModeRequested = isTestMode || isTestModeRequested();
-
-if (testModeRequested) {
-  if (!isAgeConfirmed()) {
-    setScreen('age-gate');
-    return;
-  }
-
-  setScreen('dashboard');
-  return;
-}
-
-if (!supabaseConfigured) {
-  setScreen('supabase-config-error');
-  return;
-}
+    if (!supabaseConfigured && !isTestModeRequested()) { setScreen('supabase-config-error'); return; }
     if (!isAgeConfirmed()) { setScreen('age-gate'); return; }
     if (!user) { setScreen('auth'); return; }
     setScreen('dashboard');
-  }, [loading, authLoading, user, isTestMode]);
+  }, [loading, authLoading, user]);
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   function handleAgeConfirm() {
@@ -372,7 +288,6 @@ if (!supabaseConfigured) {
 
     const ps = getProfileState();
     setProfileState(ps);
-    debugLog('test_started', { testNumber: tNum, contentCount: items.length });
     setScreen('test-intro');
   }
 
@@ -526,8 +441,6 @@ if (!supabaseConfigured) {
     const cards = pickNextCards(testContent, testAnswerIndex + 1);
     setNextCards(cards);
 
-    debugLog('answer_submitted', { contentId: currentItem?.id, answer, testAnswerIndex });
-    persistInProgress();
     setScreen('reward');
   }
 
@@ -598,13 +511,10 @@ if (!supabaseConfigured) {
     setTestAnswerIndex(prevIndex);
     setCurrentItem(testContent[prevIndex]);
     setCanUndoAnswer(canUndoFn());
-    debugLog('undo_used', { testAnswerIndex });
-    persistInProgress();
     setScreen('profile-test');
   }
 
   async function finishTest() {
-    clearInProgressTest();
     const ps = getProfileState();
 
     if (testNumber === 1) {
@@ -641,22 +551,19 @@ if (!supabaseConfigured) {
     }
 
     addSeenIds(testContent.map((i) => i.id));
-    debugLog('test_completed', { testNumber, totalProfileAnswers: ps.total_profile_answers });
     setScreen('test-summary');
   }
 
   async function handleLogout() {
-if (isTestMode || isLocalTestUser(user)) {
-  disableTestSession();
-  disableTestMode();
+    if (isLocalTestUser(user)) {
+      disableTestMode();
+      setIsTestMode(false);
+      setUser(null);
+      setUserProfile(null);
+      setScreen('auth');
+      return;
+    }
 
-  setIsTestMode(false);
-  setUser(null);
-  setUserProfile(null);
-  setScreen('auth');
-
-  return;
-}
     await signOut();
     setUser(null);
     setUserProfile(null);
@@ -702,15 +609,12 @@ if (isTestMode || isLocalTestUser(user)) {
   }
 
   function handleTestMode() {
-enableTestMode();
-enableTestSession();
-
-setUser(TEST_USER);
-setUserProfile(TEST_PROFILE);
-setIsTestMode(true);
-
-confirmAge();
-setScreen('dashboard');
+    enableTestMode();
+    setUser(TEST_USER);
+    setUserProfile(TEST_PROFILE);
+    setIsTestMode(true);
+    confirmAge();
+    setScreen('dashboard');
   }
 
   function handleUnlockFull() {
@@ -744,12 +648,11 @@ setScreen('dashboard');
   // ─── Screens ───────────────────────────────────────────────────────────────
   return (
     <>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       {screen === 'supabase-config-error' && <SupabaseConfigError />}
 
       {screen === 'age-gate' && <AgeGate onConfirm={handleAgeConfirm} />}
 
-      {screen === 'auth' && <AuthScreen onTestMode={isTestMode || isTestModeRequested() ? () => { enableTestSession(); window.location.reload(); } : handleTestMode} />}
+      {screen === 'auth' && <AuthScreen onTestMode={handleTestMode} />}
 
       {screen === 'dashboard' && userProfile && (
         <DashboardScreen
@@ -907,24 +810,7 @@ setScreen('dashboard');
         />
       )}
 
-      </main>
-
-      {(isTestMode || isAdminEmail(userProfile?.email) || isTestModeRequested()) && (
-        <DebugPanel
-          profileState={profileState}
-          testContent={testContent}
-          testAnswerIndex={testAnswerIndex}
-          currentItem={currentItem}
-          totalProfileAnswers={profileState.total_profile_answers}
-          isTestMode={isTestMode}
-          onStartTest={handleStartTest}
-          onUndo={handleUndoAnswer}
-          canUndo={canUndoAnswer}
-          onRefreshProfile={handleRefreshProfile}
-          onLogout={handleLogout}
-          onReset={handleDebugReset}
-        />
-      )}
+      <DebugPanel onReset={handleDebugReset} />
     </>
   );
 }
