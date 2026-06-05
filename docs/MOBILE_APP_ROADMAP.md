@@ -19,6 +19,8 @@ Capacitor is installed and the Android platform has been added. A debug APK was 
 
 This is the easiest way to get an installable APK without setting up Android Studio locally.
 
+> **Node.js requirement:** The GitHub Actions workflow uses Node.js 22. Capacitor CLI 8.x requires Node ≥22.0.0 — earlier Node versions will fail at `npx cap sync android`.
+
 1. Go to the GitHub repository.
 2. Click **Actions** in the top navigation.
 3. Select **Android Debug APK** from the workflow list on the left.
@@ -40,7 +42,7 @@ This is the easiest way to get an installable APK without setting up Android Stu
 
 ### Prerequisites
 
-- Node.js 18+
+- **Node.js 22+** (LTS) — required by Capacitor CLI 8.x. Install via [nvm](https://github.com/nvm-sh/nvm): `nvm install 22 && nvm use 22`
 - Java 17+ (JDK)
 - Android Studio with Android SDK (or Android command-line tools)
 - `ANDROID_HOME` environment variable pointing to your SDK

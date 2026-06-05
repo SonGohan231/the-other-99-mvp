@@ -200,7 +200,7 @@
 | MOBILE-007 | Mobile | Android platform added | VERIFIED | android/ | npx cap add android ran OK | 52 files committed |
 | MOBILE-008 | Mobile | Android sync works | VERIFIED | android/app/src/main/assets/ | npx cap sync android | Assets synced |
 | MOBILE-009 | Mobile | Debug APK workflow exists | VERIFIED | .github/workflows/android-debug-apk.yml | File check | workflow_dispatch trigger |
-| MOBILE-010 | Mobile | Debug APK artifact can be built | VERIFIED | android/app/build/outputs/apk/debug/app-debug.apk | ./gradlew assembleDebug | 4.3 MB APK built locally |
+| MOBILE-010 | Mobile | Debug APK artifact via GitHub Actions | PENDING | .github/workflows/android-debug-apk.yml | Actions run + artifact download | Prior run FAILED: Node 20 < required 22; fixed to Node 22; rerun needed to confirm artifact |
 | MOBILE-011 | Mobile | APK download instructions exist | VERIFIED | docs/MOBILE_APP_ROADMAP.md | Doc review | GitHub Actions steps documented |
 | MOBILE-012 | Mobile | Release AAB instructions exist | VERIFIED | docs/MOBILE_APP_ROADMAP.md | Doc review | Signing/AAB documented |
 | MOBILE-013 | Mobile | PWA manifest exists | VERIFIED | public/manifest.webmanifest | File check | |
