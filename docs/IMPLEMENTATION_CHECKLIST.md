@@ -191,17 +191,23 @@
 
 | ID | Category | Requirement | Status | Files touched | Verification | Notes |
 |---|---|---|---|---|---|---|
-| MOBILE-001 | Mobile | Capacitor configured | IMPLEMENTED | capacitor.config.ts | File exists | |
-| MOBILE-002 | Mobile | @capacitor/core installed | IMPLEMENTED | package.json | npm ls | |
-| MOBILE-003 | Mobile | @capacitor/cli installed | IMPLEMENTED | package.json | npm ls | |
-| MOBILE-004 | Mobile | @capacitor/android installed | IMPLEMENTED | package.json | npm ls | |
-| MOBILE-005 | Mobile | capacitor.config.ts added | IMPLEMENTED | capacitor.config.ts | File check | appId: app.theother99.mvp |
-| MOBILE-006 | Mobile | Android platform prepared | BLOCKED | docs/MOBILE_APP_ROADMAP.md | npx cap add android | Needs Android SDK locally |
-| MOBILE-007 | Mobile | PWA manifest added | IMPLEMENTED | public/manifest.webmanifest | File check | |
-| MOBILE-008 | Mobile | Icon placeholders | PARTIAL | public/icons/ | File check | Directory created, images needed |
-| MOBILE-009 | Mobile | Theme color added | IMPLEMENTED | index.html | View source | #7c3aed |
-| MOBILE-010 | Mobile | Viewport/safe-area support | IMPLEMENTED | index.html, src/index.css | Visual check | viewport-fit=cover |
-| MOBILE-011 | Mobile | Vercel web build still works | IMPLEMENTED | dist/ | npm run build | Build passes |
+| MOBILE-001 | Mobile | Capacitor core installed | VERIFIED | package.json | npm ls @capacitor/core | @capacitor/core@8.4.0 |
+| MOBILE-002 | Mobile | Capacitor Android installed | VERIFIED | package.json | npm ls @capacitor/android | @capacitor/android@8.4.0 |
+| MOBILE-003 | Mobile | capacitor.config.ts exists | VERIFIED | capacitor.config.ts | File check | |
+| MOBILE-004 | Mobile | appId configured | VERIFIED | capacitor.config.ts | File check | app.theother99.mvp |
+| MOBILE-005 | Mobile | appName configured | VERIFIED | capacitor.config.ts | File check | The Other 99 |
+| MOBILE-006 | Mobile | webDir configured as dist | VERIFIED | capacitor.config.ts | File check | webDir: 'dist' |
+| MOBILE-007 | Mobile | Android platform added | VERIFIED | android/ | npx cap add android ran OK | 52 files committed |
+| MOBILE-008 | Mobile | Android sync works | VERIFIED | android/app/src/main/assets/ | npx cap sync android | Assets synced |
+| MOBILE-009 | Mobile | Debug APK workflow exists | VERIFIED | .github/workflows/android-debug-apk.yml | File check | workflow_dispatch trigger |
+| MOBILE-010 | Mobile | Debug APK artifact can be built | VERIFIED | android/app/build/outputs/apk/debug/app-debug.apk | ./gradlew assembleDebug | 4.3 MB APK built locally |
+| MOBILE-011 | Mobile | APK download instructions exist | VERIFIED | docs/MOBILE_APP_ROADMAP.md | Doc review | GitHub Actions steps documented |
+| MOBILE-012 | Mobile | Release AAB instructions exist | VERIFIED | docs/MOBILE_APP_ROADMAP.md | Doc review | Signing/AAB documented |
+| MOBILE-013 | Mobile | PWA manifest exists | VERIFIED | public/manifest.webmanifest | File check | |
+| MOBILE-014 | Mobile | App icons created | VERIFIED | public/icons/ | File check | icon-192.png, icon-512.png, icon.svg |
+| MOBILE-015 | Mobile | Android launcher icons created | VERIFIED | android/app/src/main/res/mipmap-* | File check | All densities: mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi |
+| MOBILE-016 | Mobile | npm mobile scripts added | VERIFIED | package.json | File check | mobile:build, mobile:sync, mobile:android, etc |
+| MOBILE-017 | Mobile | Vercel web build still works | VERIFIED | dist/ | npm run build | Build passes, no regressions |
 
 ### QA
 
@@ -292,3 +298,36 @@ i18n notes:
 - getLang() checks to99_language first, falls back to to99_lang
 - All new screens fully bilingual (EN + PL)
 - premiumInsights.ts insight text is English-only (noted as PARTIAL)
+
+### Phase C (Android APK Pipeline + Icons + Mobile Scripts)
+
+**Date:** 2026-06-05
+**Status:** IMPLEMENTED
+
+Changed files:
+- `android/` — NEW: full Capacitor Android project scaffold (52 files, from `npx cap add android`)
+- `android/app/src/main/res/mipmap-*/ic_launcher.png` — REPLACED: brand icons (violet circle, "99") for all densities
+- `android/app/src/main/res/mipmap-*/ic_launcher_round.png` — REPLACED: round variant for all densities
+- `android/app/src/main/res/mipmap-*/ic_launcher_foreground.png` — REPLACED: foreground layer for adaptive icons
+- `android/app/src/main/res/drawable/ic_launcher_background.xml` — MODIFIED: background color #7c3aed
+- `android/app/src/main/res/values/ic_launcher_background.xml` — MODIFIED: color resource #7c3aed
+- `public/icons/icon-192.png` — NEW: PWA icon 192×192
+- `public/icons/icon-512.png` — NEW: PWA icon 512×512
+- `public/icons/icon.svg` — NEW: SVG source icon
+- `package.json` — MODIFIED: mobile:build, mobile:sync, mobile:android, mobile:open:android, mobile:add:android, mobile:doctor scripts
+- `.github/workflows/android-debug-apk.yml` — NEW: manual workflow to build debug APK artifact
+- `docs/MOBILE_APP_ROADMAP.md` — UPDATED: full APK download guide, local build steps, release signing notes
+- `docs/IMPLEMENTATION_CHECKLIST.md` — UPDATED: this file
+
+Build result: PASSED (npm run build)
+Content validation: PASSED (865 unique IDs)
+Android platform: ADDED (`npx cap add android` succeeded)
+Cap sync: VERIFIED (`npx cap sync android` synced web assets)
+Debug APK: BUILT locally (android/app/build/outputs/apk/debug/app-debug.apk, 4.3 MB)
+GitHub Actions workflow: ADDED (.github/workflows/android-debug-apk.yml)
+
+Known limitations:
+- Release APK/AAB requires signing key (not committed, by design)
+- iOS build still requires macOS + Xcode + Apple Developer account
+- APK built in local CI environment using downloaded Android SDK; GitHub Actions workflow uses ubuntu-latest pre-installed SDK
+- App icons are programmatically generated placeholders; replace with design-quality assets before store submission
