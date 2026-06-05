@@ -14,6 +14,7 @@ import {
 } from './utils/storage';
 import { computeBehavioralMetadata, summarizeBehavioralProfile, BehavioralSummary } from './utils/behavioralSignals';
 import { getContentBehavioralProfile } from './utils/contentTags';
+import { updateUserVoteProfile } from './utils/userVoteProfile';
 import {
   ProfileVector, loadVector, saveVector, applyDeltas, calcHumanTwinMatch, getTopDimensions,
 } from './utils/profileVector';
@@ -416,6 +417,14 @@ export default function App() {
     };
     addInteraction(localInteraction);
     setBehavioralSummary(summarizeBehavioralProfile(getInteractions()));
+    updateUserVoteProfile({
+      contentId: currentItem.id,
+      selectedAnswer: answer,
+      responseTimeMs,
+      skipped: false,
+      behavioral: behavioralMeta,
+      userId: user?.id ?? null,
+    });
     addSeenId(currentItem.id);
 
     const ps = getProfileState();
@@ -826,6 +835,7 @@ export default function App() {
           testTotal={TEST_TOTAL}
           profileProgress={profileState.profile_progress}
           selectedCard={selectedCard}
+          userId={user?.id ?? null}
           onAnswer={handleAnswer}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

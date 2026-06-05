@@ -386,3 +386,58 @@ Changed files:
 
 Build result: PASSED (npm run build)
 Content validation: PASSED (865 unique IDs)
+
+---
+
+## Phase D — Community Votes / Distributions
+
+### Seed package status
+
+Package: `the_other_99_seed_votes_MASTER_FIXED_package.zip`
+- **content_id_mapping_REQUIRED.csv**: 300 rows, ALL have `real_content_id = ''` (status: NEEDS_REAL_CONTENT_ID)
+- **Seed import**: BLOCKED — no rows are import-ready. Must populate real_content_id first.
+- **percentages_FIXED_batches_01_03.csv**: 300 rows present but not importable yet.
+- **votes_normalized_FIXED_batches_01_03.csv**: 30,000 rows present, not importable yet.
+- **Seed baseline in use**: deterministic hash-based seeding in `communityVotes.ts` (generates 120–299 seed votes per content item using content_id hash). Labels these as "Projected distribution".
+
+### Checklist
+
+| ID | Item | Status |
+|----|------|--------|
+| VOTES-001 | Import fixed master seed package | PARTIAL — seed CSVs read; all rows blocked (no real_content_id mapped); hash-based seed baseline active |
+| VOTES-002 | Create community_votes model/table/storage | VERIFIED — src/utils/communityVotes.ts (localStorage) + supabase/migrations/20260605_community_votes.sql |
+| VOTES-003 | Save every submitted answer as vote | VERIFIED — InteractionScreen.handleConfirm calls submitVote before showing community phase |
+| VOTES-004 | Prevent duplicate votes per user/content_id | VERIFIED — submitVote checks prevVote; updates existing real vote count instead of duplicating |
+| VOTES-005 | Update vote when answer changes | VERIFIED — submitVote removes previous answer count, adds new one |
+| VOTES-006 | Use anonymous_id for guest votes | VERIFIED — getOrCreateAnonId() creates persistent anon ID; passed to submitVote |
+| VOTES-007 | Use user_id for authenticated votes | VERIFIED — userId prop passed to InteractionScreen from App.tsx (user?.id ?? null) |
+| VOTES-008 | Calculate percentages from persisted votes | VERIFIED — storeToPercs() in communityVotes.ts; runs after every submitVote |
+| VOTES-009 | Combine seed and real votes safely | VERIFIED — VoteStore.byAnswer tracks seed and real separately per answer option |
+| VOTES-010 | Label seed data as Projected distribution | VERIFIED — realVotes < 30 → "Projected distribution" |
+| VOTES-011 | Label mixed data as Early community distribution | VERIFIED — realVotes 30–99 → "Early community distribution" |
+| VOTES-012 | Label real data as Community distribution only after threshold | VERIFIED — realVotes >= 100 → "Community distribution" |
+| VOTES-013 | Add user_vote_profile compressed dataset | VERIFIED — src/utils/userVoteProfile.ts; UserVoteProfile interface |
+| VOTES-014 | Update user_vote_profile after every answer | VERIFIED — handleAnswer in App.tsx calls updateUserVoteProfile() after addInteraction |
+| VOTES-015 | Store behavioral metadata with votes | VERIFIED — behavioral param passed to updateUserVoteProfile; signals (confidence, avoidance, friction, contradiction) aggregated |
+| VOTES-016 | Debug panel shows vote/distribution state | VERIFIED — DebugPanel.tsx Community Votes section: seed/real/total counts, distribution label, my vote, per-answer breakdown |
+| VOTES-017 | Export community vote state | VERIFIED — DebugPanel exports exportVoteState() as JSON download |
+| VOTES-018 | Prepare guest-to-account vote migration | PARTIAL — anonymous_id persisted in localStorage; Supabase migration documents UPDATE query; localStorage migration not yet implemented |
+| VOTES-019 | Add Supabase migration if DB schema needed | VERIFIED — supabase/migrations/20260605_community_votes.sql (status: PARTIAL — apply when Supabase project provisioned) |
+| VOTES-020 | Build passes after vote system implementation | VERIFIED — npm run build ✓, npm run validate:content ✓ (865 IDs) |
+
+**Date:** 2026-06-05
+**Status:** IMPLEMENTED (localStorage layer complete; Supabase layer PARTIAL)
+
+Changed files:
+- `src/utils/communityVotes.ts` — NEW: full vote persistence, dedup, distribution labels, seed baseline, debug export
+- `src/utils/userVoteProfile.ts` — NEW: compressed user vote profile, updated after every answer
+- `src/utils/communityStats.ts` — REPLACED: now thin wrapper over communityVotes.ts (backward compatible)
+- `src/screens/InteractionScreen.tsx` — MODIFIED: calls submitVote, shows distributionLabel, accepts userId prop
+- `src/screens/DebugPanel.tsx` — MODIFIED: Community Votes section with seed/real counts, label, my vote, export, reset
+- `src/App.tsx` — MODIFIED: passes userId to InteractionScreen, calls updateUserVoteProfile after every answer
+- `supabase/migrations/20260605_community_votes.sql` — NEW: community_votes table, unique index, view, user_vote_profiles table, RLS notes
+
+Seed package status:
+- content_id_mapping_REQUIRED.csv: all 300 rows NEEDS_REAL_CONTENT_ID
+- Seed import: BLOCKED until mapping populated
+- Active seed baseline: hash-based (communityVotes.ts)
