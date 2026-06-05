@@ -5,8 +5,21 @@ const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
 export const supabaseConfigured = Boolean(url && key);
 
+const safeStorage = {
+  getItem: (key: string) => { try { return localStorage.getItem(key); } catch { return null; } },
+  setItem: (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* ignore */ } },
+  removeItem: (key: string) => { try { localStorage.removeItem(key); } catch { /* ignore */ } },
+};
+
 export const supabase: SupabaseClient | null = supabaseConfigured
-  ? createClient(url!, key!)
+  ? createClient(url!, key!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: safeStorage,
+      },
+    })
   : null;
 
 // ─── Domain types ────────────────────────────────────────────────────────────
@@ -42,7 +55,7 @@ export async function signInWithMagicLink(email: string): Promise<{ error: strin
 
 export async function signOut(): Promise<void> {
   if (!supabase) return;
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: 'local' });
 }
 
 // ─── Profile ─────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ContentItem, NextCard, RarityTier } from '../types';
 import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField } from '../i18n';
@@ -62,6 +62,14 @@ export default function RewardScreen({
   const [pickedCard, setPickedCard] = useState<number | null>(null);
   const [cardsDismissed, setCardsDismissed] = useState(false);
   const [showRadar, setShowRadar] = useState(true);
+  const [analyzing, setAnalyzing] = useState(true);
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const delay = prefersReducedMotion ? 80 : (item.rarity_tier === 'legendary' ? 1200 : item.rarity_tier === 'epic' ? 900 : 380);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnalyzing(false), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
 
   const axes = parseAxes(item);
   const answersLeftInTest = Math.max(0, testTotal - testIndex);
@@ -108,6 +116,21 @@ export default function RewardScreen({
         <span className="status-interaction">{testIndex}&nbsp;/&nbsp;{testTotal}</span>
       </div>
 
+      {analyzing ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '16px', padding: '40px 20px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <div className="loading-dot" />
+            <div className="loading-dot" style={{ animationDelay: '0.15s' }} />
+            <div className="loading-dot" style={{ animationDelay: '0.3s' }} />
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+            {(() => {
+              const msgs = ['Analyzing your pattern…', 'Detecting a signal…', 'Mapping this choice…'];
+              return msgs[Math.abs(item.id.charCodeAt(0)) % msgs.length];
+            })()}
+          </p>
+        </div>
+      ) : (
       <div className="reward-content">
 
         {/* ── Your Profile (radar chart + axis chips) ── */}
@@ -353,6 +376,7 @@ export default function RewardScreen({
           {t.reward.hiddenFooter}
         </div>
       </div>
+      )}
     </div>
   );
 }

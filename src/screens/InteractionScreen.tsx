@@ -17,7 +17,7 @@ interface Props {
 
 type Phase = 'question' | 'community';
 
-export default function InteractionScreen({ item, testIndex, testTotal, profileProgress, selectedCard, onAnswer, onUndo, canUndo }: Props) {
+export default function InteractionScreen({ item, testIndex, testTotal, profileProgress: _profileProgress, selectedCard, onAnswer, onUndo, canUndo }: Props) {
   const t = useT();
   const [lang] = useLang();
   const [selected, setSelected] = useState<string | null>(null);
@@ -108,14 +108,14 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
         </button>
       )}
       {/* Status bar */}
-      <div className="status-bar" role="status" aria-label={`${t.interaction.questionOf(questionNum, testTotal)}. ${t.interaction.profileDiscovered} ${profileProgress.toFixed(1)}%`}>
+      <div className="status-bar" role="status" aria-label={`${t.interaction.questionOf(questionNum, testTotal)}`}>
         <div className="status-bar-left">
-          <span className="status-label">{t.interaction.profileDiscovered}</span>
+          <span className="status-label">{t.interaction.testProgressLabel ?? 'Test Progress'}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div className="progress-bar-track" style={{ flex: 1 }}>
-              <div className="progress-bar-fill" style={{ width: `${Math.min(100, (profileProgress / 85) * 100)}%` }} />
+              <div className="progress-bar-fill" style={{ width: `${Math.round((questionNum / testTotal) * 100)}%` }} />
             </div>
-            <span className="status-value">{profileProgress.toFixed(1)}%</span>
+            <span className="status-value">{questionNum}&nbsp;/&nbsp;{testTotal}</span>
           </div>
         </div>
         <span className="status-interaction">
@@ -229,6 +229,12 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
             {barsVisible && (
               <p className="animate-in" style={{ fontSize: '0.78rem', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic' }}>
                 {getCommunityMicrocopy()}
+              </p>
+            )}
+
+            {barsVisible && (
+              <p style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic', opacity: 0.6 }}>
+                {t.interaction.communityDisclaimer ?? 'Projected estimate — not yet real user data'}
               </p>
             )}
 
