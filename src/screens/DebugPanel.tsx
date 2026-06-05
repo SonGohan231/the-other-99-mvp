@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { ContentItem, ProfileState } from '../types';
-import { exportSession } from '../utils/storage';
-import { isPremiumUnlocked, unlockPremium, disablePremiumUnlock } from '../utils/premiumProgression';
+import { exportSession, resetSession } from '../utils/storage';
+import { isPremiumUnlocked, unlockPremium, disablePremiumUnlock, enablePremiumPreview, disablePremiumPreview, isPremiumPreviewEnabled } from '../utils/premiumProgression';
 import { debugLog, getLogs, getErrors, clearLogs } from '../utils/debugStore';
-import { enableTestSession } from '../utils/testSession';
+import { enableTestSession, disableTestSession } from '../utils/testSession';
+import { disableGuestMode } from '../utils/guestSession';
 
 interface Props {
   profileState: ProfileState;
@@ -18,6 +19,11 @@ interface Props {
   onRefreshProfile: () => void;
   onLogout: () => void;
   onReset: () => void;
+  onSkipQuestion?: () => void;
+  onSkipToQuestion?: (n: number) => void;
+  onCompleteTest?: () => void;
+  onSeedAnswers?: (n: number) => void;
+  onForceSnapshot?: () => void;
 }
 
 export default function DebugPanel({
@@ -33,12 +39,17 @@ export default function DebugPanel({
   onRefreshProfile,
   onLogout,
   onReset,
+  onSkipQuestion,
+  onSkipToQuestion,
+  onCompleteTest,
+  onSeedAnswers,
+  onForceSnapshot,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const inTest = testContent.length > 0 && testAnswerIndex < testContent.length;
 
   return (
     <>
-      {/* Positioned bottom-left to avoid overlapping centered CTAs */}
       <button
         className="debug-toggle"
         onClick={() => setOpen((o) => !o)}
@@ -55,7 +66,7 @@ export default function DebugPanel({
             {isTestMode && <span style={{ color: '#22d3ee', fontSize: '0.65rem' }}>TEST MODE</span>}
           </p>
 
-          {/* SESSION section */}
+          {/* SESSION */}
           <details open>
             <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>Session</summary>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.8 }}>
@@ -66,7 +77,7 @@ export default function DebugPanel({
             </div>
           </details>
 
-          {/* TEST section */}
+          {/* CURRENT TEST */}
           <details>
             <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>Current Test</summary>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.8 }}>
@@ -77,13 +88,77 @@ export default function DebugPanel({
             </div>
           </details>
 
-          {/* ACTIONS section */}
+          {/* ACTIONS */}
           <details open>
             <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>Actions</summary>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '4px' }}>
-              <button className="debug-btn" onClick={onStartTest}>▶ Start test</button>
-              {canUndo && <button className="debug-btn" onClick={onUndo}>↩ Undo last answer</button>}
-              <button className="debug-btn" onClick={onRefreshProfile}>↻ Refresh profile</button>
+              <button className="debug-btn" onClick={onStartTest}>&#9654; Start test</button>
+
+              {inTest && onSkipQuestion && (
+                <button className="debug-btn" onClick={onSkipQuestion}>&#9197; Skip question</button>
+              )}
+              {inTest && onSkipToQuestion && (
+                <button
+                  className="debug-btn"
+                  onClick={() => {
+                    const raw = window.prompt(`Jump to question (1–${testContent.length}):`, String(testAnswerIndex + 2));
+                    const n = parseInt(raw ?? '', 10);
+                    if (!isNaN(n) && n >= 1 && n <= testContent.length) {
+                      onSkipToQuestion(n);
+                    }
+                  }}
+                >
+                  &#9197; Skip to Q&hellip;
+                </button>
+              )}
+              {inTest && onCompleteTest && (
+                <button className="debug-btn" onClick={onCompleteTest}>&#9193; Complete test</button>
+              )}
+
+              {canUndo && <button className="debug-btn" onClick={onUndo}>&#8617; Undo last answer</button>}
+
+              {onSeedAnswers && (
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', alignSelf: 'center', marginRight: '2px' }}>Seed:</span>
+                  {[5, 17, 34, 51].map((n) => (
+                    <button
+                      key={n}
+                      className="debug-btn"
+                      style={{ flex: 1, minWidth: 0 }}
+                      onClick={() => { onSeedAnswers(n); debugLog('seed_answers', { n }); }}
+                    >
+                      +{n}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {onForceSnapshot && (
+                <button className="debug-btn" onClick={onForceSnapshot}>Force snapshot</button>
+              )}
+
+              <button
+                className="debug-btn"
+                onClick={() => {
+                  if (isPremiumPreviewEnabled()) { disablePremiumPreview(); } else { enablePremiumPreview(); }
+                  window.location.reload();
+                }}
+              >
+                {isPremiumPreviewEnabled() ? 'Disable premium preview' : 'Force premium preview'}
+              </button>
+
+              <button
+                className="debug-btn"
+                onClick={() => {
+                  if (isPremiumUnlocked(null)) { disablePremiumUnlock(); } else { unlockPremium(); }
+                  window.location.reload();
+                }}
+              >
+                {isPremiumUnlocked(null) ? 'Lock premium' : 'Unlock premium'}
+              </button>
+
+              <button className="debug-btn" onClick={onRefreshProfile}>Refresh profile</button>
+
               <button
                 className="debug-btn"
                 onClick={() => {
@@ -91,60 +166,46 @@ export default function DebugPanel({
                   const b = new Blob([j], { type: 'application/json' });
                   const u = URL.createObjectURL(b);
                   const a = document.createElement('a');
-                  a.href = u;
-                  a.download = `to99-${Date.now()}.json`;
-                  a.click();
+                  a.href = u; a.download = `to99-${Date.now()}.json`; a.click();
                   URL.revokeObjectURL(u);
                 }}
               >
-                ↓ Export JSON
+                Export JSON
               </button>
+
               <button
                 className="debug-btn"
                 onClick={() => {
-                  if (isPremiumUnlocked(null)) {
-                    disablePremiumUnlock();
-                  } else {
-                    unlockPremium();
-                  }
-                  window.location.reload();
+                  if (window.confirm('Enable test session?')) { enableTestSession(); window.location.reload(); }
                 }}
               >
-                {isPremiumUnlocked(null) ? '🔓 Lock premium' : '🔑 Unlock premium'}
+                Enable test session
               </button>
+
               <button
                 className="debug-btn"
+                style={{ color: '#f87171', borderColor: 'rgba(239,68,68,0.25)' }}
                 onClick={() => {
-                  if (window.confirm('Enable test mode?')) {
-                    enableTestSession();
-                    window.location.reload();
+                  if (window.confirm('Reset guest/test session and all local data?')) {
+                    disableGuestMode(); disableTestSession(); resetSession(); window.location.reload();
                   }
                 }}
               >
-                🧪 Enable test session
+                Reset guest/test session
               </button>
+
               <button
                 className="debug-btn"
-                onClick={() => {
-                  clearLogs();
-                  debugLog('logs_cleared');
-                  window.location.reload();
-                }}
+                onClick={() => { clearLogs(); debugLog('logs_cleared'); onReset(); }}
               >
-                🧹 Clear logs
+                Clear logs + reload
               </button>
-              <button
-                className="debug-btn"
-                style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.25)' }}
-                onClick={onReset}
-              >
-                ✕ Reset session
-              </button>
-              <button className="debug-btn" onClick={onLogout}>← Logout</button>
+
+              <button className="debug-btn" onClick={onLogout}>Logout</button>
             </div>
           </details>
 
-          {/* LOGS section */}
+          {/* LOGS */}
           <details>
             <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
               Logs ({getLogs().length})

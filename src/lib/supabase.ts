@@ -53,6 +53,29 @@ export async function signInWithMagicLink(email: string): Promise<{ error: strin
   return { error: error?.message ?? null };
 }
 
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+): Promise<{ error: string | null; needsConfirmation: boolean }> {
+  if (!supabase) return { error: 'Supabase not configured', needsConfirmation: false };
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: window.location.origin },
+  });
+  if (error) return { error: error.message, needsConfirmation: false };
+  return { error: null, needsConfirmation: !data.session };
+}
+
+export async function signInWithPassword(
+  email: string,
+  password: string,
+): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Supabase not configured' };
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  return { error: error?.message ?? null };
+}
+
 export async function signOut(): Promise<void> {
   if (!supabase) return;
   await supabase.auth.signOut({ scope: 'local' });
