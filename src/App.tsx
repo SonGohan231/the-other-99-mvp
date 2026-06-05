@@ -49,6 +49,44 @@ import DebugPanel from './screens/DebugPanel';
 
 const TEST_TOTAL = 17;
 
+// ─── Local test mode auth bypass ─────────────────────────────────────────────
+const TEST_USER_ID = 'local-test-user';
+
+const isTestModeRequested = () =>
+  new URLSearchParams(window.location.search).get('test') === '1' ||
+  new URLSearchParams(window.location.search).get('debug') === '1' ||
+  localStorage.getItem('to99_test_session') === 'true';
+
+const enableTestMode = () => {
+  localStorage.setItem('to99_test_session', 'true');
+  localStorage.setItem('to99_debug_mode', 'true');
+  localStorage.setItem('to99_premium_unlocked', 'true');
+};
+
+const disableTestMode = () => {
+  localStorage.removeItem('to99_test_session');
+  localStorage.removeItem('to99_debug_mode');
+  localStorage.removeItem('to99_premium_unlocked');
+};
+
+const TEST_USER = {
+  id: TEST_USER_ID,
+  email: 'test@theother99.local',
+  user_metadata: { full_name: 'Local Test User' },
+} as unknown as User;
+
+const TEST_PROFILE = {
+  id: TEST_USER_ID,
+  email: 'test@theother99.local',
+  display_name: 'Local Test User',
+  free_profile_tests_used: 0,
+  total_answers: 0,
+  premium_status: 'premium',
+} as UserProfile;
+
+const isLocalTestUser = (u: User | null) => u?.id === TEST_USER_ID;
+
+
 // ─── Config error screen ──────────────────────────────────────────────────────
 function SupabaseConfigError() {
   const t = useT();
@@ -167,6 +205,15 @@ export default function App() {
 
   // ─── Auth listener ─────────────────────────────────────────────────────────
   useEffect(() => {
+    if (isTestModeRequested()) {
+      enableTestMode();
+      setUser(TEST_USER);
+      setUserProfile(TEST_PROFILE);
+      setIsTestMode(true);
+      setAuthLoading(false);
+      return;
+    }
+
     if (!supabaseConfigured || !supabase) {
       setAuthLoading(false);
       return;
@@ -187,13 +234,20 @@ export default function App() {
   // ─── Load profile after user changes ──────────────────────────────────────
   useEffect(() => {
     if (!user) { setUserProfile(null); return; }
+
+    if (isLocalTestUser(user)) {
+      setUserProfile(TEST_PROFILE);
+      setIsTestMode(true);
+      return;
+    }
+
     getOrCreateProfile(user).then((p) => { if (p) setUserProfile(p); });
   }, [user]);
 
   // ─── Determine initial screen ──────────────────────────────────────────────
   useEffect(() => {
     if (loading || authLoading) return;
-    if (!supabaseConfigured) { setScreen('supabase-config-error'); return; }
+    if (!supabaseConfigured && !isTestModeRequested()) { setScreen('supabase-config-error'); return; }
     if (!isAgeConfirmed()) { setScreen('age-gate'); return; }
     if (!user) { setScreen('auth'); return; }
     setScreen('dashboard');
@@ -219,7 +273,7 @@ export default function App() {
     const tNum = freeTestsUsed + 1;
 
     let sessionId: string | null = null;
-    if (user) {
+    if (user && !isLocalTestUser(user)) {
       sessionId = await createTestSession(user.id, tNum, items.map((i) => i.id));
     }
 
@@ -257,7 +311,7 @@ export default function App() {
       axis_delta_json: axisDeltas,
     };
 
-    if (user && testSessionId) {
+    if (user && !isLocalTestUser(user) && testSessionId) {
       await saveAnswerToDb(testSessionId, user.id, {
         ...testAnswer,
         skipped: false,
@@ -355,7 +409,7 @@ export default function App() {
     saveProfileState(ps);
     setProfileState({ ...ps });
 
-    if (user) {
+    if (user && !isLocalTestUser(user)) {
       upsertProfileState(user.id, {
         answers_count: ps.total_profile_answers,
         profile_progress: ps.profile_progress,
@@ -481,13 +535,19 @@ export default function App() {
       total_profile_answers: ps.total_profile_answers,
     };
 
-    if (testSessionId) {
+    if (testSessionId && user && !isLocalTestUser(user)) {
       await completeTestSession(testSessionId, summaryJson);
     }
 
-    if (user) {
+    if (user && !isLocalTestUser(user)) {
       const updated = await incrementFreeTestsUsed(user.id, ps.total_profile_answers);
       if (updated) setUserProfile(updated);
+    } else if (isLocalTestUser(user)) {
+      setUserProfile({
+        ...TEST_PROFILE,
+        free_profile_tests_used: testNumber,
+        total_answers: ps.total_profile_answers,
+      });
     }
 
     addSeenIds(testContent.map((i) => i.id));
@@ -495,6 +555,15 @@ export default function App() {
   }
 
   async function handleLogout() {
+    if (isLocalTestUser(user)) {
+      disableTestMode();
+      setIsTestMode(false);
+      setUser(null);
+      setUserProfile(null);
+      setScreen('auth');
+      return;
+    }
+
     await signOut();
     setUser(null);
     setUserProfile(null);
@@ -525,21 +594,26 @@ export default function App() {
 
   async function handleRefreshProfile() {
     if (!user) return;
+
+    if (isLocalTestUser(user)) {
+      const ps = getProfileState();
+      setUserProfile({
+        ...TEST_PROFILE,
+        total_answers: ps.total_profile_answers,
+      });
+      return;
+    }
+
     const p = await refreshProfile(user.id);
     if (p) setUserProfile(p);
   }
 
   function handleTestMode() {
-    const fakeProfile: UserProfile = {
-      id: 'test_user',
-      email: 'test@local',
-      display_name: null,
-      free_profile_tests_used: 0,
-      total_answers: 0,
-      premium_status: 'free',
-    };
-    setUserProfile(fakeProfile);
+    enableTestMode();
+    setUser(TEST_USER);
+    setUserProfile(TEST_PROFILE);
     setIsTestMode(true);
+    confirmAge();
     setScreen('dashboard');
   }
 
