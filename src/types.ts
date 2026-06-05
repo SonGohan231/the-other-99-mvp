@@ -69,6 +69,21 @@ export interface ProfileState {
   total_profile_answers: number;
 }
 
+export interface BehavioralMetadata {
+  first_reaction_time_ms: number | null;
+  hesitation_time_ms: number | null;
+  was_answer_changed: boolean;
+  was_undone: boolean;
+  returned_to_question: boolean;
+  confidence_signal: number;
+  avoidance_signal: number;
+  impulsivity_signal: number;
+  deliberation_signal: number;
+  instability_signal: number;
+  emotional_friction_signal: number;
+  contradiction_signal: number;
+}
+
 export interface Interaction {
   content_id: string;
   selected_answer: string;
@@ -78,6 +93,7 @@ export interface Interaction {
   created_at: string;
   rarity_tier: string;
   content_type: string;
+  behavioral_metadata?: BehavioralMetadata | null;
 }
 
 export interface TestAnswer {
@@ -88,6 +104,7 @@ export interface TestAnswer {
   response_time_ms: number;
   answer_changes_count: number;
   axis_delta_json: Record<string, number> | null;
+  behavioral_metadata?: BehavioralMetadata | null;
 }
 
 export type AppScreen =

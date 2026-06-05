@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ContentItem, ProfileState } from '../types';
+import { ContentItem, ProfileState, BehavioralMetadata } from '../types';
 import { exportSession, resetSession } from '../utils/storage';
 import { isPremiumUnlocked, unlockPremium, disablePremiumUnlock, enablePremiumPreview, disablePremiumPreview, isPremiumPreviewEnabled } from '../utils/premiumProgression';
 import { debugLog, getLogs, getErrors, clearLogs } from '../utils/debugStore';
 import { enableTestSession, disableTestSession } from '../utils/testSession';
 import { disableGuestMode } from '../utils/guestSession';
+import { BehavioralSummary } from '../utils/behavioralSignals';
 
 interface Props {
   profileState: ProfileState;
@@ -13,6 +14,8 @@ interface Props {
   currentItem: ContentItem | null;
   totalProfileAnswers: number;
   isTestMode: boolean;
+  lastBehavioralMetadata?: BehavioralMetadata | null;
+  behavioralSummary?: BehavioralSummary | null;
   onStartTest: () => void;
   onUndo: () => void;
   canUndo: boolean;
@@ -35,6 +38,8 @@ export default function DebugPanel({
   currentItem,
   totalProfileAnswers,
   isTestMode,
+  lastBehavioralMetadata,
+  behavioralSummary,
   onStartTest,
   onUndo,
   canUndo,
@@ -90,6 +95,38 @@ export default function DebugPanel({
               <div>Progress: {testContent.length > 0 ? Math.round(testAnswerIndex / testContent.length * 100) : 0}%</div>
               <div>Queue ({testContent.length}): {testContent.slice(0, 5).map(i => i.id).join(', ')}{testContent.length > 5 ? '…' : ''}</div>
             </div>
+          </details>
+
+          {/* BEHAVIORAL */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Behavioral Signals {behavioralSummary ? `(n=${behavioralSummary.sampleSize})` : '(no data)'}
+            </summary>
+            {lastBehavioralMetadata && (
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '6px' }}>
+                <div style={{ fontSize: '0.64rem', color: 'var(--text-dim)', fontWeight: 600, marginBottom: '2px' }}>Last answer:</div>
+                <div>conf: {lastBehavioralMetadata.confidence_signal} | avoid: {lastBehavioralMetadata.avoidance_signal} | imp: {lastBehavioralMetadata.impulsivity_signal}</div>
+                <div>delib: {lastBehavioralMetadata.deliberation_signal} | inst: {lastBehavioralMetadata.instability_signal} | friction: {lastBehavioralMetadata.emotional_friction_signal}</div>
+                <div>reaction: {lastBehavioralMetadata.first_reaction_time_ms ?? '—'}ms | hesitation: {lastBehavioralMetadata.hesitation_time_ms ?? '—'}ms</div>
+                <div>changed: {String(lastBehavioralMetadata.was_answer_changed)} | undone: {String(lastBehavioralMetadata.was_undone)}</div>
+              </div>
+            )}
+            {behavioralSummary ? (
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                <div style={{ fontSize: '0.64rem', color: 'var(--text-dim)', fontWeight: 600, marginBottom: '2px' }}>Aggregates (n={behavioralSummary.sampleSize}):</div>
+                <div>decisiveness: <span style={{ color: 'var(--accent-light)' }}>{behavioralSummary.decisivenessLabel}</span></div>
+                <div>stability: <span style={{ color: 'var(--accent-light)' }}>{behavioralSummary.stabilityLabel}</span></div>
+                <div>avoidance: <span style={{ color: 'var(--accent-light)' }}>{behavioralSummary.avoidanceLabel}</span></div>
+                <div>avg conf: {behavioralSummary.avgConfidenceSignal} | avg avoid: {behavioralSummary.avgAvoidanceSignal}</div>
+                <div>avg imp: {behavioralSummary.avgImpulsivitySignal} | avg delib: {behavioralSummary.avgDeliberationSignal}</div>
+                <div>avg inst: {behavioralSummary.avgInstabilitySignal} | avg friction: {behavioralSummary.avgEmotionalFrictionSignal}</div>
+                <div>avg contradiction: {behavioralSummary.avgContradictionSignal}</div>
+                <div>changes: {behavioralSummary.totalAnswerChanges} | undos: {behavioralSummary.totalUndos} | skips: {behavioralSummary.totalSkips}</div>
+                <div>avg resp: {(behavioralSummary.avgResponseTimeMs / 1000).toFixed(1)}s</div>
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Need ≥3 answers with metadata.</div>
+            )}
           </details>
 
           {/* ACTIONS */}

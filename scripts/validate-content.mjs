@@ -109,6 +109,16 @@ function validateFile(filePath, { checkCardPaths = false, strict = false, requir
       try { JSON.parse(row.axis_delta_json); }
       catch { warnings.push(`${id}: Invalid JSON in axis_delta_json`); }
     }
+
+    // Behavioral sensitivity fields (strict mode — premium content)
+    if (strict) {
+      for (const field of ['darkness_level', 'intimacy_level', 'psychological_intensity']) {
+        if (row[field] !== undefined && row[field] !== '') {
+          const n = parseInt(row[field], 10);
+          if (isNaN(n) || n < 0 || n > 10) warnings.push(`${id}: ${field} must be 0–10 (got '${row[field]}')`);
+        }
+      }
+    }
   });
 
   return { rows, errors, warnings, seenIds };

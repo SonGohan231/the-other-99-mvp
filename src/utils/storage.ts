@@ -71,6 +71,24 @@ export function removeLastInteraction(): void {
   }
 }
 
+export function markLastInteractionUndone(contentId: string): void {
+  const interactions = getInteractions();
+  // Find the most recent interaction for this content id
+  for (let i = interactions.length - 1; i >= 0; i--) {
+    if (interactions[i].content_id === contentId) {
+      const meta = interactions[i].behavioral_metadata;
+      if (meta) {
+        interactions[i] = {
+          ...interactions[i],
+          behavioral_metadata: { ...meta, was_undone: true },
+        };
+      }
+      break;
+    }
+  }
+  localStorage.setItem(KEYS.INTERACTIONS, JSON.stringify(interactions));
+}
+
 export function getInteractions(): Interaction[] {
   try { return JSON.parse(localStorage.getItem(KEYS.INTERACTIONS) || '[]'); }
   catch { return []; }

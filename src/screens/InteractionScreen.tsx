@@ -10,7 +10,7 @@ interface Props {
   testTotal: number;
   profileProgress: number;
   selectedCard?: string | null;
-  onAnswer: (answer: string, responseTimeMs: number, changeCount: number) => void;
+  onAnswer: (answer: string, responseTimeMs: number, changeCount: number, firstReactionMs: number | null) => void;
   onUndo?: () => void;
   canUndo?: boolean;
 }
@@ -28,6 +28,7 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
   const startTimeRef = useRef<number>(Date.now());
   const answerTimeRef = useRef<number>(0);
   const changeCountRef = useRef<number>(0);
+  const firstReactionRef = useRef<number | null>(null);
 
   useEffect(() => {
     startTimeRef.current = Date.now();
@@ -36,6 +37,7 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
     setPhase('question');
     setCommunityPercs([]);
     setBarsVisible(false);
+    firstReactionRef.current = null;
   }, [item.id]);
 
   const fields = item as unknown as Record<string, string>;
@@ -44,6 +46,9 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
   const answers = answerOptionsRaw.split('|').map((a) => a.trim()).filter(Boolean);
 
   function handleSelect(answer: string) {
+    if (firstReactionRef.current === null) {
+      firstReactionRef.current = Date.now() - startTimeRef.current;
+    }
     if (selected !== null && answer !== selected) setChangeCount((c) => c + 1);
     setSelected(answer);
   }
@@ -67,7 +72,7 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
 
   function handleContinue() {
     if (!selected) return;
-    onAnswer(selected, answerTimeRef.current, changeCountRef.current);
+    onAnswer(selected, answerTimeRef.current, changeCountRef.current, firstReactionRef.current);
   }
 
   const questionNum = testIndex + 1;

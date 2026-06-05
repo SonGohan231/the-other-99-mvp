@@ -331,3 +331,58 @@ Known limitations:
 - iOS build still requires macOS + Xcode + Apple Developer account
 - APK built in local CI environment using downloaded Android SDK; GitHub Actions workflow uses ubuntu-latest pre-installed SDK
 - App icons are programmatically generated placeholders; replace with design-quality assets before store submission
+
+---
+
+## Phase C — Behavioral Signal Capture
+
+### Checklist
+
+| ID | Item | Status |
+|----|------|--------|
+| BEHAVIOR-001 | `BehavioralMetadata` interface defined in `src/types.ts` | VERIFIED |
+| BEHAVIOR-002 | `Interaction` type extended with `behavioral_metadata?: BehavioralMetadata \| null` | VERIFIED |
+| BEHAVIOR-003 | `TestAnswer` type extended with `behavioral_metadata?: BehavioralMetadata \| null` | VERIFIED |
+| BEHAVIOR-004 | `src/utils/behavioralSignals.ts` — `computeConfidenceSignal()` created | VERIFIED |
+| BEHAVIOR-005 | `src/utils/behavioralSignals.ts` — `computeAvoidanceSignal()` created | VERIFIED |
+| BEHAVIOR-006 | `src/utils/behavioralSignals.ts` — `computeImpulsivitySignal()` created | VERIFIED |
+| BEHAVIOR-007 | `src/utils/behavioralSignals.ts` — `computeDeliberationSignal()` created | VERIFIED |
+| BEHAVIOR-008 | `src/utils/behavioralSignals.ts` — `computeInstabilitySignal()` created | VERIFIED |
+| BEHAVIOR-009 | `src/utils/behavioralSignals.ts` — `computeEmotionalFrictionSignal()` created | VERIFIED |
+| BEHAVIOR-010 | `src/utils/behavioralSignals.ts` — `computeContradictionSignal()` created | VERIFIED |
+| BEHAVIOR-011 | `src/utils/behavioralSignals.ts` — `computeBehavioralMetadata()` orchestrator | VERIFIED |
+| BEHAVIOR-012 | `src/utils/behavioralSignals.ts` — `summarizeBehavioralProfile()` aggregator | VERIFIED |
+| BEHAVIOR-013 | `src/utils/behavioralSignals.ts` — `BehavioralSummary` interface with decisiveness/stability/avoidance labels | VERIFIED |
+| BEHAVIOR-014 | `src/utils/contentTags.ts` — `getContentBehavioralProfile()` derives sensitivity from existing CSV fields | VERIFIED |
+| BEHAVIOR-015 | `src/screens/InteractionScreen.tsx` — `firstReactionRef` captures first tap time | VERIFIED |
+| BEHAVIOR-016 | `src/screens/InteractionScreen.tsx` — `firstReactionMs` passed as 4th arg to `onAnswer` | VERIFIED |
+| BEHAVIOR-017 | `src/utils/storage.ts` — `markLastInteractionUndone()` added | VERIFIED |
+| BEHAVIOR-018 | `src/App.tsx` — `handleAnswer` computes `contentProfile` and `behavioralMeta` per answer | VERIFIED |
+| BEHAVIOR-019 | `src/App.tsx` — `behavioralMeta` stored in both `TestAnswer` and local `Interaction` | VERIFIED |
+| BEHAVIOR-020 | `src/App.tsx` — `handleUndoAnswer` calls `markLastInteractionUndone()` and refreshes `behavioralSummary` | VERIFIED |
+| BEHAVIOR-021 | `src/App.tsx` — `behavioralSummary` state initialized from `getInteractions()` on mount | VERIFIED |
+| BEHAVIOR-022 | `src/utils/premiumInsights.ts` — `generatePremiumInsight` accepts optional `behavioralSummary` param | VERIFIED |
+| BEHAVIOR-023 | `src/utils/premiumInsights.ts` — all 8 insight generators enriched with behavioral data when available | VERIFIED |
+| BEHAVIOR-024 | `src/components/PremiumCard.tsx` — `behavioralSummary` prop wired to `generatePremiumInsight` | VERIFIED |
+| BEHAVIOR-025 | `src/screens/PremiumDepthScreen.tsx` — `behavioralSummary` prop accepted and forwarded to cards | VERIFIED |
+| BEHAVIOR-026 | `src/screens/DebugPanel.tsx` — behavioral metrics display section added (last answer + aggregates) | VERIFIED |
+| BEHAVIOR-027 | `scripts/validate-content.mjs` — behavioral sensitivity field range checks for strict mode | VERIFIED |
+
+**Date:** 2026-06-05
+**Status:** IMPLEMENTED
+
+Changed files:
+- `src/types.ts` — MODIFIED: BehavioralMetadata interface, Interaction + TestAnswer extended
+- `src/utils/behavioralSignals.ts` — NEW: 7 signal functions, computeBehavioralMetadata, summarizeBehavioralProfile
+- `src/utils/contentTags.ts` — NEW: getContentBehavioralProfile from existing CSV fields
+- `src/screens/InteractionScreen.tsx` — MODIFIED: first_reaction capture, onAnswer 4th param
+- `src/utils/storage.ts` — MODIFIED: markLastInteractionUndone added
+- `src/App.tsx` — MODIFIED: behavioral compute + store in handleAnswer, markLastInteractionUndone in handleUndoAnswer, behavioralSummary state, props passed to DebugPanel + PremiumDepthScreen
+- `src/utils/premiumInsights.ts` — MODIFIED: BehavioralSummary param, all 8 generators enriched
+- `src/components/PremiumCard.tsx` — MODIFIED: behavioralSummary prop forwarded
+- `src/screens/PremiumDepthScreen.tsx` — MODIFIED: behavioralSummary prop forwarded
+- `src/screens/DebugPanel.tsx` — MODIFIED: behavioral props, metrics display section
+- `scripts/validate-content.mjs` — MODIFIED: sensitivity field range checks
+
+Build result: PASSED (npm run build)
+Content validation: PASSED (865 unique IDs)

@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import {
-  AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, NextCard,
+  AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, NextCard, BehavioralMetadata,
 } from './types';
 import { loadContent } from './utils/csvLoader';
 import { selectProfileTestContent, calcProfileProgress } from './utils/contentSelector';
 import {
   isAgeConfirmed, confirmAge,
   getSeenIds, addSeenId, addSeenIds,
-  addInteraction, getProfileState, saveProfileState,
+  addInteraction, getInteractions, getProfileState, saveProfileState,
   resetSession, exportSession,
-  removeSeenId, removeLastInteraction,
+  removeSeenId, removeLastInteraction, markLastInteractionUndone,
 } from './utils/storage';
+import { computeBehavioralMetadata, summarizeBehavioralProfile, BehavioralSummary } from './utils/behavioralSignals';
+import { getContentBehavioralProfile } from './utils/contentTags';
 import {
   ProfileVector, loadVector, saveVector, applyDeltas, calcHumanTwinMatch, getTopDimensions,
 } from './utils/profileVector';
@@ -181,6 +183,13 @@ export default function App() {
   const [currentLegalPage, setCurrentLegalPage] = useState<LegalPage>('terms');
   const [showPremiumUnlockedModal, setShowPremiumUnlockedModal] = useState(false);
 
+  // Behavioral summary (computed from stored interactions)
+  const [behavioralSummary, setBehavioralSummary] = useState<BehavioralSummary | null>(() =>
+    summarizeBehavioralProfile(getInteractions())
+  );
+  // Last answer's behavioral metadata (for debug display)
+  const [lastBehavioralMetadata, setLastBehavioralMetadata] = useState<BehavioralMetadata | null>(null);
+
   // Apply persisted theme + reduced motion on mount
   useState(() => {
     applyTheme(getTheme());
@@ -348,7 +357,12 @@ export default function App() {
     setScreen('test-intro');
   }
 
-  async function handleAnswer(answer: string, responseTimeMs: number, changeCount: number) {
+  async function handleAnswer(
+    answer: string,
+    responseTimeMs: number,
+    changeCount: number,
+    firstReactionMs: number | null = null,
+  ) {
     if (!currentItem) return;
 
     let axisDeltas: Record<string, number> | null = null;
@@ -358,6 +372,19 @@ export default function App() {
       }
     } catch { /* ignore */ }
 
+    const contentProfile = getContentBehavioralProfile(currentItem);
+    const behavioralMeta = computeBehavioralMetadata({
+      responseTimeMs,
+      firstReactionMs,
+      changeCount,
+      wasSkipped: false,
+      wasUndone: false,
+      axisDeltas,
+      profileVector,
+      contentProfile,
+    });
+    setLastBehavioralMetadata(behavioralMeta);
+
     const testAnswer: TestAnswer = {
       content_id: currentItem.id,
       content_type: currentItem.content_type,
@@ -366,6 +393,7 @@ export default function App() {
       response_time_ms: responseTimeMs,
       answer_changes_count: changeCount,
       axis_delta_json: axisDeltas,
+      behavioral_metadata: behavioralMeta,
     };
 
     if (user && testSessionId) {
@@ -384,8 +412,10 @@ export default function App() {
       created_at: new Date().toISOString(),
       rarity_tier: currentItem.rarity_tier,
       content_type: currentItem.content_type,
+      behavioral_metadata: behavioralMeta,
     };
     addInteraction(localInteraction);
+    setBehavioralSummary(summarizeBehavioralProfile(getInteractions()));
     addSeenId(currentItem.id);
 
     const ps = getProfileState();
@@ -538,6 +568,10 @@ export default function App() {
   function handleUndoAnswer() {
     const entry = popUndoEntry();
     if (!entry) return;
+
+    // Mark the undone interaction in localStorage before removing it
+    markLastInteractionUndone(entry.contentId);
+    setBehavioralSummary(summarizeBehavioralProfile(getInteractions()));
 
     saveVector(entry.profileVectorSnapshot);
     setProfileVector({ ...entry.profileVectorSnapshot });
@@ -959,6 +993,7 @@ export default function App() {
           isPremium={isPremium}
           totalAnswers={profileState.total_profile_answers}
           profileVector={profileVector}
+          behavioralSummary={behavioralSummary}
           onBack={() => setScreen('dashboard')}
           onUpgrade={() => setScreen('subscription')}
         />
@@ -981,6 +1016,8 @@ export default function App() {
           currentItem={currentItem}
           totalProfileAnswers={profileState.total_profile_answers}
           isTestMode={isTestMode}
+          lastBehavioralMetadata={lastBehavioralMetadata}
+          behavioralSummary={behavioralSummary}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

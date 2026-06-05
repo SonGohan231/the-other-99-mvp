@@ -1,5 +1,6 @@
 import { useT } from '../context/LangContext';
 import { ProfileVector } from '../utils/profileVector';
+import { BehavioralSummary } from '../utils/behavioralSignals';
 import PremiumCard from '../components/PremiumCard';
 import { PREMIUM_MODULES } from '../data/premiumModules';
 
@@ -7,11 +8,12 @@ interface Props {
   isPremium: boolean;
   totalAnswers: number;
   profileVector: ProfileVector;
+  behavioralSummary?: BehavioralSummary | null;
   onBack: () => void;
   onUpgrade: () => void;
 }
 
-export default function PremiumDepthScreen({ isPremium, totalAnswers, profileVector, onBack, onUpgrade }: Props) {
+export default function PremiumDepthScreen({ isPremium, totalAnswers, profileVector, behavioralSummary, onBack, onUpgrade }: Props) {
   const t = useT();
 
   return (
@@ -64,6 +66,7 @@ export default function PremiumDepthScreen({ isPremium, totalAnswers, profileVec
               isPremium={isPremium}
               totalAnswers={totalAnswers}
               profileVector={profileVector}
+              behavioralSummary={behavioralSummary}
             />
           ))}
         </div>
