@@ -85,7 +85,7 @@ function SupabaseConfigError() {
   );
 }
 
-// ─── Helper: build NextCard from ContentItem ──────────────────────────────────
+// ─── Helper: build NextCard from ContentItem ────────────────────────────────────────────
 function buildNextCard(item: ContentItem): NextCard {
   const cp = deriveCardPath(item);
   const def = CARD_PATH_DEFINITIONS.find((d) => d.path === cp) ?? CARD_PATH_DEFINITIONS[0];
@@ -101,7 +101,7 @@ function buildNextCard(item: ContentItem): NextCard {
   };
 }
 
-// ─── Helper: pick 3 candidate items with rarity variety ──────────────────────
+// ─── Helper: pick 3 candidate items with rarity variety ──────────────────────────────────────
 function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
   const available = pool.slice(fromIndex);
   if (available.length === 0) return [];
@@ -124,7 +124,7 @@ function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
   return picks.slice(0, 3).map(buildNextCard);
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────────
+// ─── App ──────────────────────────────────────────────────────────────────────────────
 export default function App() {
   const t = useT();
   const [screen, setScreen] = useState<AppScreen>('age-gate');
@@ -209,7 +209,7 @@ export default function App() {
     });
   }
 
-  // ─── Load CSV ──────────────────────────────────────────────────────────────
+  // ─── Load CSV ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     loadContent()
       .then((items) => {
@@ -252,7 +252,7 @@ export default function App() {
       .catch((err) => { setLoadError(String(err)); setLoading(false); });
   }, []);
 
-  // ─── Auth listener ─────────────────────────────────────────────────────────
+  // ─── Auth listener ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (isTestMode || isGuestMode) { setAuthLoading(false); return; }
 
@@ -273,7 +273,7 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, [isTestMode, isGuestMode]);
 
-  // ─── Load profile after user changes ──────────────────────────────────────
+  // ─── Load profile after user changes ──────────────────────────────────────────────────
   useEffect(() => {
     if (isTestMode) {
       setUserProfile(TEST_PROFILE as UserProfile);
@@ -294,7 +294,7 @@ export default function App() {
     getOrCreateProfile(user).then((p) => { if (p) setUserProfile(p); });
   }, [user, isTestMode, isGuestMode]);
 
-  // ─── Determine initial screen ──────────────────────────────────────────────
+  // ─── Determine initial screen ────────────────────────────────────────────────────────
   useEffect(() => {
     if (loading || authLoading) return;
     if (isTestMode || isGuestMode) {
@@ -308,7 +308,7 @@ export default function App() {
     setScreen('dashboard');
   }, [loading, authLoading, user, isTestMode, isGuestMode]);
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
+  // ─── Handlers ─────────────────────────────────────────────────────────────────────────
   function handleAgeConfirm() {
     confirmAge();
     if (isTestMode || isGuestMode) { setScreen('dashboard'); return; }
@@ -721,7 +721,7 @@ export default function App() {
     setScreen('full-profile');
   }
 
-  // ─── Loading ───────────────────────────────────────────────────────────────
+  // ─── Loading ───────────────────────────────────────────────────────────────────────
   if (loading || authLoading) {
     return (
       <div className="loading-screen">
@@ -744,7 +744,7 @@ export default function App() {
     );
   }
 
-  // ─── Screens ───────────────────────────────────────────────────────────────
+  // ─── Screens ───────────────────────────────────────────────────────────────────────────
   return (
     <>
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
