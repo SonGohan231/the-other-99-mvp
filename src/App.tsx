@@ -35,7 +35,7 @@ import ProfileSnapshotScreen from './screens/ProfileSnapshotScreen';
 import FullProfileScreen from './screens/FullProfileScreen';
 import HiddenParametersScreen from './screens/HiddenParametersScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
-import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
+import { enableTestMode, disableTestMode, enableTestSession, disableTestSession, TEST_USER } from './utils/testSession';
 import { saveInProgressTest, loadInProgressTest, clearInProgressTest } from './utils/inProgressTest';
 import { debugLog, debugError } from './utils/debugStore';
 import { isAdminEmail } from './config/admin';
@@ -88,7 +88,7 @@ const TEST_PROFILE = {
   premium_status: 'premium',
 } as UserProfile;
 
-const isLocalTestUser = (u: User | null) => u?.id === TEST_USER_ID;
+import isLocalTestUser = (u: User | null) => u?.id === TEST_USER_ID;
 
 
 // ─── Config error screen ──────────────────────────────────────────────────────
