@@ -35,7 +35,7 @@ import ProfileSnapshotScreen from './screens/ProfileSnapshotScreen';
 import FullProfileScreen from './screens/FullProfileScreen';
 import HiddenParametersScreen from './screens/HiddenParametersScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
-import { enableTestMode, disableTestMode, enableTestSession, disableTestSession, TEST_USER } from './utils/testSession';
+import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
 import { saveInProgressTest, loadInProgressTest, clearInProgressTest } from './utils/inProgressTest';
 import { debugLog, debugError } from './utils/debugStore';
 import { isAdminEmail } from './config/admin';
@@ -51,51 +51,49 @@ import TestIntroScreen from './screens/TestIntroScreen';
 import PremiumPlaceholder from './screens/PremiumPlaceholder';
 import DebugPanel from './screens/DebugPanel';
 
-// ─── Local test mode auth bypass ─────────────────────────────────────────────
-
 const TEST_TOTAL = 17;
 
-const TEST_USER_ID = 'local-test-user';
+// ─── Config error screen ────────────────────────────────────────────────
+function SupabaseConfigError() {
+  const t = useT();
+  return (
+    <div className="screen-centered" style={{ background: 'var(--bg)' }}>
+      <div className="config-error-inner animate-in">
+        <div style={{ padding: '4px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#f87171' }}>
+          {t.configError.badge}
+        </div>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>
+          {t.configError.title}
+        </h1>
+        <p className="body-sm">
+          {t.configError.instruction} <code style={{ color: 'var(--accent-light)' }}>.env.local</code>:
+        </p>
+        <pre className="config-error-code">{`VITE_SUPABASE_URL=https://xxx.supabase.co\nVITE_SUPABASE_PUBLISHABLE_KEY=eyJ...`}</pre>
+        <p className="body-sm">
+          {t.configError.afterNote} <code style={{ color: 'var(--accent-light)' }}>{t.configError.devCmd}</code>.
+        </p>
+      </div>
+    </div>
+  );
+}
 
-const isTestModeRequested = () => {
-  return window.location.search.includes('testMode=true');
-};
-
-const enableTestMode = () => {
-  localStorage.setItem('to99_test_session', 'true');
-  localStorage.setItem('to99_debug_mode', 'true');
-  localStorage.setItem('to99_premium_unlocked', 'true');
-};
-
-const disableTestMode = () => {
-  localStorage.removeItem('to99_test_session');
-  localStorage.removeItem('to99_debug_mode');
-  localStorage.removeItem('to99_premium_unlocked');
-};
-
-const TEST_USER = {
-  id: TEST_USER_ID,
-  email: 'test@theother99.local',
-  user_metadata: {
-    full_name: 'Local Test User',
-  },
-} as unknown as User;
-
-const TEST_PROFILE = {
-  id: TEST_USER_ID,
-  email: 'test@theother99.local',
-  display_name: 'Local Test User',
-  free_profile_tests_used: 0,
-  total_answers: 0,
-  premium_status: 'premium',
-} as UserProfile;
-
-const isLocalTestUser = (u: User | null) => u?.id === TEST_USER_ID;gorytitle: def.displayLabel,
+// ─── Helper: build NextCard from ContentItem ────────────────────────────────────────────
+function buildNextCard(item: ContentItem): NextCard {
+  const cp = deriveCardPath(item);
+  const def = CARD_PATH_DEFINITIONS.find((d) => d.path === cp) ?? CARD_PATH_DEFINITIONS[0];
+  return {
+    id: `nc_${item.id}_${Date.now()}`,
+    linkedContentId: item.id,
+    contentType: item.content_type,
+    rarityTier: item.rarity_tier,
+    cardPath: cp,
+    themeCategory: deriveThemeCategory(item),
+    title: def.displayLabel,
     subtitle: def.displaySubtitle,
   };
 }
 
-// ─── Helper: pick 3 candidate items with rarity variety ──────────────────────
+// ─── Helper: pick 3 candidate items with rarity variety ──────────────────────────────────────
 function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
   const available = pool.slice(fromIndex);
   if (available.length === 0) return [];
@@ -120,7 +118,7 @@ function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
   return picks.slice(0, 3).map(buildNextCard);
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────────
+// ─── App ──────────────────────────────────────────────────────────────────────────────
 export default function App() {
   const t = useT();
   const [screen, setScreen] = useState<AppScreen>('age-gate');
@@ -156,18 +154,21 @@ export default function App() {
   const [newFragment, setNewFragment] = useState<ProfileFragment | null>(null);
 
   // Undo state
-  const [canUndoAnswer, setCanUndoAnswer] = useState(falTestest mode
-  // Test mode 
+  const [canUndoAnswer, setCanUndoAnswer] = useState(false);
+
+  // Test mode
   const [isTestMode] = useState<boolean>(() => {
-  if (isTestModeRequested()) {
-    enableTestSession();
-    return true;
-  }
-  return isTestSessionActive();
-});ssionActiveuted premium status
+    if (isTestModeRequested()) {
+      enableTestSession();
+      return true;
+    }
+    return isTestSessionActive();
+  });
+
+  // Computed premium status
   const isPremium = isPremiumUnlocked(userProfile?.premium_status ?? null);
 
-  // ─── Persist in-progress test ─────────────────────────────────────────────
+  // ─── Persist in-progress test ─────────────────────────────────────────────────────
   function persistInProgress() {
     if (!testContent.length) return;
     saveInProgressTest({
@@ -182,7 +183,7 @@ export default function App() {
     });
   }
 
-  // ─── Load CSV ──────────────────────────────────────────────────────────────
+  // ─── Load CSV ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     loadContent()
       .then((items) => {
@@ -226,19 +227,9 @@ export default function App() {
       .catch((err) => { setLoadError(String(err)); setLoading(false); });
   }, []);
 
-  // ─── Auth listener ─────────────────────────────────────────────────────────
+  // ─── Auth listener ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-if (isTestMode || isTestModeRequested()) {
-  enableTestMode();
-  enableTestSession();
-
-  setUser(TEST_USER);
-  setUserProfile(TEST_PROFILE);
-  setIsTestMode(true);
-
-  setAuthLoading(false);
-  return;
-}
+    if (isTestMode) { setAuthLoading(false); return; }
 
     if (!supabaseConfigured || !supabase) {
       setAuthLoading(false);
@@ -257,48 +248,31 @@ if (isTestMode || isTestModeRequested()) {
     return () => subscription.unsubscribe();
   }, [isTestMode]);
 
-  // ─── Load profile after user changes ──────────────────────────────────────
+  // ─── Load profile after user changes ──────────────────────────────────────────────────
   useEffect(() => {
     if (isTestMode) {
       setUserProfile(TEST_PROFILE as UserProfile);
       return;
     }
     if (!user) { setUserProfile(null); return; }
-
-    if (isLocalTestUser(user)) {
-      setUserProfile(TEST_PROFILE);
-      setIsTestMode(true);
-      return;
-    }
-
     getOrCreateProfile(user).then((p) => { if (p) setUserProfile(p); });
   }, [user, isTestMode]);
 
-  // ─── Determine initial screen ──────────────────────────────────────────────
+  // ─── Determine initial screen ────────────────────────────────────────────────────────
   useEffect(() => {
     if (loading || authLoading) return;
-const testModeRequested = isTestMode || isTestModeRequested();
-
-if (testModeRequested) {
-  if (!isAgeConfirmed()) {
-    setScreen('age-gate');
-    return;
-  }
-
-  setScreen('dashboard');
-  return;
-}
-
-if (!supabaseConfigured) {
-  setScreen('supabase-config-error');
-  return;
-}
+    if (isTestMode) {
+      if (!isAgeConfirmed()) { setScreen('age-gate'); return; }
+      setScreen('dashboard');
+      return;
+    }
+    if (!supabaseConfigured) { setScreen('supabase-config-error'); return; }
     if (!isAgeConfirmed()) { setScreen('age-gate'); return; }
     if (!user) { setScreen('auth'); return; }
     setScreen('dashboard');
   }, [loading, authLoading, user, isTestMode]);
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
+  // ─── Handlers ─────────────────────────────────────────────────────────────────────────
   function handleAgeConfirm() {
     confirmAge();
     setScreen(user ? 'dashboard' : 'auth');
@@ -318,7 +292,7 @@ if (!supabaseConfigured) {
     const tNum = freeTestsUsed + 1;
 
     let sessionId: string | null = null;
-    if (user && !isLocalTestUser(user)) {
+    if (user) {
       sessionId = await createTestSession(user.id, tNum, items.map((i) => i.id));
     }
 
@@ -357,7 +331,7 @@ if (!supabaseConfigured) {
       axis_delta_json: axisDeltas,
     };
 
-    if (user && !isLocalTestUser(user) && testSessionId) {
+    if (user && testSessionId) {
       await saveAnswerToDb(testSessionId, user.id, {
         ...testAnswer,
         skipped: false,
@@ -455,7 +429,7 @@ if (!supabaseConfigured) {
     saveProfileState(ps);
     setProfileState({ ...ps });
 
-    if (user && !isLocalTestUser(user)) {
+    if (user) {
       upsertProfileState(user.id, {
         answers_count: ps.total_profile_answers,
         profile_progress: ps.profile_progress,
@@ -586,19 +560,13 @@ if (!supabaseConfigured) {
       total_profile_answers: ps.total_profile_answers,
     };
 
-    if (testSessionId && user && !isLocalTestUser(user)) {
+    if (testSessionId) {
       await completeTestSession(testSessionId, summaryJson);
     }
 
-    if (user && !isLocalTestUser(user)) {
+    if (user) {
       const updated = await incrementFreeTestsUsed(user.id, ps.total_profile_answers);
       if (updated) setUserProfile(updated);
-    } else if (isLocalTestUser(user)) {
-      setUserProfile({
-        ...TEST_PROFILE,
-        free_profile_tests_used: testNumber,
-        total_answers: ps.total_profile_answers,
-      });
     }
 
     addSeenIds(testContent.map((i) => i.id));
@@ -607,17 +575,11 @@ if (!supabaseConfigured) {
   }
 
   async function handleLogout() {
-if (isTestMode || isLocalTestUser(user)) {
-  disableTestSession();
-  disableTestMode();
-
-  setIsTestMode(false);
-  setUser(null);
-  setUserProfile(null);
-  setScreen('auth');
-
-  return;
-}
+    if (isTestMode) {
+      disableTestSession();
+      window.location.href = window.location.pathname;
+      return;
+    }
     await signOut();
     setUser(null);
     setUserProfile(null);
@@ -648,30 +610,13 @@ if (isTestMode || isLocalTestUser(user)) {
 
   async function handleRefreshProfile() {
     if (!user) return;
-
-    if (isLocalTestUser(user)) {
-      const ps = getProfileState();
-      setUserProfile({
-        ...TEST_PROFILE,
-        total_answers: ps.total_profile_answers,
-      });
-      return;
-    }
-
     const p = await refreshProfile(user.id);
     if (p) setUserProfile(p);
   }
 
   function handleTestMode() {
-enableTestMode();
-enableTestSession();
-
-setUser(TEST_USER);
-setUserProfile(TEST_PROFILE);
-setIsTestMode(true);
-
-confirmAge();
-setScreen('dashboard');
+    enableTestSession();
+    window.location.reload();
   }
 
   function handleUnlockFull() {
@@ -679,7 +624,7 @@ setScreen('dashboard');
     setScreen('full-profile');
   }
 
-  // ─── Loading ───────────────────────────────────────────────────────────────
+  // ─── Loading ───────────────────────────────────────────────────────────────────────
   if (loading || authLoading) {
     return (
       <div className="loading-screen">
@@ -702,7 +647,7 @@ setScreen('dashboard');
     );
   }
 
-  // ─── Screens ───────────────────────────────────────────────────────────────
+  // ─── Screens ───────────────────────────────────────────────────────────────────────────
   return (
     <>
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
