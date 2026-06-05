@@ -1,4 +1,4 @@
-import { useT } from '../context/LangContext';
+import { useT, useLang } from '../context/LangContext';
 import { ProfileVector } from '../utils/profileVector';
 import { generatePremiumInsight } from '../utils/premiumInsights';
 import { BehavioralSummary } from '../utils/behavioralSignals';
@@ -133,6 +133,7 @@ function ModuleArt({ moduleId }: { moduleId: string }) {
 
 export default function PremiumCard({ moduleId, isPremium, totalAnswers, profileVector, behavioralSummary, onOpen }: Props) {
   const t = useT();
+  const [lang] = useLang();
   const moduleT = (t.premiumModules as Record<string, { title: string; description: string; preview: string }>)[moduleId];
   if (!moduleT) return null;
 
@@ -141,7 +142,7 @@ export default function PremiumCard({ moduleId, isPremium, totalAnswers, profile
   const hasData = totalAnswers >= minAnswers;
   const isLocked = !isPremium;
 
-  const insight = (!isLocked && hasData) ? generatePremiumInsight(moduleId, profileVector, totalAnswers, behavioralSummary) : null;
+  const insight = (!isLocked && hasData) ? generatePremiumInsight(moduleId, profileVector, totalAnswers, behavioralSummary, lang) : null;
 
   return (
     <div

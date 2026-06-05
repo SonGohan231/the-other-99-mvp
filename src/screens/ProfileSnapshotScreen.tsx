@@ -1,7 +1,10 @@
 import { ProfileVector } from '../utils/profileVector';
 import { ProfileFragment } from '../utils/profileFragments';
-import { computeFullProfile } from '../utils/fullProfile';
+import { getInteractions } from '../utils/storage';
+import { summarizeBehavioralProfile } from '../utils/behavioralSignals';
+import { generateProfileInsights } from '../content/profileInsights';
 import ProfileRadarChart from '../components/ProfileRadarChart';
+import { useT, useLang } from '../context/LangContext';
 
 interface Props {
   profileVector: ProfileVector;
@@ -11,33 +14,93 @@ interface Props {
   onDashboard: () => void;
 }
 
-const LOCKED_SECTIONS = [
-  'Full Archetype',
-  'Hidden Parameters',
-  'Contradiction Pattern',
+function SectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <p style={{
+      fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em',
+      color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '8px',
+      ...style,
+    }}>
+      {children}
+    </p>
+  );
+}
+
+function InsightBlock({ label, text, accent }: { label: string; text: string; accent?: boolean }) {
+  return (
+    <div style={{
+      padding: '14px 16px',
+      background: accent ? 'rgba(124,58,237,0.07)' : 'rgba(255,255,255,0.02)',
+      border: `1px solid ${accent ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)'}`,
+      borderRadius: '8px',
+      marginBottom: '10px',
+    }}>
+      <p style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.12em', color: accent ? 'var(--accent-light)' : 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '6px' }}>
+        {label}
+      </p>
+      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.65 }}>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+const LOCKED_SECTIONS_EN = [
   'Relationship Pattern',
   'Conflict Pattern',
-  'Motivation Pattern',
+  'Motivation Architecture',
   'Shadow Pattern',
+  'Trust Pattern',
+  'Attachment Style',
+];
+
+const LOCKED_SECTIONS_PL = [
+  'Wzorzec Relacji',
+  'Wzorzec Konfliktu',
+  'Architektura Motywacji',
+  'Wzorzec Cienia',
+  'Wzorzec Zaufania',
+  'Styl Przywiązania',
 ];
 
 export default function ProfileSnapshotScreen({
   profileVector,
   totalAnswers,
-  profileFragments,
   onUnlockFull,
   onDashboard,
 }: Props) {
-  const profile = computeFullProfile(profileVector, totalAnswers);
+  const t = useT();
+  const [lang] = useLang();
+  const isPl = lang === 'pl';
 
-  // Top 3 signals: use fragments or dimension names
-  const signals: string[] = profileFragments.length > 0
-    ? profileFragments.slice(-3).reverse().map((f) => f.title)
-    : [profile.primaryDriver, profile.secondaryDriver, profile.decisionStyle].filter(Boolean).slice(0, 3);
+  const summary = summarizeBehavioralProfile(getInteractions());
+  const insights = generateProfileInsights(profileVector, summary, lang, totalAnswers);
 
-  // Truncate corePattern to first 2-3 sentences
-  const sentences = profile.corePattern.split('. ');
-  const shortPattern = sentences.slice(0, 2).join('. ') + (sentences.length > 2 ? '.' : '');
+  const lockedSections = isPl ? LOCKED_SECTIONS_PL : LOCKED_SECTIONS_EN;
+
+  const L = {
+    title:              isPl ? 'MIGAWKA PROFILU'   : 'PROFILE SNAPSHOT',
+    badge:              isPl ? 'WCZESNY SYGNAŁ'    : 'EARLY SIGNAL',
+    subtitle:           isPl
+      ? 'System zaczyna widzieć wzorzec. To nie jest gotowy profil.'
+      : 'The system is starting to see a pattern. This is not a finished profile.',
+    profileMap:         isPl ? 'Mapa profilu'      : 'Profile Map',
+    firstSignal:        isPl ? 'Pierwszy sygnał'   : 'First Signal',
+    hiddenTension:      isPl ? 'Ukryte napięcie'   : 'Hidden Tension',
+    behavioralContra:   isPl ? 'Sprzeczność behawioralna' : 'Behavioral Contradiction',
+    socialSignal:       isPl ? 'Sygnał społeczny'  : 'Social Signal',
+    decisionSignal:     isPl ? 'Sygnał decyzyjny'  : 'Decision Signal',
+    archetypeDir:       isPl ? 'Kierunek archetypu': 'Archetype Direction',
+    lockedBelow:        isPl ? 'Zablokowane poniżej' : 'Locked Below',
+    unlockButton:       t.profileSnapshot.unlockButton,
+    returnDashboard:    t.profileSnapshot.returnDashboard,
+    postLoopA:          isPl
+      ? 'Twój profil nie jest gotowy. Dopiero zaczął reagować.'
+      : 'Your profile is not complete. It just started reacting.',
+    postLoopB:          isPl
+      ? 'Odpowiadaj dalej, żeby sprawdzić, czy ten wzór się wzmocni, pęknie albo zmieni.'
+      : 'Answer more questions to see whether this pattern becomes stronger, breaks, or transforms.',
+  };
 
   return (
     <div
@@ -50,13 +113,9 @@ export default function ProfileSnapshotScreen({
     >
       <main
         style={{
-          maxWidth: '480px',
-          margin: '0 auto',
-          width: '100%',
+          maxWidth: '480px', margin: '0 auto', width: '100%',
           padding: '24px 20px 48px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0',
+          display: 'flex', flexDirection: 'column',
         }}
       >
         {/* Logo */}
@@ -66,94 +125,80 @@ export default function ProfileSnapshotScreen({
           </span>
         </div>
 
-        {/* Divider */}
         <div style={{ height: '1px', background: 'var(--border)', marginBottom: '24px' }} />
 
         {/* Title + badge */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
           <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '0.02em' }}>
-            PROFILE SNAPSHOT
+            {L.title}
           </h1>
           <span style={{
             padding: '3px 8px',
-            background: 'rgba(124,58,237,0.15)',
-            border: '1px solid rgba(124,58,237,0.35)',
+            background: 'rgba(45,212,191,0.1)',
+            border: '1px solid rgba(45,212,191,0.3)',
             borderRadius: '20px',
-            fontSize: '0.6rem',
-            fontWeight: 700,
-            color: 'var(--accent-light)',
-            letterSpacing: '0.1em',
+            fontSize: '0.58rem', fontWeight: 700,
+            color: 'var(--teal-light)', letterSpacing: '0.1em',
           }}>
-            {totalAnswers} ANSWERS
+            {totalAnswers} · {L.badge}
           </span>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: 1.5 }}>
-          The system has enough to show one clear pattern.
+          {L.subtitle}
         </p>
 
         {/* Profile Map */}
-        <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '12px' }}>
-          Profile Map
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-          <ProfileRadarChart vector={profileVector} size={220} variant="full" />
+        <SectionLabel>{L.profileMap}</SectionLabel>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
+          <ProfileRadarChart vector={profileVector} size={200} variant="full" />
         </div>
 
-        {/* Strongest Signals */}
-        <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '10px' }}>
-          Strongest Signals
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
-          {signals.map((s, i) => (
-            <div
-              key={i}
-              style={{
-                padding: '10px 14px',
-                background: 'rgba(124,58,237,0.07)',
-                border: '1px solid rgba(124,58,237,0.2)',
-                borderRadius: '8px',
-              }}
-            >
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)' }}>{s}</span>
-            </div>
-          ))}
-        </div>
+        {/* Block 1: First Signal */}
+        <InsightBlock label={L.firstSignal} text={insights.firstSignal} accent />
 
-        {/* Rarest Signal */}
-        <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '10px' }}>
-          Rarest Signal
-        </p>
-        <div style={{ marginBottom: '24px', padding: '10px 14px', background: 'rgba(45,212,191,0.06)', border: '1px solid rgba(45,212,191,0.2)', borderRadius: '8px' }}>
-          <p style={{ fontSize: '0.82rem', color: 'var(--teal-light)', fontStyle: 'italic' }}>
-            Only {profile.rarestSignalPercent.toFixed(1)}% of users generated a similar pattern.
+        {/* Block 2: Hidden Tension */}
+        <InsightBlock label={L.hiddenTension} text={insights.hiddenTension} />
+
+        {/* Block 3: Behavioral Contradiction */}
+        <InsightBlock label={L.behavioralContra} text={insights.behavioralContradiction} />
+
+        {/* Block 4: Social Signal */}
+        <InsightBlock label={L.socialSignal} text={insights.socialSignal} />
+
+        {/* Block 5: Decision Signal */}
+        <InsightBlock label={L.decisionSignal} text={insights.decisionSignal} />
+
+        {/* Block 6: Archetype Direction */}
+        <div style={{
+          padding: '14px 16px',
+          background: 'rgba(124,58,237,0.06)',
+          border: '1px solid rgba(124,58,237,0.25)',
+          borderRadius: '8px',
+          marginBottom: '10px',
+        }}>
+          <p style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--accent-light)', textTransform: 'uppercase', marginBottom: '6px' }}>
+            {L.archetypeDir}
+          </p>
+          <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>
+            {insights.archetypeDirection}
+          </p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.55, fontStyle: 'italic' }}>
+            {insights.archetypeDirectionNote}
           </p>
         </div>
 
-        {/* Pattern Direction */}
-        <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '10px' }}>
-          Your Pattern Direction
-        </p>
-        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '24px' }}>
-          {shortPattern}
-        </p>
-
-        {/* Locked Below */}
-        <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '10px' }}>
-          Locked Below
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '32px' }}>
-          {LOCKED_SECTIONS.map((s) => (
+        {/* Block 7: Premium Lock */}
+        <SectionLabel style={{ marginTop: '14px' }}>{L.lockedBelow}</SectionLabel>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '28px' }}>
+          {lockedSections.map((s) => (
             <div
               key={s}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
+                display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '8px 12px',
                 background: 'rgba(255,255,255,0.02)',
                 border: '1px solid rgba(255,255,255,0.05)',
-                borderRadius: '6px',
-                opacity: 0.45,
+                borderRadius: '6px', opacity: 0.45,
               }}
             >
               <span style={{ fontSize: '0.55rem', color: 'var(--text-dim)' }}>●</span>
@@ -162,31 +207,41 @@ export default function ProfileSnapshotScreen({
           ))}
         </div>
 
-        {/* Divider */}
+        {/* Post-snapshot loop */}
+        <div style={{
+          padding: '14px 16px',
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: '8px',
+          marginBottom: '28px',
+        }}>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '6px' }}>
+            {L.postLoopA}
+          </p>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.55, fontStyle: 'italic' }}>
+            {L.postLoopB}
+          </p>
+        </div>
+
         <div style={{ height: '1px', background: 'var(--border)', marginBottom: '24px' }} />
 
-        {/* CTA */}
         <button
           className="btn btn-primary"
           onClick={onUnlockFull}
           style={{ marginBottom: '16px' }}
         >
-          Unlock Full Profile
+          {L.unlockButton}
         </button>
 
         <button
           onClick={onDashboard}
           style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-dim)',
-            fontSize: '0.78rem',
-            cursor: 'pointer',
-            textAlign: 'center',
-            padding: '8px',
+            background: 'none', border: 'none',
+            color: 'var(--text-dim)', fontSize: '0.78rem',
+            cursor: 'pointer', textAlign: 'center', padding: '8px',
           }}
         >
-          Return to Dashboard
+          {L.returnDashboard}
         </button>
       </main>
     </div>

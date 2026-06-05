@@ -21,7 +21,7 @@ export default function PremiumDepthScreen({ isPremium, totalAnswers, profileVec
       <div style={{ maxWidth: 520, width: '100%', margin: '0 auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           <button className="btn btn-ghost" onClick={onBack} style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
-            ← Back
+            {t.premiumDepth.back}
           </button>
           <div>
             <h1 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
