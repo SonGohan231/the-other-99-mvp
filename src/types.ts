@@ -122,6 +122,7 @@ export type AppScreen =
   | 'profile-snapshot'
   | 'full-profile'
   | 'hidden-parameters'
+  | 'archetypes'
   | 'account'
   | 'settings'
   | 'legal'

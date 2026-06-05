@@ -34,6 +34,7 @@ interface Props {
   onHiddenParams: () => void;
   onAccount?: () => void;
   onPremiumDepth?: () => void;
+  onArchetypes?: () => void;
 }
 
 const ANSWERS_FOR_READ = 51;
@@ -58,6 +59,7 @@ export default function DashboardScreen({
   onHiddenParams,
   onAccount,
   onPremiumDepth,
+  onArchetypes,
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
@@ -71,6 +73,7 @@ export default function DashboardScreen({
   const maxVec = getMaxValue(profileVector);
   const hasVectorData = DIMENSIONS.some((d) => profileVector[d] > 0);
 
+  const twinDataReady = totalProfileAnswers >= 5;
   const twinStage = getTwinStage(humanTwinMatch);
   const hiddenUnlocked = isHiddenProfileUnlocked(totalProfileAnswers);
   const hiddenProfileData = computeHiddenProfile(profileVector, totalProfileAnswers);
@@ -232,8 +235,8 @@ export default function DashboardScreen({
                 <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '1px' }}>
                   {t.humanTwin.label}
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-light)', lineHeight: 1 }}>
-                  {humanTwinMatch}%
+                <div style={{ fontSize: twinDataReady ? '1.5rem' : '0.72rem', fontWeight: 800, color: twinDataReady ? 'var(--accent-light)' : 'var(--text-dim)', lineHeight: 1 }}>
+                  {twinDataReady ? `${humanTwinMatch}%` : 'Calibrating…'}
                 </div>
               </div>
               {hasVectorData && (
@@ -309,16 +312,24 @@ export default function DashboardScreen({
             <div>
               <h2 className="heading-md">{t.twinFeed.title}</h2>
               <p style={{ fontSize: '0.72rem', color: 'var(--accent-light)', fontWeight: 600 }}>
-                {t.twinFeed.stages[twinStage]}
+                {twinDataReady ? t.twinFeed.stages[twinStage] : t.twinFeed.stages['no_match']}
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-light)', lineHeight: 1 }}>
-                {humanTwinMatch}%
-              </div>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)' }}>
-                {t.twinFeed.microcopy[twinStage]}
-              </div>
+              {twinDataReady ? (
+                <>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-light)', lineHeight: 1 }}>
+                    {humanTwinMatch}%
+                  </div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)' }}>
+                    {t.twinFeed.microcopy[twinStage]}
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                  {5 - totalProfileAnswers} more answers
+                </div>
+              )}
             </div>
           </div>
           {twinFeedEvents.slice(0, 3).map((ev, i) => (
@@ -496,15 +507,26 @@ export default function DashboardScreen({
               {t.archetypes.forming(Math.max(0, 100 - totalProfileAnswers))}
             </p>
           ) : (
-            archetypeMix.mix.slice(0, 3).map((arch) => (
-              <div key={arch.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span style={{ width: '90px', fontSize: '0.75rem', color: 'var(--text)' }}>{arch.name}</span>
-                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${arch.pct}%`, background: arch.color, transition: 'width 0.6s ease', borderRadius: '2px' }} />
+            <>
+              {archetypeMix.mix.slice(0, 3).map((arch) => (
+                <div key={arch.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{ width: '90px', fontSize: '0.75rem', color: 'var(--text)' }}>{arch.name}</span>
+                  <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${arch.pct}%`, background: arch.color, transition: 'width 0.6s ease', borderRadius: '2px' }} />
+                  </div>
+                  <span style={{ width: '32px', fontSize: '0.65rem', color: 'var(--text-dim)', textAlign: 'right' }}>{arch.pct}%</span>
                 </div>
-                <span style={{ width: '32px', fontSize: '0.65rem', color: 'var(--text-dim)', textAlign: 'right' }}>{arch.pct}%</span>
-              </div>
-            ))
+              ))}
+              {onArchetypes && (
+                <button
+                  className="btn btn-ghost"
+                  onClick={onArchetypes}
+                  style={{ marginTop: '4px', fontSize: '0.78rem', color: 'var(--accent-light)', textAlign: 'left' }}
+                >
+                  View full archetype profile →
+                </button>
+              )}
+            </>
           )}
         </div>
 
