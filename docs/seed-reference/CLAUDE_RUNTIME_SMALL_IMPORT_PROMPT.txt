@@ -1,0 +1,218 @@
+THE OTHER 99 — USE SMALL V3 RUNTIME SEED PACKAGE
+
+Use this package:
+the_other_99_SEMANTIC_SEED_DATABASE_v3_RUNTIME_SMALL.zip
+
+This is the small implementation package.
+
+Do NOT use the oversized full v3 ZIP in the frontend bundle.
+Do NOT import the 600,000 raw synthetic votes into the frontend runtime.
+The app only needs projected percentages and real vote persistence.
+
+==================================================
+WHY THIS SMALL PACKAGE EXISTS
+==================================================
+
+The full v3 package is too large for normal repo/frontend work.
+
+This small package contains:
+- projected percentages,
+- compact JSON runtime data,
+- scenario comparison data,
+- content vectors,
+- mapping file,
+- archetype definitions,
+- calibration targets,
+- SQL template.
+
+It intentionally excludes:
+- raw 600k votes,
+- full synthetic population,
+- full synthetic user profiles.
+
+==================================================
+DEFAULT BASELINE
+==================================================
+
+Use:
+
+projected_percentages_early_app_userbase.json
+
+as the default runtime baseline.
+
+Default scenario:
+
+early_app_userbase_projected
+
+Reason:
+The Other 99 is a self-discovery app. Its early users are more likely to resemble an introspective app audience than the full general population.
+
+==================================================
+CRITICAL MAPPING RULE
+==================================================
+
+Do NOT use semantic IDs as production content IDs.
+
+Bad:
+semantic_v3_q0001
+
+Correct:
+Map semantic_v3_q0001 to an existing real app content_id using:
+
+content_id_mapping_to_real_app_REQUIRED.csv
+
+Only mapped rows can be used in production.
+
+If mapping cannot be automated:
+- create/update the mapping file,
+- list unmapped items,
+- ignore unmapped rows at runtime,
+- mark mapping as PARTIAL in docs/IMPLEMENTATION_CHECKLIST.md.
+
+==================================================
+RUNTIME FORMAT
+==================================================
+
+Use:
+
+projected_percentages_early_app_userbase.json
+
+This contains entries like:
+
+{
+  "semantic_v3_q0001": {
+    "source": "seed_semantic_v3",
+    "scenario_id": "early_app_userbase_projected",
+    "distribution_label": "Projected distribution",
+    "total_seed_votes": 400,
+    "answers": {
+      "A": { "count": 120, "pct": 0.3000 },
+      "B": { "count": 170, "pct": 0.4250 },
+      "C": { "count": 80, "pct": 0.2000 },
+      "D": { "count": 25, "pct": 0.0625 },
+      "SKIP": { "count": 5, "pct": 0.0125 }
+    },
+    "behavioral_averages": {
+      "avg_response_time_ms": 4200,
+      "avg_hesitation_time_ms": 2900,
+      "avg_answer_changes": 0.42,
+      "avg_emotional_friction": 38.5,
+      "avg_avoidance": 21.4,
+      "avg_confidence": 64.8,
+      "avg_contradiction": 12.2
+    }
+  }
+}
+
+Before using in the app, transform keys from semantic IDs to real app content_id.
+
+==================================================
+IMPLEMENTATION REQUIREMENTS
+==================================================
+
+1. Add the small seed package to the repo.
+2. Do not include raw synthetic votes in frontend runtime.
+3. Build or update a mapper:
+   semantic_content_id -> real content_id.
+4. Create lightweight runtime projected distribution data keyed by real content_id.
+5. Use early_app_userbase_projected as default baseline.
+6. Keep other scenarios available for DebugPanel preview if feasible.
+7. Every real answer submitted in the app must save/update a real vote.
+8. Real votes must gradually replace projected seed data.
+9. DebugPanel must show:
+   - seed/projected vote count,
+   - real vote count,
+   - scenario_id,
+   - distribution label,
+   - whether current content_id is mapped.
+
+==================================================
+LABEL RULES
+==================================================
+
+If only projected seed data exists:
+Projected distribution
+
+If real_votes >= 30 and < 100:
+Early community distribution
+
+If real_votes >= 100:
+Community distribution
+
+Never label seed-only data as:
+- How others answered
+- Real users answered
+- Community answered
+
+==================================================
+FILES TO USE
+==================================================
+
+Use these files from the small package:
+
+Runtime:
+- projected_percentages_early_app_userbase.json
+
+Optional comparison:
+- projected_percentages_by_scenario_compact.json
+
+Mapping:
+- content_id_mapping_to_real_app_REQUIRED.csv
+
+Reference:
+- semantic_content_vectors_v3_500.csv
+- archetype_definitions_v3.csv
+- calibration_targets_v3.csv
+- axis_distribution_summary_v3.csv
+
+Database:
+- community_votes_semantic_v3_schema_template.sql
+
+==================================================
+CHECKLIST UPDATE
+==================================================
+
+Update docs/IMPLEMENTATION_CHECKLIST.md.
+
+Add/update:
+
+V3-RUNTIME-001 Old random seed runtime data is not used
+V3-RUNTIME-002 Small v3 runtime package added
+V3-RUNTIME-003 Default scenario is early_app_userbase_projected
+V3-RUNTIME-004 Runtime JSON is loaded
+V3-RUNTIME-005 semantic_content_id maps to real content_id
+V3-RUNTIME-006 Unmapped rows are ignored
+V3-RUNTIME-007 Projected distribution label is used for seed-only data
+V3-RUNTIME-008 Every answer saves/updates real vote
+V3-RUNTIME-009 Real votes combine with projected baseline
+V3-RUNTIME-010 DebugPanel shows distribution source and mapping state
+V3-RUNTIME-011 build passes
+V3-RUNTIME-012 validate:content passes
+
+==================================================
+REQUIRED COMMANDS
+==================================================
+
+Run:
+
+npm run validate:content
+npm run build
+
+Do not push if build fails.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+1. Changed files
+2. Where small seed files were placed
+3. Whether large raw files were excluded from runtime
+4. Mapping status
+5. Default scenario
+6. Runtime projected distribution loading
+7. Real vote persistence status
+8. DebugPanel changes
+9. validate:content result
+10. build result
+11. commit hash

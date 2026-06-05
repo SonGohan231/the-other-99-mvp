@@ -1,5 +1,5 @@
 // Community votes system with localStorage persistence.
-// Seed baseline uses deterministic hash (no CSV seed data maps to real content IDs).
+// Seed baseline uses V3 Society-Projected Semantic Baseline (early_app_userbase_projected).
 // Real votes are tracked separately with user_id / anonymous_id.
 // Supabase migration: supabase/migrations/community_votes.sql
 
@@ -37,6 +37,8 @@ export interface VoteResult {
   realVotes: number;
   totalVotes: number;
   distributionLabel: DistributionLabel;
+  seedSource: 'v3' | 'hash';
+  semanticTheme?: string;
   myVote: string | null;
 }
 
@@ -47,23 +49,62 @@ export interface VoteDebugInfo {
   totalVotes: number;
   byAnswer: Record<string, { seed: number; real: number; total: number }>;
   distributionLabel: DistributionLabel;
+  seedSource: 'v3' | 'hash';
+  semanticId?: string;
+  semanticTheme?: string;
+  scenarioId: string;
+  isMapped: boolean;
   myVote: string | null;
 }
 
-// ─── Storage keys ─────────────────────────────────────────────────────────────
+// ─── V3 Runtime Seed ─────────────────────────────────────────────────────────
 
-const STORE_PREFIX = 'to99_votes_v2_';
-const MY_VOTE_PREFIX = 'to99_myvote_';
-
-function storeKey(contentId: string): string {
-  return `${STORE_PREFIX}${contentId}`;
+interface V3SeedItem {
+  sid: string;   // semantic_id
+  th: string;    // theme
+  n: number;     // n_options
+  sv: number;    // seed_total votes
+  p: number[];   // normalized pcts per option slot [A, B, C?, D?]
 }
 
-function myVoteKey(contentId: string): string {
-  return `${MY_VOTE_PREFIX}${contentId}`;
+interface V3RuntimeSeed {
+  version: string;
+  generated: string;
+  default_scenario: string;
+  mapping_status: string;
+  total_entries: number;
+  items: Record<string, V3SeedItem>;
 }
 
-// ─── Seed baseline (deterministic hash, no CSV seed data available) ────────
+let _v3Cache: V3RuntimeSeed | null = null;
+let _v3Loading: Promise<V3RuntimeSeed | null> | null = null;
+
+async function loadV3Seed(): Promise<V3RuntimeSeed | null> {
+  if (_v3Cache) return _v3Cache;
+  if (_v3Loading) return _v3Loading;
+
+  _v3Loading = fetch('/seed/semantic-v3/runtime_seed.json')
+    .then((res) => {
+      if (!res.ok) return null;
+      return res.json() as Promise<V3RuntimeSeed>;
+    })
+    .then((data) => {
+      _v3Cache = data;
+      return data;
+    })
+    .catch(() => null);
+
+  return _v3Loading;
+}
+
+// Pre-fetch on module load (fire-and-forget)
+loadV3Seed();
+
+function getV3SeedSync(contentId: string): V3SeedItem | null {
+  return _v3Cache?.items[contentId] ?? null;
+}
+
+// ─── Seed count computation ───────────────────────────────────────────────────
 
 function hashCode(str: string): number {
   let h = 0;
@@ -74,9 +115,9 @@ function hashCode(str: string): number {
   return Math.abs(h);
 }
 
-function computeSeedCounts(contentId: string, options: string[]): Record<string, number> {
+function computeSeedCountsHash(contentId: string, options: string[]): Record<string, number> {
   const s = hashCode(contentId);
-  const total = 120 + (s % 180); // 120–299 seed votes
+  const total = 120 + (s % 180);
   const n = options.length;
   const votes: Record<string, number> = {};
 
@@ -102,24 +143,66 @@ function computeSeedCounts(contentId: string, options: string[]): Record<string,
   return votes;
 }
 
+function computeSeedCounts(
+  contentId: string,
+  options: string[],
+): { counts: Record<string, number>; source: 'v3' | 'hash'; item: V3SeedItem | null } {
+  const v3Item = getV3SeedSync(contentId);
+
+  if (v3Item && v3Item.p.length >= options.length) {
+    const seedTotal = v3Item.sv;
+    const counts: Record<string, number> = {};
+    let allocated = 0;
+    for (let i = 0; i < options.length; i++) {
+      const pct = v3Item.p[i] ?? 0;
+      counts[options[i]] = Math.max(1, Math.round(seedTotal * pct));
+      allocated += counts[options[i]];
+    }
+    // Adjust first option to ensure total is correct
+    const diff = seedTotal - allocated;
+    if (options[0]) counts[options[0]] = Math.max(1, (counts[options[0]] ?? 0) + diff);
+    return { counts, source: 'v3', item: v3Item };
+  }
+
+  return { counts: computeSeedCountsHash(contentId, options), source: 'hash', item: null };
+}
+
+// ─── Storage keys ─────────────────────────────────────────────────────────────
+
+const STORE_PREFIX = 'to99_votes_v2_';
+const MY_VOTE_PREFIX = 'to99_myvote_';
+
+function storeKey(contentId: string): string {
+  return `${STORE_PREFIX}${contentId}`;
+}
+
+function myVoteKey(contentId: string): string {
+  return `${MY_VOTE_PREFIX}${contentId}`;
+}
+
 // ─── Store load / save ─────────────────────────────────────────────────────
 
-function loadStore(contentId: string, options: string[]): VoteStore {
+function loadStore(
+  contentId: string,
+  options: string[],
+): { store: VoteStore; source: 'v3' | 'hash'; item: V3SeedItem | null } {
   try {
     const raw = localStorage.getItem(storeKey(contentId));
     if (raw) {
       const parsed = JSON.parse(raw) as VoteStore;
-      if (parsed.v === 2) return parsed;
+      if (parsed.v === 2) {
+        const item = getV3SeedSync(contentId);
+        return { store: parsed, source: item ? 'v3' : 'hash', item };
+      }
     }
   } catch { /* ignore */ }
 
-  // Initialize with seed baseline
-  const seed = computeSeedCounts(contentId, options);
+  const { counts, source, item } = computeSeedCounts(contentId, options);
   const byAnswer: Record<string, { seed: number; real: number }> = {};
   for (const opt of options) {
-    byAnswer[opt] = { seed: seed[opt] ?? 0, real: 0 };
+    byAnswer[opt] = { seed: counts[opt] ?? 0, real: 0 };
   }
-  return { v: 2, byAnswer, realVoteCount: 0, lastUpdated: new Date().toISOString() };
+  return { store: { v: 2, byAnswer, realVoteCount: 0, lastUpdated: new Date().toISOString() }, source, item };
 }
 
 function saveStore(contentId: string, store: VoteStore): void {
@@ -177,7 +260,7 @@ export function submitVote(
   _userId?: string | null,
   _behavioral?: BehavioralMetadata | null,
 ): VoteResult {
-  const store = loadStore(contentId, options);
+  const { store, source, item } = loadStore(contentId, options);
   const prevVote = getMyVote(contentId);
 
   // Ensure all current options exist in the store
@@ -188,7 +271,6 @@ export function submitVote(
   }
 
   if (prevVote && prevVote !== selectedAnswer) {
-    // Undo previous real vote
     if (store.byAnswer[prevVote]) {
       store.byAnswer[prevVote].real = Math.max(0, store.byAnswer[prevVote].real - 1);
       store.realVoteCount = Math.max(0, store.realVoteCount - 1);
@@ -196,7 +278,6 @@ export function submitVote(
   }
 
   if (!prevVote || prevVote !== selectedAnswer) {
-    // Add new real vote
     store.byAnswer[selectedAnswer].real += 1;
     store.realVoteCount += 1;
   }
@@ -213,6 +294,8 @@ export function submitVote(
     realVotes: store.realVoteCount,
     totalVotes: seedVotes + store.realVoteCount,
     distributionLabel: getDistributionLabel(store.realVoteCount),
+    seedSource: source,
+    semanticTheme: item?.th,
     myVote: selectedAnswer,
   };
 }
@@ -224,7 +307,7 @@ export function getDistribution(
   contentId: string,
   options: string[],
 ): VoteResult {
-  const store = loadStore(contentId, options);
+  const { store, source, item } = loadStore(contentId, options);
   const percs = storeToPercs(store, options);
   const seedVotes = Object.values(store.byAnswer).reduce((s, e) => s + e.seed, 0);
 
@@ -233,6 +316,8 @@ export function getDistribution(
     realVotes: store.realVoteCount,
     totalVotes: seedVotes + store.realVoteCount,
     distributionLabel: getDistributionLabel(store.realVoteCount),
+    seedSource: source,
+    semanticTheme: item?.th,
     myVote: getMyVote(contentId),
   };
 }
@@ -241,7 +326,7 @@ export function getDistribution(
  * Debug information for a content item.
  */
 export function getVoteDebugInfo(contentId: string, options: string[]): VoteDebugInfo {
-  const store = loadStore(contentId, options);
+  const { store, source, item } = loadStore(contentId, options);
   const seedVotes = Object.values(store.byAnswer).reduce((s, e) => s + e.seed, 0);
   const byAnswerDebug: Record<string, { seed: number; real: number; total: number }> = {};
   for (const opt of options) {
@@ -255,6 +340,11 @@ export function getVoteDebugInfo(contentId: string, options: string[]): VoteDebu
     totalVotes: seedVotes + store.realVoteCount,
     byAnswer: byAnswerDebug,
     distributionLabel: getDistributionLabel(store.realVoteCount),
+    seedSource: source,
+    semanticId: item?.sid,
+    semanticTheme: item?.th,
+    scenarioId: 'early_app_userbase_projected',
+    isMapped: source === 'v3',
     myVote: getMyVote(contentId),
   };
 }

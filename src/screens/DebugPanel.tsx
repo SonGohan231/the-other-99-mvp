@@ -173,7 +173,12 @@ export default function DebugPanel({
               <div>Anon ID: <span style={{ color: 'var(--text-dim)', wordBreak: 'break-all' }}>{getOrCreateAnonId().slice(0, 20)}…</span></div>
               {voteDebug ? (
                 <>
-                  <div>Content: {voteDebug.contentId.slice(0, 20)}</div>
+                  <div>Content: {voteDebug.contentId}</div>
+                  <div>Seed source: <span style={{ color: voteDebug.seedSource === 'v3' ? '#86efac' : '#fbbf24' }}>{voteDebug.seedSource === 'v3' ? 'v3 semantic' : 'hash fallback'}</span></div>
+                  <div>Mapped: <span style={{ color: voteDebug.isMapped ? '#86efac' : '#f87171' }}>{voteDebug.isMapped ? 'yes' : 'no'}</span></div>
+                  {voteDebug.semanticId && <div>Semantic ID: {voteDebug.semanticId}</div>}
+                  {voteDebug.semanticTheme && <div>Theme: {voteDebug.semanticTheme}</div>}
+                  <div>Scenario: {voteDebug.scenarioId}</div>
                   <div>Seed votes: {voteDebug.seedVotes}</div>
                   <div>Real votes: {voteDebug.realVotes}</div>
                   <div>Total: {voteDebug.totalVotes}</div>
