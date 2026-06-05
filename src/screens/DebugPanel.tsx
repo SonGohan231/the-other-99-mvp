@@ -9,6 +9,7 @@ import { BehavioralSummary } from '../utils/behavioralSignals';
 import { getVoteDebugInfo, resetLocalVotes, exportVoteState, getOrCreateAnonId } from '../utils/communityVotes';
 import { localizedCsvField } from '../i18n';
 import { useLang } from '../context/LangContext';
+import { getAppInfo } from '../utils/appVersion';
 
 interface Props {
   profileState: ProfileState;
@@ -60,6 +61,7 @@ export default function DebugPanel({
   const [open, setOpen] = useState(false);
   const [lang] = useLang();
   const inTest = testContent.length > 0 && testAnswerIndex < testContent.length;
+  const appInfo = getAppInfo();
 
   // Compute vote debug info for current item
   const voteDebug = (() => {
@@ -88,6 +90,25 @@ export default function DebugPanel({
             Debug Panel{' '}
             {isTestMode && <span style={{ color: '#22d3ee', fontSize: '0.65rem' }}>TEST MODE</span>}
           </p>
+
+          {/* APP INFO */}
+          <details open>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>App Info</summary>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.9, fontFamily: 'monospace' }}>
+              <div><span style={{ color: 'var(--text-dim)' }}>Version:&nbsp;</span>{appInfo.version}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Commit:&nbsp;</span>{appInfo.commit}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Build:&nbsp;</span>{appInfo.buildDate}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Source:&nbsp;</span>{appInfo.deploySource}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Platform:&nbsp;</span>{appInfo.platform}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Env:&nbsp;</span>{appInfo.environment}</div>
+              <div>
+                <span style={{ color: 'var(--text-dim)' }}>Supabase:&nbsp;</span>
+                <span style={{ color: appInfo.supabaseConfigured ? '#4ade80' : '#f87171' }}>
+                  {appInfo.supabaseConfigured ? '✓ configured' : '✗ missing'}
+                </span>
+              </div>
+            </div>
+          </details>
 
           {/* SESSION */}
           <details open>
