@@ -6,6 +6,7 @@ import { getCommunityPercentages } from '../utils/communityStats';
 import { ProfileFragment } from '../utils/profileFragments';
 import { ProfileVector } from '../utils/profileVector';
 import ProfileRadarChart from '../components/ProfileRadarChart';
+import { getComparisonMessage } from '../content/profileInsights';
 
 interface Props {
   item: ContentItem;
@@ -217,6 +218,15 @@ export default function RewardScreen({
             </div>
           )}
         </div>
+
+        {/* ── Comparison message (dopamine loop) ── */}
+        {totalProfileAnswers >= 5 && (
+          <div className="reward-block animate-in" style={{ animationDelay: '0.03s', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.6, fontStyle: 'italic' }}>
+              {getComparisonMessage(changedAxes, totalProfileAnswers, lang)}
+            </p>
+          </div>
+        )}
 
         {/* ── Rarity signal ── */}
         <div className="reward-block rb-rarity animate-in" style={{ animationDelay: '0.05s' }}>

@@ -2,6 +2,7 @@ import { ProfileVector } from '../utils/profileVector';
 import { computeArchetypeMix, isArchetypeMixUnlocked, ARCHETYPES } from '../utils/archetypes';
 import { useT, useLang } from '../context/LangContext';
 import { ARCHETYPE_CONTENT } from '../content/archetypeContent';
+import { getArchetypeBlendName, getArchetypeBlendDescription } from '../content/archetypeBlends';
 
 interface Props {
   profileVector: ProfileVector;
@@ -53,6 +54,12 @@ export default function ArchetypeMixScreen({ profileVector, totalAnswers, onBack
   const primaryDef = ARCHETYPES[mix.primary];
   const content = ARCHETYPE_CONTENT[mix.primary];
   const detailLabels = isPl ? DETAIL_LABELS_PL : DETAIL_LABELS_EN;
+
+  // Blend name: show when 150+ answers and secondary archetype has ≥20% share
+  const secondaryArch = mix.mix[1];
+  const showBlend = totalAnswers >= 150 && secondaryArch && secondaryArch.pct >= 20;
+  const blendName = showBlend ? getArchetypeBlendName(mix.primary, secondaryArch.id, lang) : null;
+  const blendDescription = showBlend ? getArchetypeBlendDescription(mix.primary, secondaryArch.id, lang) : null;
 
   function getField(key: DetailKey): string {
     switch (key) {
@@ -144,6 +151,22 @@ export default function ArchetypeMixScreen({ profileVector, totalAnswers, onBack
 
             {/* Primary archetype deep detail */}
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: '28px' }}>
+              {/* Blend name card */}
+              {showBlend && blendName && blendDescription && (
+                <div style={{
+                  padding: '12px 14px',
+                  background: 'rgba(124,58,237,0.07)',
+                  border: '1px solid rgba(124,58,237,0.25)',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                }}>
+                  <p style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--accent-light)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    {isPl ? 'Twój miks' : 'Your blend'}
+                  </p>
+                  <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '6px' }}>{blendName}</p>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.5, fontStyle: 'italic' }}>{blendDescription}</p>
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
                 <span style={{ fontSize: '2.2rem', color: primaryDef.color, lineHeight: 1 }}>{primaryDef.symbol}</span>
                 <div>

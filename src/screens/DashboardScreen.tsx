@@ -142,6 +142,7 @@ export default function DashboardScreen({
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
             {MILESTONES.map((m) => {
               const reached = totalProfileAnswers >= m.answers;
+              const chipLabel = lang === 'pl' ? (m.label_pl ?? m.label) : m.label;
               return (
                 <span
                   key={m.answers}
@@ -155,7 +156,7 @@ export default function DashboardScreen({
                     color: reached ? 'var(--teal-light)' : 'var(--text-dim)',
                   }}
                 >
-                  {reached ? '✓ ' : ''}{m.label}
+                  {reached ? '✓ ' : ''}{chipLabel}
                 </span>
               );
             })}
@@ -215,13 +216,20 @@ export default function DashboardScreen({
         {totalProfileAnswers >= 51 && !isPremium && (
           <div className="card animate-in" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(45,212,191,0.08) 100%)', border: '1px solid rgba(124,58,237,0.4)' }}>
             <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--accent-light)', textTransform: 'uppercase' }}>
-              PROFILE SNAPSHOT READY
+              {lang === 'pl' ? 'MIGAWKA PROFILU GOTOWA' : 'PROFILE SNAPSHOT READY'}
             </p>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text)', margin: '6px 0 12px' }}>
-              The system has enough to show one clear pattern.
+            <p style={{ fontSize: '0.82rem', color: 'var(--text)', margin: '6px 0 4px' }}>
+              {lang === 'pl'
+                ? 'System zaczyna widzieć wzorzec. To nie jest gotowy profil.'
+                : 'The system is starting to see a pattern. This is not a finished profile.'}
+            </p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontStyle: 'italic', marginBottom: '12px' }}>
+              {lang === 'pl'
+                ? 'Twój profil nie jest gotowy. Dopiero zaczął reagować.'
+                : 'Your profile is not complete. It just started reacting.'}
             </p>
             <button className="btn btn-primary" onClick={onProfileSnapshot} style={{ fontSize: '0.82rem', padding: '10px 20px' }}>
-              See Profile Snapshot
+              {lang === 'pl' ? 'Zobacz migawkę profilu' : 'See Profile Snapshot'}
             </button>
           </div>
         )}
