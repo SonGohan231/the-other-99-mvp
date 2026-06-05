@@ -24,6 +24,8 @@ interface Props {
   onCompleteTest?: () => void;
   onSeedAnswers?: (n: number) => void;
   onForceSnapshot?: () => void;
+  onResetPremiumModal?: () => void;
+  onForcePremiumModule?: (moduleId: string) => void;
 }
 
 export default function DebugPanel({
@@ -44,6 +46,8 @@ export default function DebugPanel({
   onCompleteTest,
   onSeedAnswers,
   onForceSnapshot,
+  onResetPremiumModal,
+  onForcePremiumModule,
 }: Props) {
   const [open, setOpen] = useState(false);
   const inTest = testContent.length > 0 && testAnswerIndex < testContent.length;
@@ -156,6 +160,35 @@ export default function DebugPanel({
               >
                 {isPremiumUnlocked(null) ? 'Lock premium' : 'Unlock premium'}
               </button>
+
+              {onResetPremiumModal && (
+                <button className="debug-btn" onClick={onResetPremiumModal}>Reset premium modal</button>
+              )}
+
+              {onForcePremiumModule && (
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', alignSelf: 'center', width: '100%', marginBottom: '2px' }}>Force module:</span>
+                  {(['shadowProfile','maskVsCore','contradictions','futureSelf','relationshipMode','humanTwin','hiddenParameters','profileEvolution'] as const).map((id) => (
+                    <button
+                      key={id}
+                      className="debug-btn"
+                      style={{ fontSize: '0.6rem', padding: '3px 6px' }}
+                      onClick={() => onForcePremiumModule(id)}
+                    >
+                      {id.replace(/([A-Z])/g, ' $1').trim()}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {onSeedAnswers && (
+                <button
+                  className="debug-btn"
+                  onClick={() => { onSeedAnswers(85); debugLog('seed_answers', { n: 85 }); }}
+                >
+                  Seed +85
+                </button>
+              )}
 
               <button className="debug-btn" onClick={onRefreshProfile}>Refresh profile</button>
 

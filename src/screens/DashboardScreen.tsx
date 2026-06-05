@@ -32,6 +32,8 @@ interface Props {
   onProfileSnapshot: () => void;
   onFullProfile: () => void;
   onHiddenParams: () => void;
+  onAccount?: () => void;
+  onPremiumDepth?: () => void;
 }
 
 const ANSWERS_FOR_READ = 51;
@@ -54,6 +56,8 @@ export default function DashboardScreen({
   onProfileSnapshot,
   onFullProfile,
   onHiddenParams,
+  onAccount,
+  onPremiumDepth,
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
@@ -89,9 +93,27 @@ export default function DashboardScreen({
         <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.25em', textTransform: 'uppercase', color: 'var(--accent-light)' }}>
           The Other 99
         </span>
-        <span className="body-sm" style={{ fontSize: '0.72rem', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {userProfile.display_name ?? userProfile.email ?? '—'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {isPremium && (
+            <span style={{
+              padding: '3px 8px', fontSize: '0.62rem', fontWeight: 700,
+              background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+              borderRadius: '20px', color: 'var(--gold)', letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}>
+              {t.premiumBadge.active}
+            </span>
+          )}
+          {onAccount && (
+            <button
+              className="btn btn-ghost"
+              onClick={onAccount}
+              style={{ padding: '5px 12px', fontSize: '0.75rem' }}
+              aria-label={t.account.menuButton}
+            >
+              {userProfile.display_name ?? userProfile.email ?? t.account.statusGuest}
+            </button>
+          )}
+        </div>
       </div>
 
       <main
@@ -398,19 +420,64 @@ export default function DashboardScreen({
 
         {/* Premium Features card */}
         {isPremium && (
-          <div className="card animate-in" style={{ animationDelay: '0.22s' }}>
-            <p className="heading-md">Premium Access</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+          <div className="card animate-in" style={{
+            animationDelay: '0.22s',
+            background: 'linear-gradient(135deg, var(--bg-elevated) 0%, rgba(124,58,237,0.12) 100%)',
+            border: '1px solid rgba(245,158,11,0.25)',
+            boxShadow: '0 0 24px rgba(124,58,237,0.08)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <p className="heading-md" style={{ margin: 0 }}>{t.premiumBadge.active}</p>
+              <span style={{
+                padding: '2px 8px', fontSize: '0.6rem', fontWeight: 700,
+                background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+                borderRadius: '20px', color: 'var(--gold)', letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>✦</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {onPremiumDepth && (
+                <button
+                  className="btn btn-primary"
+                  onClick={onPremiumDepth}
+                  style={{ fontSize: '0.82rem', background: 'linear-gradient(90deg, var(--accent), rgba(124,58,237,0.8))' }}
+                >
+                  {t.premiumDepth.title} →
+                </button>
+              )}
               <button className="btn btn-ghost" onClick={onFullProfile} style={{ textAlign: 'left', fontSize: '0.82rem' }}>
-                Full Profile Analysis →
+                {t.fullProfile.title} →
               </button>
               <button className="btn btn-ghost" onClick={onHiddenParams} style={{ textAlign: 'left', fontSize: '0.82rem' }}>
-                Hidden Parameters →
+                {t.hiddenParameters.title} →
               </button>
               <button className="btn btn-ghost" onClick={onProfileSnapshot} style={{ textAlign: 'left', fontSize: '0.82rem' }}>
-                Profile Snapshot →
+                {t.profileSnapshot.title} →
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Premium CTA for free users */}
+        {!isPremium && totalProfileAnswers >= 17 && (
+          <div className="card animate-in" style={{ animationDelay: '0.22s', border: '1px solid rgba(124,58,237,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <p className="heading-md" style={{ margin: 0 }}>{t.premiumDepth.title}</p>
+              <span style={{
+                padding: '2px 8px', fontSize: '0.6rem', fontWeight: 700,
+                background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)',
+                borderRadius: '20px', color: 'var(--accent-light)', letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>
+                {t.premiumDepth.locked}
+              </span>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
+              {t.premiumDepth.subtitle}
+            </p>
+            {onPremiumDepth && (
+              <button className="btn btn-ghost" onClick={onPremiumDepth} style={{ fontSize: '0.8rem', color: 'var(--accent-light)' }}>
+                {t.premiumBadge.upgrade} →
+              </button>
+            )}
           </div>
         )}
 

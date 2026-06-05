@@ -104,7 +104,14 @@ export type AppScreen =
   | 'premium-placeholder'
   | 'profile-snapshot'
   | 'full-profile'
-  | 'hidden-parameters';
+  | 'hidden-parameters'
+  | 'account'
+  | 'settings'
+  | 'legal'
+  | 'subscription'
+  | 'premium-depth';
+
+export type LegalPage = 'terms' | 'privacy' | 'cookie' | 'subscription-terms' | 'disclaimer' | 'help';
 
 export interface ContentBias {
   content_type?: ContentType;

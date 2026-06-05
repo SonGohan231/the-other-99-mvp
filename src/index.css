@@ -928,3 +928,29 @@ body {
   left: calc(8px + env(safe-area-inset-left, 0px));
 }
 
+
+/* ─── Reduced motion via JS ─────────────────── */
+
+[data-reduced-motion="true"] *, [data-reduced-motion="true"] *::before, [data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* ─── Premium visual tokens ─────────────────── */
+
+:root {
+  --premium-gold: #f59e0b;
+  --premium-gold-glow: rgba(245,158,11,0.25);
+  --premium-cyan: #22d3ee;
+  --premium-cyan-glow: rgba(34,211,238,0.2);
+  --premium-border: linear-gradient(135deg, rgba(124,58,237,0.6), rgba(245,158,11,0.4));
+  --shadow-crimson: #dc2626;
+  --shadow-purple: rgba(88,28,135,0.8);
+}
+
+/* ─── Safe area padding for mobile ──────────── */
+
+.screen, .screen-centered {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

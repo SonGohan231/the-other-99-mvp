@@ -60,7 +60,7 @@ function splitRow(line) {
   return result;
 }
 
-function validateFile(filePath, { checkCardPaths = false, strict = false } = {}) {
+function validateFile(filePath, { checkCardPaths = false, strict = false, requireBilingual = false } = {}) {
   const text = readFileSync(filePath, 'utf-8');
   const rows = parseCsv(text);
   const errors = [];
@@ -79,6 +79,14 @@ function validateFile(filePath, { checkCardPaths = false, strict = false } = {})
 
     // Must have some prompt
     if (!row.prompt_en && !row.prompt_pl) errors.push(`${id}: No prompt (prompt_en or prompt_pl required)`);
+
+    // Bilingual check for premium content
+    if (requireBilingual) {
+      if (row.prompt_en && !row.prompt_pl) warnings.push(`${id}: prompt_en present but prompt_pl missing`);
+      if (row.prompt_pl && !row.prompt_en) warnings.push(`${id}: prompt_pl present but prompt_en missing`);
+      if (row.answer_options_en && !row.answer_options_pl) warnings.push(`${id}: answer_options_en present but answer_options_pl missing`);
+      if (row.answer_options_pl && !row.answer_options_en) warnings.push(`${id}: answer_options_pl present but answer_options_en missing`);
+    }
 
     // Rarity tier (strict mode only)
     if (strict && row.rarity_tier && !VALID_RARITIES.has(row.rarity_tier)) {
@@ -110,7 +118,7 @@ const FILES = [
   { path: resolve(ROOT, 'public/content.csv'), label: 'content.csv', opts: {} },
   { path: resolve(ROOT, 'public/content_en_v2.csv'), label: 'content_en_v2.csv', opts: {} },
   { path: resolve(ROOT, 'public/content_premium_en_v1.csv'), label: 'content_premium_en_v1.csv',
-    opts: { checkCardPaths: true, strict: true } },
+    opts: { checkCardPaths: true, strict: true, requireBilingual: true } },
 ];
 
 let totalErrors = 0;

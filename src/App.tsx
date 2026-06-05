@@ -40,6 +40,13 @@ import { isGuestModeActive, enableGuestMode, disableGuestMode, getGuestTestsUsed
 import { saveInProgressTest, loadInProgressTest, clearInProgressTest } from './utils/inProgressTest';
 import { debugLog, debugError } from './utils/debugStore';
 import { isAdminEmail } from './config/admin';
+import { LegalPage } from './types';
+import AccountScreen from './screens/AccountScreen';
+import SettingsScreen, { applyTheme, getTheme, applyReducedMotion, getReducedMotion } from './screens/SettingsScreen';
+import LegalScreen from './screens/LegalScreen';
+import SubscriptionScreen from './screens/SubscriptionScreen';
+import PremiumDepthScreen from './screens/PremiumDepthScreen';
+import PremiumUnlockedModal, { hasPremiumUnlockedBeenSeen, resetPremiumUnlockedSeen } from './components/PremiumUnlockedModal';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -169,6 +176,23 @@ export default function App() {
 
   // Computed premium status
   const isPremium = isPremiumUnlocked(userProfile?.premium_status ?? null);
+
+  // New screens state
+  const [currentLegalPage, setCurrentLegalPage] = useState<LegalPage>('terms');
+  const [showPremiumUnlockedModal, setShowPremiumUnlockedModal] = useState(false);
+
+  // Apply persisted theme + reduced motion on mount
+  useState(() => {
+    applyTheme(getTheme());
+    applyReducedMotion(getReducedMotion());
+  });
+
+  // Show premium unlocked modal when premium state first detected
+  useEffect(() => {
+    if (isPremium && !hasPremiumUnlockedBeenSeen()) {
+      setShowPremiumUnlockedModal(true);
+    }
+  }, [isPremium]);
 
   // ─── Persist in-progress test ─────────────────────────────────────────────
   function persistInProgress() {
@@ -687,6 +711,11 @@ export default function App() {
     setScreen('profile-snapshot');
   }
 
+  function handleLegalPage(page: LegalPage) {
+    setCurrentLegalPage(page);
+    setScreen('legal');
+  }
+
   function handleUnlockFull() {
     unlockPremium();
     setScreen('full-profile');
@@ -750,6 +779,8 @@ export default function App() {
           onProfileSnapshot={() => setScreen('profile-snapshot')}
           onFullProfile={() => setScreen('full-profile')}
           onHiddenParams={() => setScreen('hidden-parameters')}
+          onAccount={() => setScreen('account')}
+          onPremiumDepth={() => setScreen('premium-depth')}
         />
       )}
 
@@ -886,7 +917,61 @@ export default function App() {
         />
       )}
 
+      {screen === 'account' && (
+        <AccountScreen
+          userProfile={userProfile}
+          isGuest={isGuestMode}
+          isPremium={isPremium}
+          onLogout={handleLogout}
+          onSettings={() => setScreen('settings')}
+          onSubscription={() => setScreen('subscription')}
+          onLegal={handleLegalPage}
+          onLoginRegister={isGuestMode ? () => { disableGuestMode(); window.location.reload(); } : undefined}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'settings' && (
+        <SettingsScreen
+          onBack={() => setScreen('account')}
+          onExport={handleExportJson}
+          onReset={handleResetSession}
+        />
+      )}
+
+      {screen === 'legal' && (
+        <LegalScreen
+          page={currentLegalPage}
+          onBack={() => setScreen('account')}
+        />
+      )}
+
+      {screen === 'subscription' && (
+        <SubscriptionScreen
+          isPremium={isPremium}
+          isDebugMode={isTestMode || isAdminEmail(userProfile?.email ?? null) || false}
+          onBack={() => setScreen('account')}
+        />
+      )}
+
+      {screen === 'premium-depth' && (
+        <PremiumDepthScreen
+          isPremium={isPremium}
+          totalAnswers={profileState.total_profile_answers}
+          profileVector={profileVector}
+          onBack={() => setScreen('dashboard')}
+          onUpgrade={() => setScreen('subscription')}
+        />
+      )}
+
       </main>
+
+      {showPremiumUnlockedModal && (
+        <PremiumUnlockedModal
+          onClose={() => setShowPremiumUnlockedModal(false)}
+          onOpenPremiumDepth={() => { setShowPremiumUnlockedModal(false); setScreen('premium-depth'); }}
+        />
+      )}
 
       {(isTestMode || isAdminEmail(userProfile?.email) || isTestModeRequested()) && (
         <DebugPanel
@@ -907,6 +992,8 @@ export default function App() {
           onCompleteTest={handleCompleteTest}
           onSeedAnswers={handleSeedAnswers}
           onForceSnapshot={handleForceSnapshot}
+          onResetPremiumModal={() => { resetPremiumUnlockedSeen(); setShowPremiumUnlockedModal(true); }}
+          onForcePremiumModule={(_id) => { setScreen('premium-depth'); }}
         />
       )}
     </>
