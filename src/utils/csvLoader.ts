@@ -1,4 +1,4 @@
-import { ContentItem, RarityTier } from '../types';
+import { ContentItem, RarityTier, CardPath } from '../types';
 import { loadContentV2 } from './csvLoaderV2';
 import { ContentItemV2 } from '../types/contentV2';
 
@@ -21,7 +21,7 @@ function rarityFromWeight(weight: number): RarityTier {
   return 'standard';
 }
 
-function mapV2ModeToCardPath(mode: string): string {
+function mapV2ModeToCardPath(mode: string): CardPath {
   const normalized = (mode || '').toLowerCase();
 
   if (normalized.includes('secret')) return 'Secret Human';
@@ -45,6 +45,14 @@ function safeString(value: unknown): string {
 }
 
 function mapV2ToContentItem(item: ContentItemV2): ContentItemWithDiagnostics {
+  // ContentItemV2 in this branch does not expose `mode`, even though the raw
+  // v2 question CSV has a mode column. Use a safe fallback for card/source
+  // diagnostics so the build does not depend on a missing type field.
+  const maybeMode = (item as ContentItemV2 & { mode?: string }).mode;
+  const v2Mode = safeString(
+    maybeMode || item.categoryEn || item.categoryPl || item.answerType || 'standard',
+  );
+
   const answerLabelsPl = item.answers
     .map((answer) => safeString(answer.labelPl || answer.shortLabelPl))
     .filter(Boolean);
@@ -82,7 +90,7 @@ function mapV2ToContentItem(item: ContentItemV2): ContentItemWithDiagnostics {
   }
 
   const rarityTier = rarityFromWeight(item.rarityWeight || 1);
-  const cardPath = mapV2ModeToCardPath(item.mode || '');
+  const cardPath = mapV2ModeToCardPath(v2Mode);
 
   return {
     id: item.questionId,
@@ -105,6 +113,8 @@ function mapV2ToContentItem(item: ContentItemV2): ContentItemWithDiagnostics {
     answer_options_en: answerLabelsEn.join('|'),
 
     axis_target: item.primaryAxis || '',
+    // V2 scoring is answer-level. Runtime resolves the selected answer through
+    // answer_axis_deltas_json. Keep question-level axis_delta_json empty.
     axis_delta_json: '{}',
 
     hidden_signal: '',
@@ -149,12 +159,14 @@ function mapV2ToContentItem(item: ContentItemV2): ContentItemWithDiagnostics {
     answer_ids_json: JSON.stringify(answerIds),
     answer_axis_deltas_json: JSON.stringify(axisDeltasByAnswerLabel),
     answer_reveal_shorts_json: JSON.stringify(revealByAnswerLabel),
-    source_mode: item.mode,
+    source_mode: v2Mode,
     source_tier: item.tier,
   };
 }
 
 export async function loadContent(): Promise<ContentItem[]> {
+  // Hard-lock the active quiz content source to the v2 database.
+  // Do not silently fall back to legacy CSVs. If v2 fails, fail visibly.
   const v2Items = await loadContentV2();
 
   if (!Array.isArray(v2Items) || v2Items.length === 0) {
@@ -164,7 +176,6 @@ export async function loadContent(): Promise<ContentItem[]> {
   }
 
   const mappedItems = v2Items.map(mapV2ToContentItem);
-
   const seen = new Set<string>();
 
   return mappedItems.filter((item) => {
