@@ -112,7 +112,7 @@ export default function EmergingArchetypeScreen({ archetype, totalAnswers, onBac
               <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '10px' }}>
                 A direction is appearing
               </p>
-              <p style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}>
+              <p className="animate-blur-in" style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}>
                 {archetype.primary.name}
               </p>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', lineHeight: 1.65 }}>
@@ -133,7 +133,7 @@ export default function EmergingArchetypeScreen({ archetype, totalAnswers, onBac
                 <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: '8px' }}>
                   Primary
                 </p>
-                <p style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text)', marginBottom: '4px' }}>
+                <p className="animate-blur-in" style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text)', marginBottom: '4px' }}>
                   {archetype.primary.name}
                 </p>
                 <ScoreBar score={archetype.primary.percentage} color="var(--accent-light)" animated />
@@ -182,7 +182,7 @@ export default function EmergingArchetypeScreen({ archetype, totalAnswers, onBac
               <p style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: '12px' }}>
                 {archetype.confidence === 'strong' ? 'Dominant Archetype' : 'Leading Archetype'}
               </p>
-              <h2 style={{
+              <h2 className="animate-blur-in" style={{
                 fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)',
                 letterSpacing: '-0.02em', marginBottom: '4px',
               }}>

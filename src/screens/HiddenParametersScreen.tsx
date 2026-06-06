@@ -96,7 +96,7 @@ export default function HiddenParametersScreen({ profileVector, onBack, engineRe
 
         {/* ── Engine-powered primary display ─────────────────── */}
         {engineResult && (
-          <div style={{ marginBottom: '28px' }}>
+          <div className="animate-in" style={{ marginBottom: '28px' }}>
             <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--gold-light)', textTransform: 'uppercase', marginBottom: '14px' }}>
               {isPl ? 'PROFIL UKRYTY' : 'HIDDEN PROFILE'}
             </p>
@@ -148,7 +148,7 @@ export default function HiddenParametersScreen({ profileVector, onBack, engineRe
                 </div>
                 {/* Score bar */}
                 <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden', marginBottom: '10px' }}>
-                  <div style={{ height: '100%', width: `${dim.score}%`, background: color, borderRadius: '2px', transition: 'width 0.6s ease' }} />
+                  <div className="bar-fill-animated" style={{ height: '100%', width: `${dim.score}%`, background: color, borderRadius: '2px' }} />
                 </div>
                 <p style={{ fontSize: '0.74rem', color: 'var(--text-dim)', lineHeight: 1.6 }}>
                   {dim.user_facing_summary}

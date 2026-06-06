@@ -1634,3 +1634,83 @@ body {
   opacity: 0.44;
   cursor: default;
 }
+
+/* ─── Premium Micro-Animations ──────────────── */
+
+/* Blur-to-sharp reveal: archetype names, psychological reveals */
+@keyframes blurIn {
+  from { opacity: 0; filter: blur(6px); transform: translateY(8px); }
+  to   { opacity: 1; filter: blur(0px); transform: translateY(0); }
+}
+
+/* Answer selection: ripple-out glow ring */
+@keyframes selectGlow {
+  0%   { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+  45%  { box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.5), 0 0 24px rgba(124, 58, 237, 0.22); }
+  100% { box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28), 0 0 10px rgba(124, 58, 237, 0.10); }
+}
+
+/* Epic reward reveal: lift + unblur */
+@keyframes epicReveal {
+  0%   { opacity: 0; transform: translateY(14px) scale(0.94); filter: blur(3px); }
+  65%  { opacity: 1; transform: translateY(-2px) scale(1.01); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Legendary reward reveal: gold surge */
+@keyframes legendaryReveal {
+  0%   { opacity: 0; transform: scale(0.88); }
+  55%  { opacity: 1; transform: scale(1.04); box-shadow: 0 0 48px rgba(245, 158, 11, 0.4), 0 0 20px rgba(196, 132, 252, 0.22); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Score bar fill from left */
+@keyframes barFill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Slow psychological section reveal */
+@keyframes sectionReveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Blur-to-sharp reveal utility */
+.animate-blur-in {
+  animation: blurIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Answer button: animated selection glow ring */
+.answer-btn.selected {
+  animation: selectGlow 0.45s ease-out forwards;
+}
+
+/* Dashboard bento tile stagger entry */
+.bento-grid > .bento-tile                { animation: fadeUp 0.5s ease-out both; }
+.bento-grid > .bento-tile:nth-child(1)   { animation-delay: 0.06s; }
+.bento-grid > .bento-tile:nth-child(2)   { animation-delay: 0.12s; }
+.bento-grid > .bento-tile:nth-child(3)   { animation-delay: 0.18s; }
+.bento-grid > .bento-tile:nth-child(4)   { animation-delay: 0.24s; }
+.bento-grid > .bento-tile:nth-child(5)   { animation-delay: 0.30s; }
+.bento-grid > .bento-tile:nth-child(6)   { animation-delay: 0.36s; }
+
+/* Button press: deeper tactile feedback for primary CTA */
+.btn-primary:active {
+  transform: scale(0.96);
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.22);
+}
+
+/* Rarity-tuned reward block entrance */
+.reward-reveal--epic {
+  animation: epicReveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.reward-reveal--legendary {
+  animation: legendaryReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Score bar animated fill from left — add class to fill div */
+.bar-fill-animated {
+  transform-origin: left center;
+  animation: barFill 0.75s cubic-bezier(0.4, 0, 0.2, 1) both;
+}

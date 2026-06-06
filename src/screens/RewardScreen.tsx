@@ -240,7 +240,10 @@ export default function RewardScreen({
         )}
 
         {/* ── Rarity signal ── */}
-        <div className="reward-block rb-rarity animate-in" style={{ animationDelay: '0.05s' }}>
+        <div
+          className={`reward-block rb-rarity${item.rarity_tier === 'epic' ? ' reward-reveal--epic' : item.rarity_tier === 'legendary' ? ' reward-reveal--legendary' : ' animate-in'}`}
+          style={{ animationDelay: '0.05s' }}
+        >
           <p className="reward-block-label">{t.reward.blockLabel['rarity']}</p>
           <p className="reward-block-text">{t.reward.rarityPercent(communityPct)}</p>
         </div>
@@ -362,8 +365,9 @@ export default function RewardScreen({
 
         {/* Profile evolution card — shown every 5 answers */}
         {evolutionData && showContinue && (
-          <div className="animate-in" style={{
+          <div className="animate-blur-in" style={{
             margin: '0 0 12px',
+            animationDelay: '0.1s',
             padding: '14px 16px',
             background: 'linear-gradient(135deg, rgba(124,58,237,0.1) 0%, rgba(8,145,178,0.06) 100%)',
             border: '1px solid rgba(124,58,237,0.22)',

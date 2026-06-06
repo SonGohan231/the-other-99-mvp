@@ -227,7 +227,7 @@ export default function Snapshot51Screen({ snapshot, totalAnswers, onBack, onSta
         {snapshot.is_available && (
           <>
             {/* ── Emerging Archetype ─────────────────── */}
-            <div style={{ marginBottom: '20px' }}>
+            <div className="animate-in" style={{ marginBottom: '20px', animationDelay: '0.05s' }}>
               <SectionLabel>Emerging Archetype</SectionLabel>
               <GlassCard accent>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
@@ -281,7 +281,7 @@ export default function Snapshot51Screen({ snapshot, totalAnswers, onBack, onSta
             </div>
 
             {/* ── Strongest Axes ─────────────────────── */}
-            <div style={{ marginBottom: '20px' }}>
+            <div className="animate-in" style={{ marginBottom: '20px', animationDelay: '0.12s' }}>
               <SectionLabel>Strongest Dimensions</SectionLabel>
               <GlassCard>
                 {snapshot.strongest_axes.map((ax) => (
@@ -296,7 +296,7 @@ export default function Snapshot51Screen({ snapshot, totalAnswers, onBack, onSta
 
             {/* ── Uncertain Axes ─────────────────────── */}
             {snapshot.uncertain_axes.length > 0 && (
-              <div style={{ marginBottom: '20px' }}>
+              <div className="animate-in" style={{ marginBottom: '20px', animationDelay: '0.19s' }}>
                 <SectionLabel>Still Forming</SectionLabel>
                 <GlassCard style={{ borderStyle: 'dashed' }}>
                   <p style={{ fontSize: '0.73rem', color: 'var(--text-dim)', marginBottom: '10px', lineHeight: 1.5 }}>
@@ -316,7 +316,7 @@ export default function Snapshot51Screen({ snapshot, totalAnswers, onBack, onSta
             )}
 
             {/* ── Hidden Parameters ──────────────────── */}
-            <div style={{ marginBottom: '20px' }}>
+            <div className="animate-in" style={{ marginBottom: '20px', animationDelay: '0.26s' }}>
               <SectionLabel>Hidden Parameters</SectionLabel>
               <GlassCard>
                 {[
@@ -353,7 +353,7 @@ export default function Snapshot51Screen({ snapshot, totalAnswers, onBack, onSta
             </div>
 
             {/* ── Contradiction Summary ──────────────── */}
-            <div style={{ marginBottom: '20px' }}>
+            <div className="animate-in" style={{ marginBottom: '20px', animationDelay: '0.33s' }}>
               <SectionLabel>Internal Pattern</SectionLabel>
               <GlassCard style={{
                 borderColor: contr.level === 'high'
@@ -385,7 +385,7 @@ export default function Snapshot51Screen({ snapshot, totalAnswers, onBack, onSta
 
             {/* ── Human Twin Preview ─────────────────── */}
             {twin.is_unlocked && (
-              <div style={{ marginBottom: '20px' }}>
+              <div className="animate-in" style={{ marginBottom: '20px', animationDelay: '0.40s' }}>
                 <SectionLabel>Closest Projected Profile</SectionLabel>
                 <GlassCard gold>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -409,7 +409,7 @@ export default function Snapshot51Screen({ snapshot, totalAnswers, onBack, onSta
             )}
 
             {/* ── Growth Direction ───────────────────── */}
-            <div style={{ marginBottom: '24px' }}>
+            <div className="animate-in" style={{ marginBottom: '24px', animationDelay: '0.47s' }}>
               <SectionLabel>Growth Direction</SectionLabel>
               <GlassCard>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>

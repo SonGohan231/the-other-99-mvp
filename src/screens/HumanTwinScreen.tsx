@@ -139,7 +139,7 @@ export default function HumanTwinScreen({ humanTwin, totalAnswers, onBack }: Pro
 
         {/* PREVIEW */}
         {humanTwin.tier === 'preview' && (
-          <>
+          <div className="animate-in">
             <GlassCard style={{ marginBottom: '20px', borderColor: 'rgba(124,58,237,0.2)' }}>
               <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: '10px' }}>
                 Closest projected profile
@@ -157,19 +157,19 @@ export default function HumanTwinScreen({ humanTwin, totalAnswers, onBack }: Pro
                 Answer <strong style={{ color: 'var(--text)' }}>{remaining51} more</strong> to unlock a similarity score and shared patterns.
               </p>
             </GlassCard>
-          </>
+          </div>
         )}
 
         {/* MEANINGFUL / STRONG */}
         {(humanTwin.tier === 'meaningful' || humanTwin.tier === 'strong') && (
           <>
             {/* Similarity ring */}
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <div className="animate-in" style={{ textAlign: 'center', marginBottom: '20px' }}>
               <SimilarityRing pct={humanTwin.similarity_percent} />
               <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '4px' }}>
                 Estimated similarity
               </p>
-              <p style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)' }}>
+              <p className="animate-blur-in" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)', animationDelay: '0.15s' }}>
                 {humanTwin.closest_reference_name}
               </p>
             </div>
