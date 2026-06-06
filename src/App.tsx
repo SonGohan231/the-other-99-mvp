@@ -57,6 +57,7 @@ import LegalScreen from './screens/LegalScreen';
 import SubscriptionScreen from './screens/SubscriptionScreen';
 import PremiumDepthScreen from './screens/PremiumDepthScreen';
 import PremiumUnlockedModal, { hasPremiumUnlockedBeenSeen, resetPremiumUnlockedSeen } from './components/PremiumUnlockedModal';
+import { USE_V2_CONTENT } from './config/features';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -134,6 +135,95 @@ function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
   }
 
   return picks.slice(0, 3).map(buildNextCard);
+}
+
+
+function parseJsonRecord(raw: string | undefined | null): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseStringArray(raw: string | undefined | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function numericDeltas(raw: unknown): Record<string, number> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (Number.isFinite(n) && n !== 0) out[key] = n;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function getSelectedAnswerDeltas(item: ContentItem, answer: string): Record<string, number> | null {
+  const answerMap = parseJsonRecord((item as any).answer_axis_deltas_json);
+  const direct = numericDeltas(answerMap[answer]);
+  if (direct) return direct;
+
+  // Fallback: if localized display used full label but map was keyed by short label or the reverse,
+  // normalize by trimming and case-folding.
+  const normalizedAnswer = answer.trim().toLowerCase();
+  for (const [label, rawDeltas] of Object.entries(answerMap)) {
+    if (label.trim().toLowerCase() === normalizedAnswer) {
+      const deltas = numericDeltas(rawDeltas);
+      if (deltas) return deltas;
+    }
+  }
+
+  // Legacy fallback: question-level deltas.
+  return numericDeltas(parseJsonRecord(item.axis_delta_json));
+}
+
+function getContentDiagnostics(
+  content: ContentItem[],
+  currentItem: ContentItem | null,
+  lang: string | null,
+) {
+  const v2Count = content.filter((item) => (item as any).content_source === 'v2').length;
+  const legacyCount = content.filter((item) => (item as any).content_source !== 'v2').length;
+  const answerIds = parseStringArray((currentItem as any)?.answer_ids_json);
+  const activeSource = v2Count > 0 && legacyCount === 0
+    ? 'v2'
+    : v2Count > 0 && legacyCount > 0
+      ? 'mixed'
+      : legacyCount > 0
+        ? 'legacy'
+        : 'unknown';
+  const warnings: string[] = [];
+  if (USE_V2_CONTENT && v2Count === 0) warnings.push('USE_V2_CONTENT=true but no v2 items were loaded.');
+  if (USE_V2_CONTENT && legacyCount > 0) warnings.push('Legacy items are present while v2 content is enabled.');
+  if (currentItem && !(currentItem as any).content_source) warnings.push('Current item has no content_source metadata.');
+
+  return {
+    use_v2_content: USE_V2_CONTENT,
+    active_content_source: activeSource,
+    loaded_content_count: content.length,
+    loaded_v2_question_count: v2Count,
+    loaded_v2_answer_count: v2Count > 0 ? 5300 : 0,
+    loaded_legacy_count: legacyCount,
+    current_content_source: (currentItem as any)?.content_source ?? null,
+    current_content_version: (currentItem as any)?.content_version ?? currentItem?.version ?? null,
+    current_source_file: (currentItem as any)?.source_file ?? null,
+    current_question_id: (currentItem as any)?.question_id ?? currentItem?.id ?? null,
+    current_answer_ids: answerIds,
+    current_lang: lang,
+    warnings,
+  } as const;
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────────────────
@@ -459,12 +549,7 @@ export default function App() {
     if (!currentItem) return;
     setPendingSelection(null); // confirmed — clear pre-confirm selection
 
-    let axisDeltas: Record<string, number> | null = null;
-    try {
-      if (currentItem.axis_delta_json) {
-        axisDeltas = JSON.parse(currentItem.axis_delta_json) as Record<string, number>;
-      }
-    } catch { /* ignore */ }
+    const axisDeltas = getSelectedAnswerDeltas(currentItem, answer);
 
     const contentProfile = getContentBehavioralProfile(currentItem);
     const behavioralMeta = computeBehavioralMetadata({
@@ -788,6 +873,7 @@ export default function App() {
       lang,
       startedAt: testStartedAt,
       premiumState: { unlocked: isPremium, source: premiumSrc },
+      contentDiagnostics: getContentDiagnostics(content, currentItem, lang),
       buildInfo: {
         version: ai.version,
         commit: ai.commit,
@@ -1334,6 +1420,13 @@ export default function App() {
           swapEvents={swapEvents}
           exitEvents={exitEvents}
           returnEvents={returnEvents}
+          profileVector={profileVector as Record<string, number>}
+          canonicalVector={canonicalVector}
+          userId={user?.id ?? null}
+          lang={lang}
+          startedAt={testStartedAt}
+          premiumState={{ unlocked: isPremium, source: isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null }}
+          contentDiagnostics={getContentDiagnostics(content, currentItem, lang)}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}
