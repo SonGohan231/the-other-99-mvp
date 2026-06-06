@@ -75,6 +75,8 @@ export interface BehavioralMetadata {
   was_answer_changed: boolean;
   was_undone: boolean;
   returned_to_question: boolean;
+  was_swapped?: boolean;
+  was_skipped_with_selection?: boolean;
   confidence_signal: number;
   avoidance_signal: number;
   impulsivity_signal: number;
@@ -82,6 +84,62 @@ export interface BehavioralMetadata {
   instability_signal: number;
   emotional_friction_signal: number;
   contradiction_signal: number;
+}
+
+export interface QuestionContext {
+  question_id: string;
+  category: string;
+  content_type: string;
+  rarity_tier: string;
+  axis_target: string;
+  darkness_level: string;
+  intimacy_level: string;
+  psychological_intensity: string;
+  content_tier: 'free' | 'premium';
+}
+
+export interface SkipEvent {
+  event_type: 'skip_question';
+  question_id: string;
+  timestamp: string;
+  time_to_skip_ms: number;
+  immediate_or_delayed: 'immediate' | 'delayed';
+  had_selection_before_skip: boolean;
+  question_context: QuestionContext;
+  skip_count_in_session: number;
+  skip_count_in_category: number;
+  skip_count_on_axis: number;
+}
+
+export interface SwapEvent {
+  event_type: 'swap_question';
+  old_question_id: string;
+  new_question_id: string;
+  timestamp: string;
+  time_to_swap_ms: number;
+  had_selection_before_swap: boolean;
+  old_question_context: QuestionContext;
+  new_question_context: QuestionContext;
+  swap_count_in_session: number;
+}
+
+export interface ExitToMenuEvent {
+  event_type: 'exit_to_menu';
+  question_id: string;
+  timestamp: string;
+  session_depth: number;
+  answer_count_before_exit: number;
+  time_on_question_ms: number;
+  phase_at_exit: string;
+  had_selection: boolean;
+}
+
+export interface ReturnToSessionEvent {
+  event_type: 'return_to_session';
+  timestamp: string;
+  time_away_ms: number;
+  same_question_restored: boolean;
+  session_depth_at_return: number;
 }
 
 export interface Interaction {

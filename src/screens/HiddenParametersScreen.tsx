@@ -55,8 +55,8 @@ const DISPLAY_NAMES_PL: Record<string, string> = {
 export default function HiddenParametersScreen({ profileVector, onBack }: Props) {
   const [lang] = useLang();
   const isPl = lang === 'pl';
-  const params = computeHiddenParameters(profileVector);
   const summary = summarizeBehavioralProfile(getInteractions());
+  const params = computeHiddenParameters(profileVector, summary);
   const displayNames = isPl ? DISPLAY_NAMES_PL : DISPLAY_NAMES_EN;
 
   const HEADER = isPl ? 'UKRYTE PARAMETRY' : 'HIDDEN PARAMETERS';

@@ -14,6 +14,8 @@ interface Props {
   onAnswer: (answer: string, responseTimeMs: number, changeCount: number, firstReactionMs: number | null) => void;
   onUndo?: () => void;
   canUndo?: boolean;
+  onSkip?: (timeOnQuestionMs: number, hadSelection: boolean) => void;
+  onExitToMenu?: (timeOnQuestionMs: number, hadSelection: boolean, phase: string) => void;
 }
 
 // Reveal state machine: question → saved → analyzing → comparing → insight
@@ -35,6 +37,8 @@ export default function InteractionScreen({
   onAnswer,
   onUndo,
   canUndo,
+  onSkip,
+  onExitToMenu,
 }: Props) {
   const t = useT();
   const [lang] = useLang();
@@ -137,27 +141,54 @@ export default function InteractionScreen({
   const showDistribution = phase === 'comparing' || phase === 'insight';
   const showContinue = phase === 'insight';
 
+  function handleSkip() {
+    const elapsed = Date.now() - startTimeRef.current;
+    onSkip?.(elapsed, selected !== null);
+  }
+
+  function handleExitToMenu() {
+    const elapsed = Date.now() - startTimeRef.current;
+    onExitToMenu?.(elapsed, selected !== null, phase);
+  }
+
   return (
     <div className="interaction-screen" style={{ position: 'relative' }}>
-      {/* Back / Undo button */}
-      {canUndo && onUndo && phase === 'question' && (
+      {/* Top-left: Back/Undo or Exit */}
+      {phase === 'question' && (
+        <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '6px', zIndex: 10 }}>
+          {canUndo && onUndo && (
+            <button
+              onClick={onUndo}
+              style={{ fontSize: '0.72rem', color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+              aria-label="Go back to previous question"
+            >
+              ← {t.interaction.reveal?.saved ? 'Back' : 'Back'}
+            </button>
+          )}
+          {onExitToMenu && (
+            <button
+              onClick={handleExitToMenu}
+              style={{ fontSize: '0.72rem', color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+              aria-label={t.interaction.exitToMenu}
+            >
+              {t.interaction.exitToMenu}
+            </button>
+          )}
+        </div>
+      )}
+      {/* Top-right: Skip */}
+      {phase === 'question' && onSkip && (
         <button
-          onClick={onUndo}
+          onClick={handleSkip}
           style={{
-            position: 'absolute',
-            top: '12px',
-            left: '12px',
-            fontSize: '0.72rem',
-            color: 'var(--text-dim)',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            zIndex: 10,
+            position: 'absolute', top: '12px', right: '12px',
+            fontSize: '0.72rem', color: 'var(--text-dim)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '4px 8px', zIndex: 10,
           }}
-          aria-label="Go back to previous question"
+          aria-label={t.interaction.skipQuestion}
         >
-          ← Back
+          {t.interaction.skipQuestion} →
         </button>
       )}
 

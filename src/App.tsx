@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import {
   AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, NextCard, BehavioralMetadata,
+  SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent,
 } from './types';
 import { loadContent } from './utils/csvLoader';
 import { selectProfileTestContent, calcProfileProgress } from './utils/contentSelector';
@@ -171,6 +172,12 @@ export default function App() {
   // Undo state
   const [canUndoAnswer, setCanUndoAnswer] = useState(false);
 
+  // Behavioral event queues (flushed to session persistence)
+  const [skipEvents, setSkipEvents] = useState<SkipEvent[]>([]);
+  const [swapEvents, setSwapEvents] = useState<SwapEvent[]>([]);
+  const [exitEvents, setExitEvents] = useState<ExitToMenuEvent[]>([]);
+  const [returnEvents, setReturnEvents] = useState<ReturnToSessionEvent[]>([]);
+
   // Test mode (developer bypass)
   const [isTestMode] = useState<boolean>(() => {
     if (isTestModeRequested()) {
@@ -227,6 +234,10 @@ export default function App() {
       selectedCard,
       canUndoAnswer,
       nextCardIds: nc.map((c) => c.linkedContentId ?? '').filter(Boolean),
+      skipEvents,
+      swapEvents,
+      exitEvents,
+      returnEvents,
     });
   }
 
@@ -268,6 +279,21 @@ export default function App() {
                 if (itemToRestore) {
                   restoredInProgressRef.current = true;
                   setCurrentItem(itemToRestore);
+                  // Restore persisted event queues
+                  if (saved.skipEvents?.length) setSkipEvents(saved.skipEvents);
+                  if (saved.swapEvents?.length) setSwapEvents(saved.swapEvents);
+                  if (saved.exitEvents?.length) setExitEvents(saved.exitEvents);
+                  if (saved.returnEvents?.length) setReturnEvents(saved.returnEvents);
+                  // Record return-to-session event
+                  const timeAway = Date.now() - new Date(saved.updatedAt).getTime();
+                  const returnEvent: ReturnToSessionEvent = {
+                    event_type: 'return_to_session',
+                    timestamp: new Date().toISOString(),
+                    time_away_ms: timeAway,
+                    same_question_restored: saved.currentItemId === itemToRestore.id,
+                    session_depth_at_return: saved.testAnswerIndex,
+                  };
+                  setReturnEvents((prev) => [...prev, returnEvent]);
                   if (saved.pendingAnswer && saved.testAnswerIndex > 0) {
                     setScreen('reward');
                   } else {
@@ -731,6 +757,7 @@ export default function App() {
   }
 
   function handleSkipQuestion() {
+    // Debug panel shortcut — no event metadata
     if (!testContent.length) return;
     const nextIndex = testAnswerIndex + 1;
     if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
@@ -740,6 +767,65 @@ export default function App() {
     } else {
       void finishTest();
     }
+  }
+
+  function handleSkipQuestionEvent(timeOnQuestionMs: number, hadSelection: boolean) {
+    if (!currentItem) return;
+    const skipCountInSession = skipEvents.length + 1;
+    const skipCountInCategory = skipEvents.filter((e) => e.question_context.category === currentItem.category).length + 1;
+    const skipCountOnAxis = skipEvents.filter((e) => e.question_context.axis_target === currentItem.axis_target).length + 1;
+    const event: SkipEvent = {
+      event_type: 'skip_question',
+      question_id: currentItem.id,
+      timestamp: new Date().toISOString(),
+      time_to_skip_ms: timeOnQuestionMs,
+      immediate_or_delayed: timeOnQuestionMs < 3000 ? 'immediate' : 'delayed',
+      had_selection_before_skip: hadSelection,
+      question_context: {
+        question_id: currentItem.id,
+        category: currentItem.category,
+        content_type: currentItem.content_type,
+        rarity_tier: currentItem.rarity_tier,
+        axis_target: currentItem.axis_target,
+        darkness_level: currentItem.darkness_level,
+        intimacy_level: currentItem.intimacy_level,
+        psychological_intensity: currentItem.psychological_intensity,
+        content_tier: (currentItem.access_tier ?? 'free') as 'free' | 'premium',
+      },
+      skip_count_in_session: skipCountInSession,
+      skip_count_in_category: skipCountInCategory,
+      skip_count_on_axis: skipCountOnAxis,
+    };
+    const updated = [...skipEvents, event];
+    setSkipEvents(updated);
+
+    const nextIndex = testAnswerIndex + 1;
+    if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
+      setTestAnswerIndex(nextIndex);
+      setCurrentItem(testContent[nextIndex]);
+      persistInProgress({ testAnswerIndex: nextIndex, currentItem: testContent[nextIndex] });
+      setScreen('profile-test');
+    } else {
+      void finishTest();
+    }
+  }
+
+  function handleExitToMenuEvent(timeOnQuestionMs: number, hadSelection: boolean, phase: string) {
+    if (!currentItem) return;
+    const event: ExitToMenuEvent = {
+      event_type: 'exit_to_menu',
+      question_id: currentItem.id,
+      timestamp: new Date().toISOString(),
+      session_depth: testAnswerIndex,
+      answer_count_before_exit: testAnswers.length,
+      time_on_question_ms: timeOnQuestionMs,
+      phase_at_exit: phase,
+      had_selection: hadSelection,
+    };
+    const updatedExits = [...exitEvents, event];
+    setExitEvents(updatedExits);
+    persistInProgress();
+    setScreen('dashboard');
   }
 
   function handleSkipToQuestion(n: number) {
@@ -875,6 +961,8 @@ export default function App() {
           onAnswer={handleAnswer}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}
+          onSkip={handleSkipQuestionEvent}
+          onExitToMenu={handleExitToMenuEvent}
         />
       )}
 

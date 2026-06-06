@@ -116,9 +116,9 @@ export function computeFullProfile(vector: ProfileVector, totalAnswers: number):
   else if ((d1 === 'control' && d2 === 'security') || (d1 === 'security' && d2 === 'control')) probableArchetypeDirection = 'Architect / Guardian blend';
   else if ((d1 === 'emotion' && d2 === 'connection') || (d1 === 'connection' && d2 === 'emotion')) probableArchetypeDirection = 'Mirror / Anchor blend';
   else if ((d1 === 'independence' && d2 === 'risk') || (d1 === 'risk' && d2 === 'independence')) probableArchetypeDirection = 'Rebel / Catalyst blend';
-  else if ((d1 === 'curiosity' && d2 === 'independence') || (d1 === 'independence' && d2 === 'curiosity')) probableArchetypeDirection = 'Explorer / Pathfinder blend';
+  else if ((d1 === 'curiosity' && d2 === 'independence') || (d1 === 'independence' && d2 === 'curiosity')) probableArchetypeDirection = 'Explorer / Dreamer blend';
   else if ((d1 === 'security' && d2 === 'control') || (d1 === 'control' && d2 === 'security')) probableArchetypeDirection = 'Guardian / Strategist blend';
-  else if ((d1 === 'change' && d2 === 'curiosity') || (d1 === 'curiosity' && d2 === 'change')) probableArchetypeDirection = 'Alchemist / Seeker blend';
+  else if ((d1 === 'change' && d2 === 'curiosity') || (d1 === 'curiosity' && d2 === 'change')) probableArchetypeDirection = 'Alchemist / Weaver blend';
 
   void totalAnswers;
 

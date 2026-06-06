@@ -1,5 +1,7 @@
+import { SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent } from '../types';
+
 const KEY = 'to99_in_progress_test';
-const VERSION = 2;
+const VERSION = 3;
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export interface InProgressTestState {
@@ -12,7 +14,11 @@ export interface InProgressTestState {
   pendingAnswer: string;
   selectedCard: string | null;
   canUndoAnswer: boolean;
-  nextCardIds: string[];       // IDs of the 3 candidate cards shown at reward screen
+  nextCardIds: string[];
+  skipEvents: SkipEvent[];
+  swapEvents: SwapEvent[];
+  exitEvents: ExitToMenuEvent[];
+  returnEvents: ReturnToSessionEvent[];
   updatedAt: string;
 }
 
@@ -34,15 +40,25 @@ function _load(): InProgressTestState | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as InProgressTestState;
-    if (parsed.version !== VERSION) return null;
+    if (parsed.version !== VERSION && parsed.version !== 2) return null;
+    // Migrate v2 saves to v3 shape
+    if (parsed.version === 2) {
+      (parsed as InProgressTestState).skipEvents = [];
+      (parsed as InProgressTestState).swapEvents = [];
+      (parsed as InProgressTestState).exitEvents = [];
+      (parsed as InProgressTestState).returnEvents = [];
+    }
     if (!parsed.testContentIds?.length) return null;
     // Expire after MAX_AGE_MS
     if (parsed.updatedAt) {
       const age = Date.now() - new Date(parsed.updatedAt).getTime();
       if (age > MAX_AGE_MS) { localStorage.removeItem(KEY); return null; }
     }
-    // Guarantee nextCardIds exists (migration from v1 saves)
     if (!parsed.nextCardIds) parsed.nextCardIds = [];
+    if (!parsed.skipEvents) parsed.skipEvents = [];
+    if (!parsed.swapEvents) parsed.swapEvents = [];
+    if (!parsed.exitEvents) parsed.exitEvents = [];
+    if (!parsed.returnEvents) parsed.returnEvents = [];
     return parsed;
   } catch { return null; }
 }

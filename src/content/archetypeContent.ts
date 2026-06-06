@@ -183,10 +183,10 @@ export const ARCHETYPE_CONTENT: Record<ArchetypeId, ArchetypeContent> = {
     premium_teaser_pl: 'Twój profil pokazuje konkretną oś, gdzie twoja strategiczna jasność jest atutem, a gdzie staje się murem.',
   },
 
-  seeker: {
-    id: 'seeker',
-    name_en: 'The Seeker',
-    name_pl: 'Poszukiwacz',
+  weaver: {
+    id: 'weaver',
+    name_en: 'The Weaver',
+    name_pl: 'Tkacz',
     short_hook_en: 'You are not indecisive. You are protecting several versions of your future at once.',
     short_hook_pl: 'Nie jesteś niezdecydowany. Chronisz kilka wersji swojej przyszłości jednocześnie.',
     first_signal_en: 'You have a notebook full of beginnings.',
@@ -238,7 +238,7 @@ export const ARCHETYPE_CONTENT: Record<ArchetypeId, ArchetypeContent> = {
   catalyst: {
     id: 'catalyst',
     name_en: 'The Catalyst',
-    name_pl: 'Katalizator',
+    name_pl: 'Iskra',
     short_hook_en: 'You often look calm because you already panicked internally.',
     short_hook_pl: 'Często wyglądasz spokojnie, bo już wpadłeś w panikę wewnętrznie.',
     first_signal_en: 'You sent the message before you thought through the consequences.',
@@ -313,10 +313,10 @@ export const ARCHETYPE_CONTENT: Record<ArchetypeId, ArchetypeContent> = {
     premium_teaser_pl: 'Twój profil pokazuje, co naprawdę próbujesz przekształcić — i czy celem jest coś zewnętrznego, czy wewnętrznego.',
   },
 
-  pathfinder: {
-    id: 'pathfinder',
-    name_en: 'The Pathfinder',
-    name_pl: 'Pionier',
+  dreamer: {
+    id: 'dreamer',
+    name_en: 'The Dreamer',
+    name_pl: 'Marzyciel',
     short_hook_en: 'You do not make promises carelessly. Not everyone in your life has learned this about you yet.',
     short_hook_pl: 'Nie składasz obietnic lekkomyślnie. Nie wszyscy w twoim życiu jeszcze to wiedzą.',
     first_signal_en: 'You already know how long this will actually take.',

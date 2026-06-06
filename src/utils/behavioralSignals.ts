@@ -1,4 +1,4 @@
-import { Interaction, BehavioralMetadata } from '../types';
+import { Interaction, BehavioralMetadata, SkipEvent, SwapEvent, ExitToMenuEvent } from '../types';
 import { ProfileVector } from './profileVector';
 
 // Response time thresholds (ms)
@@ -190,6 +190,11 @@ export interface BehavioralSummary {
   totalAnswerChanges: number;
   totalUndos: number;
   totalSkips: number;
+  totalSwaps: number;
+  totalExits: number;
+  skipRatePercent: number;
+  mostSkippedCategory: string | null;
+  mostSkippedAxis: string | null;
   decisivenessLabel: DecisivenessLabel;
   stabilityLabel: StabilityLabel;
   avoidanceLabel: AvoidanceLabel;
@@ -207,6 +212,9 @@ function avgNullable(values: (number | null)[]): number | null {
 
 export function summarizeBehavioralProfile(
   interactions: Interaction[],
+  skipEventsArg: SkipEvent[] = [],
+  swapEventsArg: SwapEvent[] = [],
+  exitEventsArg: ExitToMenuEvent[] = [],
 ): BehavioralSummary | null {
   const withMeta = interactions.filter(
     (i) => i.behavioral_metadata != null,
@@ -225,10 +233,28 @@ export function summarizeBehavioralProfile(
 
   const totalChanges = metas.reduce((sum, m) => sum + (m.was_answer_changed ? 1 : 0), 0);
   const totalUndos = metas.reduce((sum, m) => sum + (m.was_undone ? 1 : 0), 0);
-  const totalSkips = withMeta.reduce((sum, i) => sum + (i.skipped ? 1 : 0), 0);
+  const totalSkips = withMeta.reduce((sum, i) => sum + (i.skipped ? 1 : 0), 0) + skipEventsArg.length;
   const avgResp = avg(withMeta.map((i) => i.response_time_ms));
   const avgFirst = avgNullable(metas.map((m) => m.first_reaction_time_ms));
   const avgHes = avgNullable(metas.map((m) => m.hesitation_time_ms));
+
+  // Skip/swap/exit aggregates
+  const totalSwaps = swapEventsArg.length;
+  const totalExits = exitEventsArg.length;
+  const totalAnswered = withMeta.length;
+  const skipRatePercent = totalAnswered > 0 ? Math.round((skipEventsArg.length / (totalAnswered + skipEventsArg.length)) * 100) : 0;
+
+  // Most-skipped category/axis
+  const categoryCount: Record<string, number> = {};
+  const axisCount: Record<string, number> = {};
+  for (const ev of skipEventsArg) {
+    const cat = ev.question_context.category;
+    const ax = ev.question_context.axis_target;
+    categoryCount[cat] = (categoryCount[cat] ?? 0) + 1;
+    axisCount[ax] = (axisCount[ax] ?? 0) + 1;
+  }
+  const mostSkippedCategory = Object.keys(categoryCount).sort((a, b) => categoryCount[b] - categoryCount[a])[0] ?? null;
+  const mostSkippedAxis = Object.keys(axisCount).sort((a, b) => axisCount[b] - axisCount[a])[0] ?? null;
 
   let decisivenessLabel: DecisivenessLabel;
   if (avgImp > 65) decisivenessLabel = 'impulsive';
@@ -261,6 +287,11 @@ export function summarizeBehavioralProfile(
     totalAnswerChanges: totalChanges,
     totalUndos,
     totalSkips,
+    totalSwaps,
+    totalExits,
+    skipRatePercent,
+    mostSkippedCategory,
+    mostSkippedAxis,
     decisivenessLabel,
     stabilityLabel,
     avoidanceLabel,
