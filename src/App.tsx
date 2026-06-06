@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import {
   AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, NextCard, BehavioralMetadata,
@@ -14,6 +14,7 @@ import {
 } from './utils/storage';
 import { computeBehavioralMetadata, summarizeBehavioralProfile, BehavioralSummary } from './utils/behavioralSignals';
 import { getContentBehavioralProfile } from './utils/contentTags';
+import { updateUserVoteProfile } from './utils/userVoteProfile';
 import {
   ProfileVector, loadVector, saveVector, applyDeltas, calcHumanTwinMatch, getTopDimensions,
 } from './utils/profileVector';
@@ -59,6 +60,7 @@ import TestSummaryScreen from './screens/TestSummaryScreen';
 import TruthOrDareScreen from './screens/TruthOrDareScreen';
 import TestIntroScreen from './screens/TestIntroScreen';
 import PremiumPlaceholder from './screens/PremiumPlaceholder';
+import ArchetypeMixScreen from './screens/ArchetypeMixScreen';
 import DebugPanel from './screens/DebugPanel';
 
 const TEST_TOTAL = 17;
@@ -137,6 +139,11 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // Tracks whether an in-progress test was restored on load (prevents initial-screen effect from overriding it)
+  const restoredInProgressRef = useRef(false);
+  // Tracks whether the current question was restored from an interrupted session
+  const [wasRestoredFromInterrupt, setWasRestoredFromInterrupt] = useState(false);
 
   // Active test state
   const [testContent, setTestContent] = useState<ContentItem[]>([]);
@@ -259,10 +266,12 @@ export default function App() {
                   ? restoredContent.find((i) => i.id === saved.currentItemId) ?? null
                   : null;
                 if (itemToRestore) {
+                  restoredInProgressRef.current = true;
                   setCurrentItem(itemToRestore);
                   if (saved.pendingAnswer && saved.testAnswerIndex > 0) {
                     setScreen('reward');
                   } else {
+                    setWasRestoredFromInterrupt(true);
                     setScreen('profile-test');
                   }
                 }
@@ -321,6 +330,7 @@ export default function App() {
   // ─── Determine initial screen ────────────────────────────────────────────────────────
   useEffect(() => {
     if (loading || authLoading) return;
+    if (restoredInProgressRef.current) return; // in-progress test restored — don't redirect to dashboard
     if (isTestMode || isGuestMode) {
       if (!isAgeConfirmed()) { setScreen('age-gate'); return; }
       setScreen('dashboard');
@@ -394,10 +404,12 @@ export default function App() {
       changeCount,
       wasSkipped: false,
       wasUndone: false,
+      wasReturned: wasRestoredFromInterrupt,
       axisDeltas,
       profileVector,
       contentProfile,
     });
+    if (wasRestoredFromInterrupt) setWasRestoredFromInterrupt(false);
     setLastBehavioralMetadata(behavioralMeta);
 
     const testAnswer: TestAnswer = {
@@ -431,6 +443,14 @@ export default function App() {
     };
     addInteraction(localInteraction);
     setBehavioralSummary(summarizeBehavioralProfile(getInteractions()));
+    updateUserVoteProfile({
+      contentId: currentItem.id,
+      selectedAnswer: answer,
+      responseTimeMs,
+      skipped: false,
+      behavioral: behavioralMeta,
+      userId: user?.id ?? null,
+    });
     addSeenId(currentItem.id);
 
     const ps = getProfileState();
@@ -831,6 +851,15 @@ export default function App() {
           onHiddenParams={() => setScreen('hidden-parameters')}
           onAccount={() => setScreen('account')}
           onPremiumDepth={() => setScreen('premium-depth')}
+          onArchetypes={() => setScreen('archetypes')}
+        />
+      )}
+
+      {screen === 'archetypes' && (
+        <ArchetypeMixScreen
+          profileVector={profileVector}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
         />
       )}
 
@@ -842,6 +871,7 @@ export default function App() {
           testTotal={TEST_TOTAL}
           profileProgress={profileState.profile_progress}
           selectedCard={selectedCard}
+          userId={user?.id ?? null}
           onAnswer={handleAnswer}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

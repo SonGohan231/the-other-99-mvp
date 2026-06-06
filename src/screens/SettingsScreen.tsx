@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useT, useLang } from '../context/LangContext';
 import { Lang } from '../i18n';
+import { getAppInfo } from '../utils/appVersion';
 
 const THEME_KEY = 'to99_theme';
 const REDUCED_MOTION_KEY = 'to99_reduced_motion';
@@ -69,6 +70,10 @@ export default function SettingsScreen({ onBack, onExport, onReset }: Props) {
   const [lang, setLang] = useLang();
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const [reducedMotion, setReducedMotionState] = useState<boolean>(getReducedMotion);
+  const [debugEnabled, setDebugEnabled] = useState(() => {
+    try { return localStorage.getItem('to99_debug_mode') === 'true'; } catch { return false; }
+  });
+  const appInfo = getAppInfo();
 
   useEffect(() => {
     applyTheme(theme);
@@ -212,6 +217,59 @@ export default function SettingsScreen({ onBack, onExport, onReset }: Props) {
           <div style={lastRowStyle}>
             <span style={{ color: 'var(--text-dim)' }}>{t.settings.deleteAccount}</span>
           </div>
+        </div>
+
+        {/* Build Info — always visible */}
+        <p style={sectionLabel}>Build Info</p>
+        <div style={sectionStyle}>
+          <div style={rowStyle}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Version</span>
+            <span style={{ color: 'var(--text-dim)', fontFamily: 'monospace', fontSize: '0.72rem' }}>
+              {appInfo.version} · {appInfo.commit}
+            </span>
+          </div>
+          <div style={rowStyle}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Built</span>
+            <span style={{ color: 'var(--text-dim)', fontFamily: 'monospace', fontSize: '0.72rem' }}>
+              {appInfo.buildDate}
+            </span>
+          </div>
+          <div style={rowStyle}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Platform</span>
+            <span style={{ color: 'var(--text-dim)', fontFamily: 'monospace', fontSize: '0.72rem' }}>
+              {appInfo.platform} / {appInfo.environment}
+            </span>
+          </div>
+          <div style={lastRowStyle}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Supabase</span>
+            <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: appInfo.supabaseConfigured ? '#4ade80' : '#f87171' }}>
+              {appInfo.supabaseConfigured ? '✓ connected' : '✗ missing'}
+            </span>
+          </div>
+        </div>
+
+        {/* Debug Panel toggle */}
+        <div style={{ textAlign: 'center', paddingTop: '4px', paddingBottom: '8px' }}>
+          {debugEnabled ? (
+            <p style={{ fontSize: '0.65rem', color: 'var(--teal-light)' }}>
+              ✓ Debug Panel enabled — look for the DBG button
+            </p>
+          ) : (
+            <button
+              onClick={() => {
+                try { localStorage.setItem('to99_debug_mode', 'true'); } catch { /* ignore */ }
+                setDebugEnabled(true);
+                window.location.reload();
+              }}
+              style={{
+                fontSize: '0.65rem', color: 'var(--text-dim)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                textDecoration: 'underline', padding: '4px 8px',
+              }}
+            >
+              Enable Debug Panel
+            </button>
+          )}
         </div>
       </div>
     </div>

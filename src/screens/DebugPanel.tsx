@@ -6,6 +6,10 @@ import { debugLog, getLogs, getErrors, clearLogs } from '../utils/debugStore';
 import { enableTestSession, disableTestSession } from '../utils/testSession';
 import { disableGuestMode } from '../utils/guestSession';
 import { BehavioralSummary } from '../utils/behavioralSignals';
+import { getVoteDebugInfo, resetLocalVotes, exportVoteState, getOrCreateAnonId } from '../utils/communityVotes';
+import { localizedCsvField } from '../i18n';
+import { useLang } from '../context/LangContext';
+import { getAppInfo } from '../utils/appVersion';
 
 interface Props {
   profileState: ProfileState;
@@ -55,7 +59,19 @@ export default function DebugPanel({
   onForcePremiumModule,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [lang] = useLang();
   const inTest = testContent.length > 0 && testAnswerIndex < testContent.length;
+  const appInfo = getAppInfo();
+
+  // Compute vote debug info for current item
+  const voteDebug = (() => {
+    if (!currentItem) return null;
+    const fields = currentItem as unknown as Record<string, string>;
+    const raw = localizedCsvField(fields, 'answer_options', lang);
+    const options = raw.split('|').map((a) => a.trim()).filter(Boolean);
+    if (options.length === 0) return null;
+    return getVoteDebugInfo(currentItem.id, options);
+  })();
 
   return (
     <>
@@ -74,6 +90,25 @@ export default function DebugPanel({
             Debug Panel{' '}
             {isTestMode && <span style={{ color: '#22d3ee', fontSize: '0.65rem' }}>TEST MODE</span>}
           </p>
+
+          {/* APP INFO */}
+          <details open>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>App Info</summary>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.9, fontFamily: 'monospace' }}>
+              <div><span style={{ color: 'var(--text-dim)' }}>Version:&nbsp;</span>{appInfo.version}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Commit:&nbsp;</span>{appInfo.commit}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Build:&nbsp;</span>{appInfo.buildDate}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Source:&nbsp;</span>{appInfo.deploySource}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Platform:&nbsp;</span>{appInfo.platform}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Env:&nbsp;</span>{appInfo.environment}</div>
+              <div>
+                <span style={{ color: 'var(--text-dim)' }}>Supabase:&nbsp;</span>
+                <span style={{ color: appInfo.supabaseConfigured ? '#4ade80' : '#f87171' }}>
+                  {appInfo.supabaseConfigured ? '✓ configured' : '✗ missing'}
+                </span>
+              </div>
+            </div>
+          </details>
 
           {/* SESSION */}
           <details open>
@@ -127,6 +162,63 @@ export default function DebugPanel({
             ) : (
               <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Need ≥3 answers with metadata.</div>
             )}
+          </details>
+
+          {/* COMMUNITY VOTES */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Community Votes {voteDebug ? `(real: ${voteDebug.realVotes})` : '(no item)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              <div>Anon ID: <span style={{ color: 'var(--text-dim)', wordBreak: 'break-all' }}>{getOrCreateAnonId().slice(0, 20)}…</span></div>
+              {voteDebug ? (
+                <>
+                  <div>Content: {voteDebug.contentId}</div>
+                  <div>Seed source: <span style={{ color: voteDebug.seedSource === 'v3' ? '#86efac' : '#fbbf24' }}>{voteDebug.seedSource === 'v3' ? 'v3 semantic' : 'hash fallback'}</span></div>
+                  <div>Mapped: <span style={{ color: voteDebug.isMapped ? '#86efac' : '#f87171' }}>{voteDebug.isMapped ? 'yes' : 'no'}</span></div>
+                  {voteDebug.semanticId && <div>Semantic ID: {voteDebug.semanticId}</div>}
+                  {voteDebug.semanticTheme && <div>Theme: {voteDebug.semanticTheme}</div>}
+                  <div>Scenario: {voteDebug.scenarioId}</div>
+                  <div>Seed votes: {voteDebug.seedVotes}</div>
+                  <div>Real votes: {voteDebug.realVotes}</div>
+                  <div>Total: {voteDebug.totalVotes}</div>
+                  <div>Label: <span style={{ color: 'var(--accent-light)' }}>{voteDebug.distributionLabel}</span></div>
+                  <div>My vote: {voteDebug.myVote ?? 'none'}</div>
+                  <div style={{ marginTop: '4px', fontSize: '0.6rem' }}>
+                    {Object.entries(voteDebug.byAnswer).map(([opt, counts]) => (
+                      <div key={opt}>{opt}: seed={counts.seed} real={counts.real} total={counts.total}</div>
+                    ))}
+                  </div>
+                </>
+              ) : <div>No current item.</div>}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '4px' }}>
+              <button
+                className="debug-btn"
+                onClick={() => {
+                  const data = exportVoteState();
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url; a.download = `to99-votes-${Date.now()}.json`; a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Export vote state
+              </button>
+              <button
+                className="debug-btn"
+                style={{ color: '#f87171', borderColor: 'rgba(239,68,68,0.25)' }}
+                onClick={() => {
+                  if (window.confirm('Reset all local community votes?')) {
+                    resetLocalVotes();
+                    window.location.reload();
+                  }
+                }}
+              >
+                Reset local votes
+              </button>
+            </div>
           </details>
 
           {/* ACTIONS */}

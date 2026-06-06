@@ -41,6 +41,7 @@ const en = {
     googleButton: 'Continue with Google',
     googleConnecting: 'Connecting…',
     googleNotConfigured: 'Google login is not configured yet.',
+    googleProviderDisabled: 'Google login is not enabled in Supabase yet.',
     orDivider: 'or',
     emailLabel: 'Email — get a login link',
     emailPlaceholder: 'your@email.com',
@@ -170,8 +171,8 @@ const en = {
     empty: 'Answer questions to build your profile.',
   },
   humanTwin: {
-    label: 'Human Twin Match',
-    subtext: 'Pattern similarity across all users.',
+    label: 'Estimated Similarity',
+    subtext: 'Pattern similarity — estimated from your answers. Not real-time user matching.',
   },
   firstSignal: {
     badge: 'FIRST SIGNAL DETECTED',
@@ -196,16 +197,6 @@ const en = {
     cardPick: (name: string): string => `${name} chosen`,
     firstSignal: 'First signal unlocked',
   },
-  milestones: {
-    title: 'Profile Milestones',
-    items: [
-      { answers: 17, label: 'First Signal', description: 'Initial pattern detected.' },
-      { answers: 34, label: 'Pattern Forming', description: 'Behavioral profile emerging.' },
-      { answers: 51, label: 'Profile Reading', description: 'Full profile available.' },
-      { answers: 68, label: 'Hidden Profile', description: 'Hidden dimensions revealed.' },
-      { answers: 85, label: 'Human Twin', description: 'Maximum twin match unlocked.' },
-    ] as { answers: number; label: string; description: string }[],
-  },
   fragments: {
     title: 'Profile Fragments',
     discovered: (n: number): string => `${n} fragment${n === 1 ? '' : 's'} discovered`,
@@ -214,29 +205,29 @@ const en = {
     rarityLabel: { standard: 'signal', rare: 'rare signal', epic: 'rare pattern', legendary: 'rare event' } as Record<string, string>,
   },
   twinFeed: {
-    title: 'Human Twin',
+    title: 'Estimated Similarity',
     stages: {
-      no_match: 'No match yet',
-      weak_candidate: 'Weak candidate',
-      potential_overlap: 'Potential overlap',
-      possible_twin: 'Possible twin',
-      strong_match: 'Strong match pattern',
-      twin_candidate: 'Human Twin candidate',
+      no_match: 'Early signal — no pattern yet',
+      weak_candidate: 'Early similarity signal',
+      potential_overlap: 'Estimated similarity forming',
+      possible_twin: 'Similarity direction forming',
+      strong_match: 'Estimated match pattern',
+      twin_candidate: 'Strongest estimated similarity',
     } as Record<string, string>,
     events: {
-      similarity_increased: 'Similarity increased.',
-      candidate_detected: 'Potential overlap detected.',
-      overlap_found: 'New overlap detected.',
-      confidence_improved: 'Twin confidence improved.',
-      rare_match: 'A rare behavioral overlap appeared.',
+      similarity_increased: 'Estimated similarity increased.',
+      candidate_detected: 'Similarity direction detected.',
+      overlap_found: 'New pattern similarity detected.',
+      confidence_improved: 'Similarity estimate refined.',
+      rare_match: 'A rare behavioral pattern appeared.',
     } as Record<string, string>,
     microcopy: {
-      no_match: 'We are still looking.',
-      weak_candidate: 'Potential match detected.',
-      potential_overlap: 'Pattern similarity increasing.',
-      possible_twin: 'Twin confidence improving.',
-      strong_match: 'The system is narrowing the search.',
-      twin_candidate: 'Strong match signal detected.',
+      no_match: 'Not enough data yet.',
+      weak_candidate: 'Pattern similarity detected.',
+      potential_overlap: 'Similarity estimate building.',
+      possible_twin: 'Pattern direction narrowing.',
+      strong_match: 'Estimated match direction clear.',
+      twin_candidate: 'Strongest estimated match so far.',
     } as Record<string, string>,
   },
   timeline: {
@@ -291,18 +282,18 @@ const en = {
     } as Record<string, string>,
     rarityText: {
       standard: 'Common signal. Every answer matters.',
-      rare: 'Uncommon signal — seen in a minority.',
+      rare: 'Uncommon signal. Your answer stands out from the pattern.',
       epic: 'Rare signal. You are entering the realm of the few.',
       legendary: 'High-impact signal. This answer left a mark on your profile.',
     } as Record<string, string>,
     rarityPercent: (pct: number): string =>
       pct < 20
-        ? `Only ${pct.toFixed(1)}% generated this signal.`
+        ? `Estimated: ${pct.toFixed(1)}% chose this answer.`
         : pct < 40
-        ? `This answer appears in ${pct.toFixed(0)}% of profiles.`
-        : `Less common than ${(100 - pct).toFixed(0)}% of answers.`,
+        ? `Estimated ${pct.toFixed(0)}% answered the same way.`
+        : `Less common than an estimated ${(100 - pct).toFixed(0)}% of answers.`,
     communityReveal: (n: number) =>
-      n >= 50 ? `${n}% of users answered similarly.` : `Only ${n}% chose the same answer.`,
+      n >= 50 ? `~${n}% answered similarly (projected).` : `Only ~${n}% chose the same (projected).`,
     profileMovement: (axes: string) => `Your profile shifted toward: ${axes}.`,
     hiddenFooter: 'New hidden-profile data added.',
   },
@@ -517,6 +508,7 @@ const en = {
   premiumDepth: {
     title: 'Premium Depth',
     subtitle: 'Your deeper profile layers.',
+    back: '← Back',
     locked: 'Premium only',
     lockedHint: 'Unlock premium to access this module.',
     insufficientData: 'Keep answering to strengthen this signal.',
@@ -583,6 +575,7 @@ const pl: T = {
     googleButton: 'Zaloguj się przez Google',
     googleConnecting: 'Łączenie…',
     googleNotConfigured: 'Logowanie Google nie jest jeszcze skonfigurowane.',
+    googleProviderDisabled: 'Logowanie Google nie jest jeszcze włączone w Supabase.',
     orDivider: 'lub',
     emailLabel: 'Email — otrzymasz link logowania',
     emailPlaceholder: 'twoj@email.com',
@@ -707,8 +700,8 @@ const pl: T = {
     empty: 'Odpowiadaj na pytania, żeby zbudować profil.',
   },
   humanTwin: {
-    label: 'Dopasowanie bliźniaka',
-    subtext: 'Podobieństwo wzorca względem wszystkich użytkowników.',
+    label: 'Szacowane podobieństwo',
+    subtext: 'Podobieństwo wzorca — szacowane na podstawie Twoich odpowiedzi. Nie jest to dopasowanie w czasie rzeczywistym.',
   },
   firstSignal: {
     badge: 'WYKRYTO PIERWSZY SYGNAŁ',
@@ -733,16 +726,6 @@ const pl: T = {
     cardPick: (name: string): string => `Wybrano: ${name}`,
     firstSignal: 'Odblokowano pierwszy sygnał',
   },
-  milestones: {
-    title: 'Kamienie milowe profilu',
-    items: [
-      { answers: 17, label: 'Pierwszy sygnał', description: 'Wykryto wstępny wzorzec.' },
-      { answers: 34, label: 'Wzorzec się tworzy', description: 'Wyłania się profil behawioralny.' },
-      { answers: 51, label: 'Odczyt profilu', description: 'Pełny profil dostępny.' },
-      { answers: 68, label: 'Ukryty profil', description: 'Ujawniono ukryte wymiary.' },
-      { answers: 85, label: 'Bliźniak człowieka', description: 'Odblokowano maksymalne dopasowanie.' },
-    ],
-  },
   fragments: {
     title: 'Fragmenty profilu',
     discovered: (n: number): string => `Odkryto ${n} ${n === 1 ? 'fragment' : 'fragmentów'}`,
@@ -751,29 +734,29 @@ const pl: T = {
     rarityLabel: { standard: 'sygnał', rare: 'rzadki sygnał', epic: 'rzadki wzorzec', legendary: 'rzadkie zdarzenie' } as Record<string, string>,
   },
   twinFeed: {
-    title: 'Bliźniak człowieka',
+    title: 'Szacowane podobieństwo',
     stages: {
-      no_match: 'Brak dopasowania',
-      weak_candidate: 'Słaby kandydat',
-      potential_overlap: 'Potencjalne pokrycie',
-      possible_twin: 'Możliwy bliźniak',
-      strong_match: 'Silny wzorzec dopasowania',
-      twin_candidate: 'Kandydat na bliźniaka',
+      no_match: 'Wczesny sygnał — brak wzorca',
+      weak_candidate: 'Wczesny sygnał podobieństwa',
+      potential_overlap: 'Szacowane podobieństwo się kształtuje',
+      possible_twin: 'Kierunek podobieństwa się tworzy',
+      strong_match: 'Szacowany wzorzec dopasowania',
+      twin_candidate: 'Najsilniejsze szacowane podobieństwo',
     } as Record<string, string>,
     events: {
-      similarity_increased: 'Podobieństwo wzrosło.',
-      candidate_detected: 'Wykryto potencjalne pokrycie.',
-      overlap_found: 'Wykryto nowe pokrycie.',
-      confidence_improved: 'Pewność bliźniaka wzrosła.',
-      rare_match: 'Pojawiło się rzadkie pokrycie behawioralne.',
+      similarity_increased: 'Szacowane podobieństwo wzrosło.',
+      candidate_detected: 'Wykryto kierunek podobieństwa.',
+      overlap_found: 'Wykryto nowe podobieństwo wzorców.',
+      confidence_improved: 'Szacunek podobieństwa doprecyzowany.',
+      rare_match: 'Pojawił się rzadki wzorzec behawioralny.',
     } as Record<string, string>,
     microcopy: {
-      no_match: 'Nadal szukamy.',
-      weak_candidate: 'Wykryto potencjalne dopasowanie.',
-      potential_overlap: 'Podobieństwo wzorców rośnie.',
-      possible_twin: 'Pewność bliźniaka poprawia się.',
-      strong_match: 'System zawęża poszukiwania.',
-      twin_candidate: 'Wykryto silny sygnał dopasowania.',
+      no_match: 'Za mało danych.',
+      weak_candidate: 'Wykryto podobieństwo wzorców.',
+      potential_overlap: 'Szacunek podobieństwa rośnie.',
+      possible_twin: 'Kierunek wzorca się zawęża.',
+      strong_match: 'Szacowany kierunek dopasowania wyraźny.',
+      twin_candidate: 'Najsilniejsze szacowane dopasowanie.',
     } as Record<string, string>,
   },
   timeline: {
@@ -828,18 +811,18 @@ const pl: T = {
     },
     rarityText: {
       standard: 'Typowy sygnał. Każda odpowiedź ma znaczenie.',
-      rare: 'Nieczęsty sygnał — widuje się go u mniejszości.',
+      rare: 'Nieczęsty sygnał. Twoja odpowiedź wyróżnia się na tle wzorca.',
       epic: 'Rzadki sygnał. Wchodzisz w obszar nielicznych.',
       legendary: 'Sygnał o dużym wpływie. Ta odpowiedź odcisnęła ślad na Twoim profilu.',
     },
     rarityPercent: (n: number): string =>
       n < 20
-        ? `Tylko ${n.toFixed(1)}% wygenerowało ten sygnał.`
+        ? `Szacunkowo: ${n.toFixed(1)}% wybrało tę odpowiedź.`
         : n < 40
-        ? `Ta odpowiedź pojawia się w ${n.toFixed(0)}% profili.`
-        : `Rzadziej niż ${(100 - n).toFixed(0)}% odpowiedzi.`,
+        ? `Szacunkowo ${n.toFixed(0)}% odpowiedziało tak samo.`
+        : `Rzadziej niż szacowane ${(100 - n).toFixed(0)}% odpowiedzi.`,
     communityReveal: (n: number) =>
-      n >= 50 ? `${n}% użytkowników odpowiedziało podobnie.` : `Tylko ${n}% wybrało tę samą odpowiedź.`,
+      n >= 50 ? `~${n}% odpowiedziało podobnie (prognoza).` : `Tylko ~${n}% wybrało to samo (prognoza).`,
     profileMovement: (axes: string) => `Twój profil przesunął się w stronę: ${axes}.`,
     hiddenFooter: 'Dodano nową informację do ukrytego profilu.',
   },
@@ -1054,6 +1037,7 @@ const pl: T = {
   premiumDepth: {
     title: 'Premium Depth',
     subtitle: 'Głębsze warstwy Twojego profilu.',
+    back: '← Wróć',
     locked: 'Tylko premium',
     lockedHint: 'Odblokuj premium, żeby uzyskać dostęp do tego modułu.',
     insufficientData: 'Odpowiadaj dalej, aby wzmocnić ten sygnał.',

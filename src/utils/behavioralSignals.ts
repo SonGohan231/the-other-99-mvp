@@ -127,13 +127,14 @@ export function computeBehavioralMetadata(params: {
   changeCount: number;
   wasSkipped: boolean;
   wasUndone: boolean;
+  wasReturned?: boolean;
   axisDeltas: Record<string, number> | null;
   profileVector: ProfileVector;
   contentProfile: ContentBehavioralProfile;
 }): BehavioralMetadata {
   const {
     responseTimeMs, firstReactionMs, changeCount, wasSkipped,
-    wasUndone, axisDeltas, profileVector, contentProfile,
+    wasUndone, wasReturned, axisDeltas, profileVector, contentProfile,
   } = params;
 
   const hesitationMs =
@@ -159,7 +160,7 @@ export function computeBehavioralMetadata(params: {
     hesitation_time_ms: hesitationMs,
     was_answer_changed: changeCount > 0,
     was_undone: wasUndone,
-    returned_to_question: false,
+    returned_to_question: wasReturned ?? false,
     confidence_signal: confidence,
     avoidance_signal: avoidance,
     impulsivity_signal: impulsivity,
