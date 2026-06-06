@@ -5,9 +5,7 @@ import {
   SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent,
 } from './types';
 import { loadContent } from './utils/csvLoader';
-import { selectProfileTestContent, calcProfileProgress, selectContentByCategory } from './utils/contentSelector';
-import { recommendCategories } from './utils/categoryRecommender';
-import CategoryPickerScreen from './screens/CategoryPickerScreen';
+import { selectProfileTestContent, calcProfileProgress, selectNextAdaptiveQuestion } from './utils/contentSelector';
 import {
   isAgeConfirmed, confirmAge,
   getSeenIds, addSeenId, addSeenIds,
@@ -256,8 +254,8 @@ export default function App() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>(getTimeline);
   const [newFragment, setNewFragment] = useState<ProfileFragment | null>(null);
 
-  // Category-first discovery
-  const [recommendedCategories, setRecommendedCategories] = useState<string[]>([]);
+  // Adaptive next-question reason (for DebugPanel)
+  const [nextQuestionReason, setNextQuestionReason] = useState<string | null>(null);
 
   // Undo state
   const [canUndoAnswer, setCanUndoAnswer] = useState(false);
@@ -736,44 +734,22 @@ export default function App() {
       return;
     }
 
-    // Recommend two categories based on current canonical vector uncertainty
     const seenIds = getSeenIds();
-    const cats = recommendCategories(content, seenIds, canonicalVector, 2);
-    setRecommendedCategories(cats.length >= 2 ? cats : ['General', 'Relationships']);
-    setScreen('category-pick');
-  }
-
-  function handleCategorySelected(categoryEn: string) {
-    const nextIndex = testAnswerIndex;
-
-    if (nextIndex >= TEST_TOTAL || nextIndex >= testContent.length) {
-      void finishTest();
-      return;
-    }
+    const selection = selectNextAdaptiveQuestion(content, seenIds, canonicalVector, testContent, nextIndex);
+    if (!selection) { await finishTest(); return; }
 
     let items = [...testContent];
-
-    // Try to bring a matching item to the front of the remaining queue
-    const matchIdx = items.findIndex(
-      (item, idx) =>
-        idx >= nextIndex &&
-        (item.theme_category === categoryEn || item.category === categoryEn),
-    );
-
-    if (matchIdx > nextIndex) {
-      [items[nextIndex], items[matchIdx]] = [items[matchIdx], items[nextIndex]];
-      setTestContent(items);
-    } else if (matchIdx === -1) {
-      // No pre-selected item matches — pick one from full pool
-      const seenIds = getSeenIds();
-      const picked = selectContentByCategory(content, seenIds, categoryEn);
-      if (picked) {
-        items = [...items];
-        items[nextIndex] = picked;
-        setTestContent(items);
+    if (items[nextIndex]?.id !== selection.item.id) {
+      const existingIdx = items.findIndex((item, idx) => idx >= nextIndex && item.id === selection.item.id);
+      if (existingIdx > nextIndex) {
+        [items[nextIndex], items[existingIdx]] = [items[existingIdx], items[nextIndex]];
+      } else if (existingIdx === -1) {
+        items[nextIndex] = selection.item;
       }
+      setTestContent(items);
     }
 
+    setNextQuestionReason(selection.reason);
     setCurrentItem(items[nextIndex]);
     persistInProgress({ testContent: items, currentItem: items[nextIndex] });
     setScreen('profile-test');
@@ -1263,15 +1239,6 @@ export default function App() {
         />
       )}
 
-      {screen === 'category-pick' && (
-        <CategoryPickerScreen
-          categories={recommendedCategories}
-          questionsAnswered={testAnswerIndex}
-          testTotal={TEST_TOTAL}
-          onPick={handleCategorySelected}
-        />
-      )}
-
       {screen === 'test-summary' && (
         <TestSummaryScreen
           testNumber={testNumber}
@@ -1463,6 +1430,7 @@ export default function App() {
           humanTwinResult={engineResults.humanTwin}
           hiddenParameters={engineResults.hiddenParams}
           snapshot51={engineResults.snapshot}
+          nextQuestionReason={nextQuestionReason}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

@@ -199,7 +199,6 @@ export type AppScreen =
   | 'test-intro'
   | 'profile-test'
   | 'reward'
-  | 'category-pick'
   | 'test-summary'
   | 'truth-or-dare'
   | 'my-profile'

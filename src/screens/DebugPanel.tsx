@@ -55,6 +55,7 @@ interface Props {
   humanTwinResult?: HumanTwinResult | null;
   hiddenParameters?: HiddenParametersResult | null;
   snapshot51?: Snapshot51Result | null;
+  nextQuestionReason?: string | null;
 }
 
 export default function DebugPanel({
@@ -95,6 +96,7 @@ export default function DebugPanel({
   humanTwinResult,
   hiddenParameters,
   snapshot51,
+  nextQuestionReason,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [uiLang] = useLang();
@@ -194,6 +196,7 @@ export default function DebugPanel({
               <div>Current: {currentItem?.id ?? 'none'}</div>
               <div>Progress: {testContent.length > 0 ? Math.round(testAnswerIndex / testContent.length * 100) : 0}%</div>
               <div>Queue ({testContent.length}): {testContent.slice(0, 5).map(i => i.id).join(', ')}{testContent.length > 5 ? '…' : ''}</div>
+              {nextQuestionReason && <div>Next selection: {nextQuestionReason}</div>}
             </div>
           </details>
 
