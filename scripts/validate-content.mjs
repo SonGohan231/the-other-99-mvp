@@ -521,6 +521,67 @@ try {
     .forEach(([p, n]) => console.log(`  ${p.padEnd(26)} ${n}`));
 } catch {}
 
+// ─── v2 database spot-check ──────────────────────────────────────────────────
+// Validates public/v2/ CSVs when present using raw line counts and header checks.
+// The v2 CSVs use complex quoting; a proper parser (PapaParse) is used at runtime.
+try {
+  const v2QPath = resolve(ROOT, 'public/v2/questions_all_2650.csv');
+  const v2APath = resolve(ROOT, 'public/v2/answers_all_5300.csv');
+  let v2Present = false;
+  try { readFileSync(v2QPath); v2Present = true; } catch { /* not present */ }
+
+  if (v2Present) {
+    const qText = readFileSync(v2QPath, 'utf-8');
+    const aText = readFileSync(v2APath, 'utf-8');
+
+    // Data row count: total non-empty lines minus 1 header line
+    const countRows = (text) => text.split('\n').filter(l => l.trim()).length - 1;
+    const qCount = countRows(qText);
+    const aCount = countRows(aText);
+
+    console.log(`\nv2 database (public/v2/):`);
+    console.log(`  questions: ${qCount}  answers: ${aCount}`);
+
+    if (qCount < 2650) {
+      console.log(`  WARN:  expected ≥2650 questions, got ${qCount}`);
+      totalWarnings++;
+    }
+    if (aCount < 5300) {
+      console.log(`  WARN:  expected ≥5300 answers, got ${aCount}`);
+      totalWarnings++;
+    }
+
+    // Header presence check for TIER_1 per-answer reveal columns
+    const aHeaders = aText.split('\n')[0].split(',').map(h => h.trim().replace(/^﻿/, '').replace(/^"|"$/g, ''));
+    const hasPl = aHeaders.includes('answer_reveal_short_pl');
+    const hasEn = aHeaders.includes('answer_reveal_short_en');
+    if (!hasPl) {
+      console.log(`  WARN:  answers CSV missing column answer_reveal_short_pl (TIER_1 reveal)`);
+      totalWarnings++;
+    }
+    if (!hasEn) {
+      console.log(`  WARN:  answers CSV missing column answer_reveal_short_en (TIER_1 reveal)`);
+      totalWarnings++;
+    }
+    if (hasPl && hasEn) {
+      console.log(`  ✓ TIER_1 per-answer reveal columns present (answer_reveal_short_pl/en).`);
+    }
+
+    // Header presence check for AX01–AX10 axis_deltas_json column
+    const hasAxisDeltas = aHeaders.includes('axis_deltas_json');
+    if (!hasAxisDeltas) {
+      console.log(`  WARN:  answers CSV missing column axis_deltas_json`);
+      totalWarnings++;
+    } else {
+      console.log(`  ✓ axis_deltas_json column present (AX01–AX10 format at runtime).`);
+    }
+  }
+} catch (e) {
+  // v2 files missing or parse error — warn, don't fail
+  console.log(`\n  WARN:  v2 database check failed: ${e.message}`);
+  totalWarnings++;
+}
+
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`Total unique IDs: ${allIds.size}`);
 if (totalWarnings > 0) console.log(`Total warnings: ${totalWarnings}`);

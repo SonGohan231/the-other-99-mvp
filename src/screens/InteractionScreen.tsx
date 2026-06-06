@@ -19,6 +19,8 @@ interface Props {
   onExitToMenu?: (timeOnQuestionMs: number, hadSelection: boolean, phase: string, selectedAnswer: string | null) => void;
   onSwap?: (timeOnQuestionMs: number, hadSelection: boolean, selectedAnswer: string | null) => void;
   initialSelected?: string | null;
+  // Per-answer TIER_1 reveal copy (v2 content). Keyed by answer label text.
+  answerRevealShorts?: Record<string, { pl: string; en: string }>;
 }
 
 // Reveal state machine: question → saved → analyzing → comparing → insight
@@ -44,6 +46,7 @@ export default function InteractionScreen({
   onExitToMenu,
   onSwap,
   initialSelected,
+  answerRevealShorts,
 }: Props) {
   const t = useT();
   const [lang] = useLang();
@@ -135,6 +138,12 @@ export default function InteractionScreen({
   }
 
   function getInsightCopy(): string {
+    // TIER_1: per-answer reveal from v2 content (answerRevealShorts keyed by answer label)
+    if (selected && answerRevealShorts?.[selected]) {
+      const rev = answerRevealShorts[selected];
+      return lang === 'pl' ? rev.pl : rev.en;
+    }
+    // Reveal template lookup
     const template = getRevealTemplate(item.reveal_template_id);
     if (template) return lang === 'pl' ? template.insightCopy.pl : template.insightCopy.en;
     // Fallback: rarity-based copy from i18n

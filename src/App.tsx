@@ -19,6 +19,10 @@ import { updateUserVoteProfile } from './utils/userVoteProfile';
 import {
   ProfileVector, loadVector, saveVector, applyDeltas, calcHumanTwinMatch, getTopDimensions,
 } from './utils/profileVector';
+import {
+  CanonicalVector, loadCanonicalVector, saveCanonicalVector, applyCanonicalDeltas,
+  clearCanonicalVector,
+} from './utils/canonicalVector';
 import { FeedEvent, getFeedEvents, addFeedEvent } from './utils/eventFeed';
 import { ProfileFragment, getFragments, checkAndUnlockFragment } from './utils/profileFragments';
 import { TwinFeedEvent, getTwinFeedEvents, checkAndAddTwinEvent } from './utils/twinFeed';
@@ -166,6 +170,7 @@ export default function App() {
 
   // Living profile
   const [profileVector, setProfileVector] = useState<ProfileVector>(loadVector);
+  const [canonicalVector, setCanonicalVector] = useState<CanonicalVector>(loadCanonicalVector);
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>(getFeedEvents);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [profileFragments, setProfileFragments] = useState<ProfileFragment[]>(getFragments);
@@ -508,6 +513,7 @@ export default function App() {
     ps.rarity_points += parseFloat(currentItem.rarity_score) || 0;
 
     const vectorSnapshot = { ...profileVector };
+    const canonicalSnapshot = { ...canonicalVector };
 
     let updatedVec = profileVector;
     const newChangedAxes: string[] = [];
@@ -533,6 +539,11 @@ export default function App() {
       if (changed.length > 0) {
         addFeedEvent({ type: 'dimension_up', label: changed[0] });
       }
+
+      // Canonical 10D vector — handles both AX01–AX10 keys (v2 content) and legacy poles
+      const { next: newCanonical } = applyCanonicalDeltas(canonicalVector, axisDeltas);
+      saveCanonicalVector(newCanonical);
+      setCanonicalVector(newCanonical);
     }
 
     setChangedAxes(newChangedAxes);
@@ -593,6 +604,7 @@ export default function App() {
       selectedAnswer: answer,
       axisDeltas,
       profileVectorSnapshot: vectorSnapshot,
+      canonicalVectorSnapshot: canonicalSnapshot,
       answerNumber: ps.total_profile_answers,
       changeCount,
       createdAt: new Date().toISOString(),
@@ -659,6 +671,11 @@ export default function App() {
 
     saveVector(entry.profileVectorSnapshot);
     setProfileVector({ ...entry.profileVectorSnapshot });
+
+    if (entry.canonicalVectorSnapshot) {
+      saveCanonicalVector(entry.canonicalVectorSnapshot);
+      setCanonicalVector({ ...entry.canonicalVectorSnapshot });
+    }
 
     const ps = getProfileState();
     ps.total_profile_answers = Math.max(0, ps.total_profile_answers - 1);
@@ -775,6 +792,7 @@ export default function App() {
   function handleResetSession() {
     if (window.confirm('Reset local session? Supabase data is not affected.')) {
       resetSession();
+      clearCanonicalVector();
       window.location.reload();
     }
   }

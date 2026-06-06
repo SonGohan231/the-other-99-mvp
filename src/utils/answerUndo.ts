@@ -1,4 +1,5 @@
 import { ProfileVector } from './profileVector';
+import { CanonicalVector } from './canonicalVector';
 
 const UNDO_KEY = 'to99_undo_stack';
 const MAX_UNDO_ENTRIES = 3;
@@ -9,6 +10,7 @@ export interface UndoEntry {
   selectedAnswer: string;
   axisDeltas: Record<string, number> | null;
   profileVectorSnapshot: ProfileVector;
+  canonicalVectorSnapshot?: CanonicalVector;
   answerNumber: number;
   changeCount: number;
   createdAt: string;

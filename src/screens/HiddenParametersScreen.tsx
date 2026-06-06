@@ -4,6 +4,7 @@ import { getInteractions } from '../utils/storage';
 import { summarizeBehavioralProfile } from '../utils/behavioralSignals';
 import { getInProgressEventQueues } from '../utils/inProgressTest';
 import { useLang } from '../context/LangContext';
+import { computeCanonicalHP, buildHPDisplay } from '../engine/canonicalHP';
 
 interface Props {
   profileVector: ProfileVector;
@@ -56,10 +57,12 @@ const DISPLAY_NAMES_PL: Record<string, string> = {
 export default function HiddenParametersScreen({ profileVector, onBack }: Props) {
   const [lang] = useLang();
   const isPl = lang === 'pl';
-  const { skipEvents, swapEvents, exitEvents } = getInProgressEventQueues();
+  const { skipEvents, swapEvents, exitEvents, returnEvents } = getInProgressEventQueues();
   const summary = summarizeBehavioralProfile(getInteractions(), skipEvents, swapEvents, exitEvents);
   const params = computeHiddenParameters(profileVector, summary);
   const displayNames = isPl ? DISPLAY_NAMES_PL : DISPLAY_NAMES_EN;
+  const canonicalHP = computeCanonicalHP(summary, returnEvents);
+  const hpDisplay = canonicalHP ? buildHPDisplay(canonicalHP) : null;
 
   const HEADER = isPl ? 'UKRYTE PARAMETRY' : 'HIDDEN PARAMETERS';
   const SUBTITLE = isPl
@@ -87,7 +90,60 @@ export default function HiddenParametersScreen({ profileVector, onBack }: Props)
           {SUBTITLE}
         </p>
 
-        <div style={{ height: '1px', background: 'var(--border)', marginBottom: '8px' }} />
+        <div style={{ height: '1px', background: 'var(--border)', marginBottom: '24px' }} />
+
+        {/* Canonical HP01 / HP02 / HP03 — primary section */}
+        {hpDisplay ? (
+          <div style={{ marginBottom: '28px' }}>
+            <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--teal-light)', textTransform: 'uppercase', marginBottom: '14px' }}>
+              {isPl ? 'PARAMETRY KANONICZNE' : 'CANONICAL PARAMETERS'}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {hpDisplay.map((hp) => {
+                const positive = hp.value >= 0;
+                const fillPct = Math.abs(hp.value);
+                const label = positive ? (isPl ? hp.positiveLabel.pl : hp.positiveLabel.en)
+                                       : (isPl ? hp.negativeLabel.pl : hp.negativeLabel.en);
+                const desc = isPl ? hp.descPl : hp.descEn;
+                const fillColor = positive ? 'var(--teal-light)' : 'var(--accent-light)';
+                return (
+                  <div key={hp.id} style={{ padding: '14px 14px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-dim)', letterSpacing: '0.06em' }}>{hp.id}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: fillColor }}>{label}</span>
+                    </div>
+                    {/* Bipolar bar — center origin */}
+                    <div style={{ position: 'relative', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '10px' }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        height: '100%',
+                        width: `${fillPct / 2}%`,
+                        left: positive ? '50%' : undefined,
+                        right: positive ? undefined : `${50 - fillPct / 2}%`,
+                        background: fillColor,
+                        borderRadius: '2px',
+                        transition: 'width 0.6s ease',
+                      }} />
+                      {/* Center mark */}
+                      <div style={{ position: 'absolute', top: 0, left: '50%', width: '1px', height: '100%', background: 'rgba(255,255,255,0.15)' }} />
+                    </div>
+                    <p style={{ fontSize: '0.73rem', color: 'var(--text-dim)', lineHeight: 1.5, fontStyle: 'italic' }}>"{desc}"</p>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ height: '1px', background: 'var(--border)', marginTop: '24px' }} />
+          </div>
+        ) : (
+          <div style={{ marginBottom: '24px', padding: '12px 14px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.5 }}>
+              {isPl
+                ? 'Parametry kanoniczne wymagają co najmniej 3 odpowiedzi behawioralnych.'
+                : 'Canonical parameters require at least 3 behavioral answers.'}
+            </p>
+          </div>
+        )}
 
         {/* Behavioral summary section */}
         {summary && (
@@ -137,7 +193,10 @@ export default function HiddenParametersScreen({ profileVector, onBack }: Props)
           </div>
         )}
 
-        {/* Parameter list */}
+        {/* Legacy parameter list */}
+        <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.6 }}>
+          {isPl ? 'SYGNAŁY WEWNĘTRZNE' : 'INTERNAL SIGNALS'}
+        </p>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {params.map((p) => (
             <div key={p.id} style={{ padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
