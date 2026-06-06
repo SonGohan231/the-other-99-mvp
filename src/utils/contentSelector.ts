@@ -163,3 +163,21 @@ export function calcProfileProgress(totalProfileAnswers: number): number {
   if (totalProfileAnswers >= 51) return 100;
   return Math.min(85, (totalProfileAnswers / 51) * 85);
 }
+
+// Category-first selection: pick an unseen question from the given category.
+// Falls back to any unseen question if the category has no remaining items.
+export function selectContentByCategory(
+  allContent: ContentItem[],
+  seenIds: string[],
+  categoryEn: string,
+): ContentItem | null {
+  const available = allContent.filter((item) => !seenIds.includes(item.id));
+  if (available.length === 0) return null;
+
+  const inCategory = available.filter(
+    (item) => (item.theme_category || item.category) === categoryEn,
+  );
+
+  const pool = inCategory.length > 0 ? inCategory : available;
+  return pool[Math.floor(Math.random() * pool.length)];
+}

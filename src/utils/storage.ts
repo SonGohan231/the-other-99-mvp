@@ -1,6 +1,24 @@
 import { ProfileState, Interaction } from '../types';
 import { CanonicalVector } from './canonicalVector';
 
+export interface ContentDiagnostics {
+  use_v2_content: boolean;
+  active_content_source: 'legacy' | 'v2' | 'mixed' | 'fallback' | 'unknown';
+  questions_loaded: number;
+  answers_loaded: number;
+  loaded_content_count: number;
+  loaded_v2_question_count: number;
+  loaded_v2_answer_count: number;
+  loaded_legacy_count: number;
+  current_content_source: string | null;
+  current_content_version: string | null;
+  current_source_file: string | null;
+  current_question_id: string | null;
+  current_answer_ids: string[];
+  current_lang: string | null;
+  warnings: string[];
+}
+
 export const KEYS = {
   AGE_CONFIRMED:  'to99_age_confirmed',
   STARTED:        'to99_started',
@@ -155,11 +173,18 @@ export function exportFullSession(extras: {
   exitEvents?: unknown[];
   returnEvents?: unknown[];
   buildInfo?: Record<string, string>;
+  contentDiagnostics?: ContentDiagnostics | null;
   // v4 session context
   userId?: string | null;
   lang?: string;
   startedAt?: string | null;
   premiumState?: { unlocked: boolean; source: string | null } | null;
+  // Profile intelligence engine results
+  emergingArchetype?: unknown;
+  contradictionProfile?: unknown;
+  humanTwin?: unknown;
+  snapshot51?: unknown;
+  hiddenParameters?: unknown;
 } = {}): string {
   const base = JSON.parse(exportSession());
   return JSON.stringify(
@@ -181,6 +206,12 @@ export function exportFullSession(extras: {
         return: extras.returnEvents ?? [],
       },
       build_info: extras.buildInfo ?? null,
+      content_diagnostics: extras.contentDiagnostics ?? null,
+      emerging_archetype: extras.emergingArchetype ?? null,
+      contradiction_profile: extras.contradictionProfile ?? null,
+      human_twin: extras.humanTwin ?? null,
+      snapshot_51: extras.snapshot51 ?? null,
+      hidden_parameters: extras.hiddenParameters ?? null,
     },
     null,
     2
