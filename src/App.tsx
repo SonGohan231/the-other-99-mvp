@@ -425,6 +425,245 @@ export default function App() {
                   };
                   setReturnEvents((prev) => [...prev, returnEvent]);
                   if (saved.pendingAnswer && saved.testAnswerIndex > 0) {
+                    setScreen(  return numericDeltas(parseJsonRecord(item.axis_delta_json));
+}
+
+function getContentDiagnostics(
+  content: ContentItem[],
+  currentItem: ContentItem | null,
+  lang: string | null,
+) {
+  const v2Count = content.filter((item) => (item as any).content_source === 'v2').length;
+  const legacyCount = content.filter((item) => (item as any).content_source !== 'v2').length;
+  const answerIds = parseStringArray((currentItem as any)?.answer_ids_json);
+  const activeSource = v2Count > 0 && legacyCount === 0
+    ? 'v2'
+    : v2Count > 0 && legacyCount > 0
+      ? 'mixed'
+      : legacyCount > 0
+        ? 'legacy'
+        : 'unknown';
+  const warnings: string[] = [];
+  if (USE_V2_CONTENT && v2Count === 0) warnings.push('USE_V2_CONTENT=true but no v2 items were loaded.');
+  if (USE_V2_CONTENT && legacyCount > 0) warnings.push('Legacy items are present while v2 content is enabled.');
+  if (currentItem && !(currentItem as any).content_source) warnings.push('Current item has no content_source metadata.');
+
+  return {
+    use_v2_content: USE_V2_CONTENT,
+    active_content_source: activeSource,
+    loaded_content_count: content.length,
+    loaded_v2_question_count: v2Count,
+    loaded_v2_answer_count: v2Count > 0 ? 5300 : 0,
+    loaded_legacy_count: legacyCount,
+    current_content_source: (currentItem as any)?.content_source ?? null,
+    current_content_version: (currentItem as any)?.content_version ?? currentItem?.version ?? null,
+    current_source_file: (currentItem as any)?.source_file ?? null,
+    current_question_id: (currentItem as any)?.question_id ?? currentItem?.id ?? null,
+    current_answer_ids: answerIds,
+    current_lang: lang,
+    warnings,
+  } as const;
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────────────
+export default function App() {
+  const t = useT();
+  const [lang, setLang] = useLang();
+  const [screen, setScreen] = useState<AppScreen>('age-gate');
+  const [content, setContent] = useState<ContentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Tracks whether an in-progress test was restored on load (prevents initial-screen effect from overriding it)
+  const restoredInProgressRef = useRef(false);
+  // Tracks whether the current question was restored from an interrupted session
+  const [wasRestoredFromInterrupt, setWasRestoredFromInterrupt] = useState(false);
+
+  // Active test state
+  const [testContent, setTestContent] = useState<ContentItem[]>([]);
+  const [testAnswerIndex, setTestAnswerIndex] = useState(0);
+  const [testAnswers, setTestAnswers] = useState<TestAnswer[]>([]);
+  const [testSessionId, setTestSessionId] = useState<string | null>(null);
+  const [testNumber, setTestNumber] = useState(1);
+  const [testStartedAt, setTestStartedAt] = useState<string | null>(null);
+
+  // Per-question state
+  const [currentItem, setCurrentItem] = useState<ContentItem | null>(null);
+  const [pendingAnswer, setPendingAnswer] = useState('');
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null); // pre-confirm selection
+  const [profileState, setProfileState] = useState<ProfileState>(getProfileState());
+  const [nextCards, setNextCards] = useState<NextCard[]>([]);
+  const [changedAxes, setChangedAxes] = useState<string[]>([]);
+
+  // Living profile
+  const [profileVector, setProfileVector] = useState<ProfileVector>(loadVector);
+  const [canonicalVector, setCanonicalVector] = useState<CanonicalVector>(loadCanonicalVector);
+  const [feedEvents, setFeedEvents] = useState<FeedEvent[]>(getFeedEvents);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [profileFragments, setProfileFragments] = useState<ProfileFragment[]>(getFragments);
+  const [twinFeedEvents, setTwinFeedEvents] = useState<TwinFeedEvent[]>(getTwinFeedEvents);
+  const [timeline, setTimeline] = useState<TimelineEvent[]>(getTimeline);
+  const [newFragment, setNewFragment] = useState<ProfileFragment | null>(null);
+
+  // Undo state
+  const [canUndoAnswer, setCanUndoAnswer] = useState(false);
+
+  // Behavioral event queues (flushed to session persistence)
+  const [skipEvents, setSkipEvents] = useState<SkipEvent[]>([]);
+  const [swapEvents, setSwapEvents] = useState<SwapEvent[]>([]);
+  const [exitEvents, setExitEvents] = useState<ExitToMenuEvent[]>([]);
+  const [returnEvents, setReturnEvents] = useState<ReturnToSessionEvent[]>([]);
+
+  // Test mode (developer bypass)
+  const [isTestMode] = useState<boolean>(() => {
+    if (isTestModeRequested()) {
+      enableTestSession();
+      return true;
+    }
+    return isTestSessionActive();
+  });
+
+  // Guest mode (real user, no account, localStorage only)
+  const [isGuestMode] = useState<boolean>(() => isGuestModeActive());
+
+  // Computed premium status
+  const isPremium = isPremiumUnlocked(userProfile?.premium_status ?? null);
+
+  // New screens state
+  const [currentLegalPage, setCurrentLegalPage] = useState<LegalPage>('terms');
+  const [showPremiumUnlockedModal, setShowPremiumUnlockedModal] = useState(false);
+
+  // Behavioral summary (computed from stored interactions)
+  const [behavioralSummary, setBehavioralSummary] = useState<BehavioralSummary | null>(() => {
+    const { skipEvents: se, swapEvents: sw, exitEvents: ex } = getInProgressEventQueues();
+    return summarizeBehavioralProfile(getInteractions(), se, sw, ex);
+  });
+  // Last answer's behavioral metadata (for debug display)
+  const [lastBehavioralMetadata, setLastBehavioralMetadata] = useState<BehavioralMetadata | null>(null);
+
+  // Apply persisted theme + reduced motion on mount
+  useState(() => {
+    applyTheme(getTheme());
+    applyReducedMotion(getReducedMotion());
+  });
+
+  // Show premium unlocked modal when premium state first detected
+  useEffect(() => {
+    if (isPremium && !hasPremiumUnlockedBeenSeen()) {
+      setShowPremiumUnlockedModal(true);
+    }
+  }, [isPremium]);
+
+  // Preload the next 2 question backgrounds when quiz is active
+  useEffect(() => {
+    if (screen !== 'profile-test' || testContent.length === 0) return;
+    for (let i = testAnswerIndex; i < Math.min(testAnswerIndex + 3, testContent.length); i++) {
+      preloadBg(getQuestionBg(testContent[i]));
+    }
+  }, [screen, testAnswerIndex, testContent]);
+
+  // ─── Persist in-progress test ─────────────────────────────────────────────
+  function persistInProgress(overrides?: { nextCards?: NextCard[]; testAnswerIndex?: number; testContent?: ContentItem[]; currentItem?: ContentItem | null; pendingSelection?: string | null }) {
+    const tc = overrides?.testContent ?? testContent;
+    if (!tc.length) return;
+    const tai = overrides?.testAnswerIndex ?? testAnswerIndex;
+    const ci = overrides?.currentItem !== undefined ? overrides.currentItem : currentItem;
+    const nc = overrides?.nextCards ?? nextCards;
+    const ps = overrides?.pendingSelection !== undefined ? overrides.pendingSelection : pendingSelection;
+    const premiumSrc =
+      isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null;
+    saveQuizSnapshot({
+      testNumber,
+      testSessionId,
+      testAnswerIndex: tai,
+      testContentIds: tc.map((i) => i.id),
+      currentItemId: ci?.id ?? null,
+      pendingAnswer,
+      pendingSelection: ps,
+      selectedCard,
+      canUndoAnswer,
+      nextCardIds: nc.map((c) => c.linkedContentId ?? '').filter(Boolean),
+      skipEvents,
+      swapEvents,
+      exitEvents,
+      returnEvents,
+      userId: user?.id ?? null,
+      lang,
+      startedAt: testStartedAt ?? new Date().toISOString(),
+      premiumState: { unlocked: isPremium, source: premiumSrc },
+      canonicalVector,
+    });
+  }
+
+  // ─── Load CSV ───────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    loadContent()
+      .then((items) => {
+        setContent(items);
+        setLoading(false);
+
+        if (isAgeConfirmed()) {
+          try {
+            const saved = restoreQuizSnapshot();
+            if (saved && saved.testContentIds.length > 0) {
+              const restoredContent = saved.testContentIds
+                .map((id: string) => items.find((i) => i.id === id))
+                .filter(Boolean) as ContentItem[];
+              if (restoredContent.length > 0) {
+                setTestContent(restoredContent);
+                setTestAnswerIndex(saved.testAnswerIndex);
+                setTestNumber(saved.testNumber);
+                setTestSessionId(saved.testSessionId);
+                setPendingAnswer(saved.pendingAnswer);
+                setSelectedCard(saved.selectedCard);
+                setCanUndoAnswer(saved.canUndoAnswer);
+
+                // Restore next cards if persisted (reward screen restore)
+                if (saved.nextCardIds?.length) {
+                  const restoredCards = saved.nextCardIds
+                    .map((id: string) => items.find((i) => i.id === id))
+                    .filter(Boolean)
+                    .map((i) => buildNextCard(i as ContentItem));
+                  if (restoredCards.length > 0) setNextCards(restoredCards);
+                }
+
+                const itemToRestore = saved.currentItemId
+                  ? restoredContent.find((i) => i.id === saved.currentItemId) ?? null
+                  : null;
+                if (itemToRestore) {
+                  restoredInProgressRef.current = true;
+                  setCurrentItem(itemToRestore);
+                  // Restore v4 session context
+                  if (saved.startedAt) setTestStartedAt(saved.startedAt);
+                  // Restore language if it was recorded and differs from current
+                  if (saved.lang && saved.lang !== lang) setLang(saved.lang as 'en' | 'pl');
+                  // Restore pre-confirmation selection
+                  if (saved.pendingSelection) setPendingSelection(saved.pendingSelection);
+                  // Restore persisted event queues
+                  if (saved.skipEvents?.length) setSkipEvents(saved.skipEvents);
+                  if (saved.swapEvents?.length) setSwapEvents(saved.swapEvents);
+                  if (saved.exitEvents?.length) setExitEvents(saved.exitEvents);
+                  if (saved.returnEvents?.length) setReturnEvents(saved.returnEvents);
+                  // Restore canonical 10D vector so scoring is consistent on resume
+                  if (saved.canonicalVector) {
+                    setCanonicalVector(saved.canonicalVector);
+                    saveCanonicalVector(saved.canonicalVector);
+                  }
+                  // Record return-to-session event
+                  const timeAway = Date.now() - new Date(saved.updatedAt).getTime();
+                  const returnEvent: ReturnToSessionEvent = {
+                    event_type: 'return_to_session',
+                    timestamp: new Date().toISOString(),
+                    time_away_ms: timeAway,
+                    same_question_restored: saved.currentItemId === itemToRestore.id,
+                    session_depth_at_return: saved.testAnswerIndex,
+                  };
+                  setReturnEvents((prev) => [...prev, returnEvent]);
+                  if (saved.pendingAnswer && saved.testAnswerIndex > 0) {
                     setScreen('reward');
                   } else {
                     setWasRestoredFromInterrupt(true);
