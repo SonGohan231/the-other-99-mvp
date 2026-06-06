@@ -1,5 +1,12 @@
 export type ContentType = 'question' | 'secret' | 'dare' | 'game' | 'riddle';
 export type RarityTier = 'standard' | 'rare' | 'epic' | 'legendary';
+export type SafetyLabel = 'safe' | 'mild' | 'sensitive' | 'intimate' | 'taboo' | 'forbidden';
+export type StatisticSourceLabel = 'estimated' | 'community' | 'research';
+export type ContentContractStatus =
+  | 'draft'
+  | 'migrated_needs_editorial_review'
+  | 'reviewed'
+  | 'approved';
 
 export type CardPath =
   | 'Social Mirror'
@@ -55,6 +62,15 @@ export interface ContentItem {
   community_stat_seed_json: string;
   reward_sequence_json: string;
   sample_reward_screen_pl: string;
+  // v2 content contract fields
+  canon_version?: string;
+  safety_label?: SafetyLabel;
+  statistic_source_label?: StatisticSourceLabel;
+  allowed_actions?: string;
+  reveal_template_id?: string;
+  sensitivity_level?: string;
+  controversy_level?: string;
+  content_contract_status?: ContentContractStatus;
 }
 
 export interface ProfileState {

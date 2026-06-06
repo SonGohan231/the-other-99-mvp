@@ -36,6 +36,9 @@ const VALID_CARD_PATHS = new Set([
 ]);
 const VALID_RARITIES = new Set(['common', 'uncommon', 'rare', 'epic', 'legendary', 'standard']);
 const OPEN_TYPES = new Set(['open']);
+const VALID_SAFETY_LABELS = new Set(['safe', 'mild', 'sensitive', 'intimate', 'taboo', 'forbidden']);
+const VALID_REVEAL_TEMPLATES = new Set(['reveal_standard', 'reveal_rare', 'reveal_epic', 'reveal_legendary', 'reveal_sensitive', 'reveal_open']);
+const VALID_CONTRACT_STATUSES = new Set(['draft', 'migrated_needs_editorial_review', 'reviewed', 'approved']);
 
 // ─── CSV parser ───────────────────────────────────────────────────────────────
 
@@ -229,6 +232,45 @@ function validateFile(filePath, { checkCardPaths = false, requireBilingual = fal
     for (const field of plFields) {
       if (row[field] && DISALLOWED_PL_CATALYST_NAMES.has((row[field] || '').toLowerCase())) {
         warnings.push(`${id}: ${field} contains 'Katalizator' — public PL name must be 'Iskra'`);
+      }
+    }
+
+    // ── v2 content contract fields ────────────────────────────────────────────
+
+    // canon_version: must be present
+    if (!row.canon_version) {
+      errors.push(`${id}: missing canon_version (run migrate-content-v2.mjs)`);
+    } else if (row.canon_version !== 'TO99_ARCHETYPE_CANON_1.0') {
+      warnings.push(`${id}: unknown canon_version '${row.canon_version}'`);
+    }
+
+    // safety_label: must be present and valid
+    if (!row.safety_label) {
+      errors.push(`${id}: missing safety_label`);
+    } else if (!VALID_SAFETY_LABELS.has(row.safety_label)) {
+      errors.push(`${id}: invalid safety_label '${row.safety_label}'`);
+    }
+
+    // reveal_template_id: must be present and valid
+    if (!row.reveal_template_id) {
+      errors.push(`${id}: missing reveal_template_id`);
+    } else if (!VALID_REVEAL_TEMPLATES.has(row.reveal_template_id)) {
+      warnings.push(`${id}: unknown reveal_template_id '${row.reveal_template_id}'`);
+    }
+
+    // content_contract_status: must be present and valid
+    if (!row.content_contract_status) {
+      errors.push(`${id}: missing content_contract_status`);
+    } else if (!VALID_CONTRACT_STATUSES.has(row.content_contract_status)) {
+      warnings.push(`${id}: unknown content_contract_status '${row.content_contract_status}'`);
+    }
+
+    // sensitivity_level / controversy_level: optional but must be numeric 0-10 if present
+    for (const field of ['sensitivity_level', 'controversy_level']) {
+      if (row[field] !== undefined && row[field] !== '') {
+        const n = parseInt(row[field], 10);
+        if (isNaN(n) || n < 0 || n > 10)
+          warnings.push(`${id}: ${field} must be 0–10 (got '${row[field]}')`);
       }
     }
 
