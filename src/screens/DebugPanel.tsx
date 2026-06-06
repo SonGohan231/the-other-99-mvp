@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ContentItem, ProfileState, BehavioralMetadata, SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent } from '../types';
-import { exportFullSession, resetSession } from '../utils/storage';
+import { ContentDiagnostics, exportFullSession, resetSession } from '../utils/storage';
 import { isPremiumUnlocked, unlockPremium, disablePremiumUnlock, enablePremiumPreview, disablePremiumPreview, isPremiumPreviewEnabled } from '../utils/premiumProgression';
 import { debugLog, getLogs, getErrors, clearLogs } from '../utils/debugStore';
 import { enableTestSession, disableTestSession } from '../utils/testSession';
@@ -10,6 +10,7 @@ import { getVoteDebugInfo, resetLocalVotes, exportVoteState, getOrCreateAnonId }
 import { localizedCsvField } from '../i18n';
 import { useLang } from '../context/LangContext';
 import { getAppInfo } from '../utils/appVersion';
+import { CanonicalVector } from '../utils/canonicalVector';
 
 interface Props {
   profileState: ProfileState;
@@ -30,6 +31,13 @@ interface Props {
   swapEvents?: SwapEvent[];
   exitEvents?: ExitToMenuEvent[];
   returnEvents?: ReturnToSessionEvent[];
+  profileVector?: Record<string, number>;
+  canonicalVector?: CanonicalVector | null;
+  userId?: string | null;
+  lang?: string;
+  startedAt?: string | null;
+  premiumState?: { unlocked: boolean; source: string | null } | null;
+  contentDiagnostics?: ContentDiagnostics | null;
   onSkipQuestion?: () => void;
   onSkipToQuestion?: (n: number) => void;
   onCompleteTest?: () => void;
@@ -52,6 +60,13 @@ export default function DebugPanel({
   swapEvents = [],
   exitEvents = [],
   returnEvents = [],
+  profileVector,
+  canonicalVector,
+  userId = null,
+  lang: sessionLang,
+  startedAt = null,
+  premiumState = null,
+  contentDiagnostics = null,
   onStartTest,
   onUndo,
   canUndo,
@@ -67,7 +82,8 @@ export default function DebugPanel({
   onForcePremiumModule,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [lang] = useLang();
+  const [uiLang] = useLang();
+  const exportLang = sessionLang ?? uiLang;
   const inTest = testContent.length > 0 && testAnswerIndex < testContent.length;
   const appInfo = getAppInfo();
 
@@ -75,7 +91,7 @@ export default function DebugPanel({
   const voteDebug = (() => {
     if (!currentItem) return null;
     const fields = currentItem as unknown as Record<string, string>;
-    const raw = localizedCsvField(fields, 'answer_options', lang);
+    const raw = localizedCsvField(fields, 'answer_options', uiLang);
     const options = raw.split('|').map((a) => a.trim()).filter(Boolean);
     if (options.length === 0) return null;
     return getVoteDebugInfo(currentItem.id, options);
@@ -115,6 +131,27 @@ export default function DebugPanel({
                   {appInfo.supabaseConfigured ? '✓ configured' : '✗ missing'}
                 </span>
               </div>
+            </div>
+          </details>
+
+          <details open>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>Content Source</summary>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.9, fontFamily: 'monospace' }}>
+              <div><span style={{ color: 'var(--text-dim)' }}>USE_V2_CONTENT:&nbsp;</span>{String(contentDiagnostics?.use_v2_content ?? 'unknown')}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Active source:&nbsp;</span>{contentDiagnostics?.active_content_source ?? 'unknown'}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Loaded total:&nbsp;</span>{contentDiagnostics?.loaded_content_count ?? testContent.length}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Loaded v2 questions:&nbsp;</span>{contentDiagnostics?.loaded_v2_question_count ?? 0}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Loaded v2 answers:&nbsp;</span>{contentDiagnostics?.loaded_v2_answer_count ?? 0}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Loaded legacy:&nbsp;</span>{contentDiagnostics?.loaded_legacy_count ?? 0}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Current source:&nbsp;</span>{contentDiagnostics?.current_content_source ?? 'unknown'}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Question ID:&nbsp;</span>{contentDiagnostics?.current_question_id ?? currentItem?.id ?? 'none'}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Answer IDs:&nbsp;</span>{contentDiagnostics?.current_answer_ids?.join(', ') || 'none'}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Source file:&nbsp;</span>{contentDiagnostics?.current_source_file ?? 'unknown'}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Lang:&nbsp;</span>{contentDiagnostics?.current_lang ?? exportLang}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Canonical AX:&nbsp;</span>{canonicalVector ? JSON.stringify(canonicalVector) : 'null'}</div>
+              {!!contentDiagnostics?.warnings?.length && (
+                <div style={{ color: '#fbbf24' }}>Warnings: {contentDiagnostics.warnings.join(' | ')}</div>
+              )}
             </div>
           </details>
 
@@ -359,7 +396,14 @@ export default function DebugPanel({
                 className="debug-btn"
                 onClick={() => {
                   const j = exportFullSession({
+                    profileVector,
+                    canonicalVector,
                     skipEvents, swapEvents, exitEvents, returnEvents,
+                    userId,
+                    lang: exportLang,
+                    startedAt: startedAt ?? new Date().toISOString(),
+                    premiumState,
+                    contentDiagnostics,
                     buildInfo: { version: appInfo.version, commit: appInfo.commit, buildDate: appInfo.buildDate },
                   });
                   const b = new Blob([j], { type: 'application/json' });
@@ -375,7 +419,14 @@ export default function DebugPanel({
                 className="debug-btn"
                 onClick={() => {
                   const j = exportFullSession({
+                    profileVector,
+                    canonicalVector,
                     skipEvents, swapEvents, exitEvents, returnEvents,
+                    userId,
+                    lang: exportLang,
+                    startedAt: startedAt ?? new Date().toISOString(),
+                    premiumState,
+                    contentDiagnostics,
                     buildInfo: { version: appInfo.version, commit: appInfo.commit, buildDate: appInfo.buildDate },
                   });
                   navigator.clipboard.writeText(j).then(() => alert('Copied to clipboard')).catch(() => alert('Copy failed'));
