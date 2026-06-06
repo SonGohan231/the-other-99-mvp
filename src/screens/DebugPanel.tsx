@@ -138,12 +138,11 @@ export default function DebugPanel({
           <details open>
             <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>Content Source</summary>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.9, fontFamily: 'monospace' }}>
+              <div><span style={{ color: 'var(--text-dim)' }}>Active source:&nbsp;</span><strong>{contentDiagnostics?.active_content_source ?? 'unknown'}</strong></div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Questions loaded:&nbsp;</span>{contentDiagnostics?.questions_loaded ?? contentDiagnostics?.loaded_content_count ?? 0}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>Answers loaded:&nbsp;</span>{contentDiagnostics?.answers_loaded ?? contentDiagnostics?.loaded_v2_answer_count ?? 0}</div>
               <div><span style={{ color: 'var(--text-dim)' }}>USE_V2_CONTENT:&nbsp;</span>{String(contentDiagnostics?.use_v2_content ?? 'unknown')}</div>
-              <div><span style={{ color: 'var(--text-dim)' }}>Active source:&nbsp;</span>{contentDiagnostics?.active_content_source ?? 'unknown'}</div>
-              <div><span style={{ color: 'var(--text-dim)' }}>Loaded total:&nbsp;</span>{contentDiagnostics?.loaded_content_count ?? 0}</div>
-              <div><span style={{ color: 'var(--text-dim)' }}>Loaded v2 Qs:&nbsp;</span>{contentDiagnostics?.loaded_v2_question_count ?? 0}</div>
-              <div><span style={{ color: 'var(--text-dim)' }}>Loaded v2 As:&nbsp;</span>{contentDiagnostics?.loaded_v2_answer_count ?? 0}</div>
-              <div><span style={{ color: 'var(--text-dim)' }}>Loaded legacy:&nbsp;</span>{contentDiagnostics?.loaded_legacy_count ?? 0}</div>
+              <div><span style={{ color: 'var(--text-dim)' }}>v2 Qs / legacy:&nbsp;</span>{contentDiagnostics?.loaded_v2_question_count ?? 0} / {contentDiagnostics?.loaded_legacy_count ?? 0}</div>
               <div><span style={{ color: 'var(--text-dim)' }}>Current source:&nbsp;</span>{contentDiagnostics?.current_content_source ?? 'unknown'}</div>
               <div><span style={{ color: 'var(--text-dim)' }}>Question ID:&nbsp;</span>{contentDiagnostics?.current_question_id ?? currentItem?.id ?? 'none'}</div>
               <div><span style={{ color: 'var(--text-dim)' }}>Answer IDs:&nbsp;</span>{contentDiagnostics?.current_answer_ids?.join(', ') || 'none'}</div>
