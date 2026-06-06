@@ -145,6 +145,15 @@ const en = {
     communitySplit: 'This split is unusually close.',
     continueToResult: 'Continue',
     testProgressLabel: 'Test Progress',
+    reveal: {
+      saved: 'Answer saved',
+      analyzing: 'Analyzing pattern',
+      comparing: 'Comparing signal',
+      insight: 'This answer changed your map',
+      insightRare: 'A rare signal detected',
+      insightEpic: 'An unusual pattern emerging',
+      insightLegendary: 'A defining signal recorded',
+    },
   },
   dimensions: {
     control: 'Control',
@@ -673,6 +682,15 @@ const pl: T = {
     communitySplit: 'Ten podział jest wyjątkowo bliski.',
     continueToResult: 'Dalej',
     testProgressLabel: 'Postęp testu',
+    reveal: {
+      saved: 'Odpowiedź zapisana',
+      analyzing: 'Analizujemy wzór',
+      comparing: 'Porównujemy sygnał',
+      insight: 'Ta odpowiedź coś zmieniła',
+      insightRare: 'Wykryto rzadki sygnał',
+      insightEpic: 'Wyłania się niezwykły wzorzec',
+      insightLegendary: 'Zapisano sygnał kluczowy',
+    },
   },
   dimensions: {
     control: 'Kontrola',

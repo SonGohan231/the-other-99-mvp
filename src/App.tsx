@@ -39,7 +39,7 @@ import HiddenParametersScreen from './screens/HiddenParametersScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
 import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
 import { isGuestModeActive, enableGuestMode, disableGuestMode, getGuestTestsUsed, incrementGuestTestsUsed, GUEST_USER_ID } from './utils/guestSession';
-import { saveInProgressTest, loadInProgressTest, clearInProgressTest } from './utils/inProgressTest';
+import { clearInProgressTest, saveQuizSnapshot, restoreQuizSnapshot } from './utils/inProgressTest';
 import { debugLog, debugError } from './utils/debugStore';
 import { isAdminEmail } from './config/admin';
 import { LegalPage } from './types';
@@ -204,17 +204,22 @@ export default function App() {
   }, [isPremium]);
 
   // ─── Persist in-progress test ─────────────────────────────────────────────
-  function persistInProgress() {
-    if (!testContent.length) return;
-    saveInProgressTest({
+  function persistInProgress(overrides?: { nextCards?: NextCard[]; testAnswerIndex?: number; testContent?: ContentItem[]; currentItem?: ContentItem | null }) {
+    const tc = overrides?.testContent ?? testContent;
+    if (!tc.length) return;
+    const tai = overrides?.testAnswerIndex ?? testAnswerIndex;
+    const ci = overrides?.currentItem !== undefined ? overrides.currentItem : currentItem;
+    const nc = overrides?.nextCards ?? nextCards;
+    saveQuizSnapshot({
       testNumber,
       testSessionId,
-      testAnswerIndex,
-      testContentIds: testContent.map((i) => i.id),
-      currentItemId: currentItem?.id ?? null,
+      testAnswerIndex: tai,
+      testContentIds: tc.map((i) => i.id),
+      currentItemId: ci?.id ?? null,
       pendingAnswer,
       selectedCard,
       canUndoAnswer,
+      nextCardIds: nc.map((c) => c.linkedContentId ?? '').filter(Boolean),
     });
   }
 
@@ -227,7 +232,7 @@ export default function App() {
 
         if (isAgeConfirmed()) {
           try {
-            const saved = loadInProgressTest();
+            const saved = restoreQuizSnapshot();
             if (saved && saved.testContentIds.length > 0) {
               const restoredContent = saved.testContentIds
                 .map((id: string) => items.find((i) => i.id === id))
@@ -240,6 +245,16 @@ export default function App() {
                 setPendingAnswer(saved.pendingAnswer);
                 setSelectedCard(saved.selectedCard);
                 setCanUndoAnswer(saved.canUndoAnswer);
+
+                // Restore next cards if persisted (reward screen restore)
+                if (saved.nextCardIds?.length) {
+                  const restoredCards = saved.nextCardIds
+                    .map((id: string) => items.find((i) => i.id === id))
+                    .filter(Boolean)
+                    .map((i) => buildNextCard(i as ContentItem));
+                  if (restoredCards.length > 0) setNextCards(restoredCards);
+                }
+
                 const itemToRestore = saved.currentItemId
                   ? restoredContent.find((i) => i.id === saved.currentItemId) ?? null
                   : null;
@@ -526,7 +541,8 @@ export default function App() {
     setNextCards(cards);
 
     debugLog('answer_submitted', { contentId: currentItem?.id, answer, testAnswerIndex });
-    persistInProgress();
+    // Pass fresh cards + index directly since setState is async
+    persistInProgress({ nextCards: cards, testAnswerIndex: testAnswerIndex + 1 });
     setScreen('reward');
   }
 
