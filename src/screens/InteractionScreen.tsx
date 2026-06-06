@@ -4,6 +4,8 @@ import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField } from '../i18n';
 import { submitVote, VoteResult, getDistributionLabel } from '../utils/communityVotes';
 import { getRevealTemplate } from '../content/revealTemplates';
+import QuestionBackground from '../components/QuestionBackground';
+import { getQuestionBg, preloadBg } from '../utils/questionBackgrounds';
 
 interface Props {
   item: ContentItem;
@@ -64,6 +66,10 @@ export default function InteractionScreen({
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const motionScale = prefersReducedMotion ? 0.15 : 1;
+
+  // Background image — deterministic per item, preloads next
+  const bgSrc = getQuestionBg(item);
+  useEffect(() => { preloadBg(bgSrc); }, [bgSrc]);
 
   useEffect(() => {
     startTimeRef.current = Date.now();
@@ -175,7 +181,10 @@ export default function InteractionScreen({
   }
 
   return (
-    <div className="interaction-screen" style={{ position: 'relative' }}>
+    <div className="interaction-screen interaction-screen--with-bg" style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Question background — sits at z-index 0 */}
+      <QuestionBackground src={bgSrc} />
+
       {/* Top-left: Back/Undo or Exit */}
       {phase === 'question' && (
         <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '6px', zIndex: 10 }}>

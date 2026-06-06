@@ -46,6 +46,7 @@ import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, Undo
 import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
 import { isGuestModeActive, enableGuestMode, disableGuestMode, getGuestTestsUsed, incrementGuestTestsUsed, GUEST_USER_ID } from './utils/guestSession';
 import { clearInProgressTest, saveQuizSnapshot, restoreQuizSnapshot, getInProgressEventQueues } from './utils/inProgressTest';
+import { getQuestionBg, preloadBg } from './utils/questionBackgrounds';
 import { debugLog, debugError } from './utils/debugStore';
 import { getAppInfo } from './utils/appVersion';
 import { isAdminEmail } from './config/admin';
@@ -226,6 +227,14 @@ export default function App() {
       setShowPremiumUnlockedModal(true);
     }
   }, [isPremium]);
+
+  // Preload the next 2 question backgrounds when quiz is active
+  useEffect(() => {
+    if (screen !== 'profile-test' || testContent.length === 0) return;
+    for (let i = testAnswerIndex; i < Math.min(testAnswerIndex + 3, testContent.length); i++) {
+      preloadBg(getQuestionBg(testContent[i]));
+    }
+  }, [screen, testAnswerIndex, testContent]);
 
   // ─── Persist in-progress test ─────────────────────────────────────────────
   function persistInProgress(overrides?: { nextCards?: NextCard[]; testAnswerIndex?: number; testContent?: ContentItem[]; currentItem?: ContentItem | null; pendingSelection?: string | null }) {
