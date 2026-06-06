@@ -2,6 +2,7 @@ import { ProfileVector } from '../utils/profileVector';
 import { ProfileFragment } from '../utils/profileFragments';
 import { getInteractions } from '../utils/storage';
 import { summarizeBehavioralProfile } from '../utils/behavioralSignals';
+import { getInProgressEventQueues } from '../utils/inProgressTest';
 import { generateProfileInsights } from '../content/profileInsights';
 import ProfileRadarChart from '../components/ProfileRadarChart';
 import { useT, useLang } from '../context/LangContext';
@@ -12,6 +13,7 @@ interface Props {
   profileFragments: ProfileFragment[];
   onUnlockFull: () => void;
   onDashboard: () => void;
+  onContinueAnswering?: () => void;
 }
 
 function SectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -132,12 +134,14 @@ export default function ProfileSnapshotScreen({
   totalAnswers,
   onUnlockFull,
   onDashboard,
+  onContinueAnswering,
 }: Props) {
   const t = useT();
   const [lang] = useLang();
   const isPl = lang === 'pl';
 
-  const summary = summarizeBehavioralProfile(getInteractions());
+  const { skipEvents, swapEvents, exitEvents } = getInProgressEventQueues();
+  const summary = summarizeBehavioralProfile(getInteractions(), skipEvents, swapEvents, exitEvents);
   const insights = generateProfileInsights(profileVector, summary, lang, totalAnswers);
   const rarity = computeEstimatedRarity(profileVector);
   const lockedSections = isPl ? LOCKED_SECTIONS_PL : LOCKED_SECTIONS_EN;
@@ -167,6 +171,7 @@ export default function ProfileSnapshotScreen({
     postLoopB:          isPl
       ? 'Odpowiadaj dalej, żeby sprawdzić, czy ten wzór się wzmocni, pęknie albo zmieni.'
       : 'Answer more questions to see whether this pattern becomes stronger, breaks, or transforms.',
+    continueAnswering:  isPl ? 'Odpowiadaj dalej' : 'Continue answering',
   };
 
   return (
@@ -346,10 +351,20 @@ export default function ProfileSnapshotScreen({
         <button
           className="btn btn-primary"
           onClick={onUnlockFull}
-          style={{ marginBottom: '16px' }}
+          style={{ marginBottom: '12px' }}
         >
           {L.unlockButton}
         </button>
+
+        {onContinueAnswering && (
+          <button
+            className="btn btn-teal"
+            onClick={onContinueAnswering}
+            style={{ marginBottom: '12px' }}
+          >
+            {L.continueAnswering}
+          </button>
+        )}
 
         <button
           onClick={onDashboard}

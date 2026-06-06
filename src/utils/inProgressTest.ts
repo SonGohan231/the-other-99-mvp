@@ -12,6 +12,7 @@ export interface InProgressTestState {
   testContentIds: string[];
   currentItemId: string | null;
   pendingAnswer: string;
+  pendingSelection: string | null;  // pre-confirmation selection within current question
   selectedCard: string | null;
   canUndoAnswer: boolean;
   nextCardIds: string[];
@@ -55,6 +56,7 @@ function _load(): InProgressTestState | null {
       if (age > MAX_AGE_MS) { localStorage.removeItem(KEY); return null; }
     }
     if (!parsed.nextCardIds) parsed.nextCardIds = [];
+    if (parsed.pendingSelection === undefined) parsed.pendingSelection = null;
     if (!parsed.skipEvents) parsed.skipEvents = [];
     if (!parsed.swapEvents) parsed.swapEvents = [];
     if (!parsed.exitEvents) parsed.exitEvents = [];
@@ -99,4 +101,20 @@ export function restoreQuizSnapshot(): InProgressTestState | null {
 /** Wipe the snapshot (call when test completes or user explicitly resets). */
 export function clearQuizSnapshot(): void {
   clearInProgressTest();
+}
+
+/** Return just the behavioral event queues from the persisted snapshot (or empty arrays). */
+export function getInProgressEventQueues(): {
+  skipEvents: SkipEvent[];
+  swapEvents: SwapEvent[];
+  exitEvents: ExitToMenuEvent[];
+  returnEvents: ReturnToSessionEvent[];
+} {
+  const s = _load();
+  return {
+    skipEvents: s?.skipEvents ?? [],
+    swapEvents: s?.swapEvents ?? [],
+    exitEvents: s?.exitEvents ?? [],
+    returnEvents: s?.returnEvents ?? [],
+  };
 }

@@ -2,6 +2,7 @@ import { ProfileVector } from '../utils/profileVector';
 import { computeHiddenParameters, ParameterLevel } from '../utils/hiddenParameters';
 import { getInteractions } from '../utils/storage';
 import { summarizeBehavioralProfile } from '../utils/behavioralSignals';
+import { getInProgressEventQueues } from '../utils/inProgressTest';
 import { useLang } from '../context/LangContext';
 
 interface Props {
@@ -55,7 +56,8 @@ const DISPLAY_NAMES_PL: Record<string, string> = {
 export default function HiddenParametersScreen({ profileVector, onBack }: Props) {
   const [lang] = useLang();
   const isPl = lang === 'pl';
-  const summary = summarizeBehavioralProfile(getInteractions());
+  const { skipEvents, swapEvents, exitEvents } = getInProgressEventQueues();
+  const summary = summarizeBehavioralProfile(getInteractions(), skipEvents, swapEvents, exitEvents);
   const params = computeHiddenParameters(profileVector, summary);
   const displayNames = isPl ? DISPLAY_NAMES_PL : DISPLAY_NAMES_EN;
 

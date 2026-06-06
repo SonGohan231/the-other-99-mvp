@@ -1,3 +1,4 @@
+// canon_version: TO99_ARCHETYPE_CANON_1.0
 import { ProfileVector } from './profileVector';
 
 export type AxisId =
