@@ -93,6 +93,22 @@ function splitRow(line) {
   return result;
 }
 
+// ─── Valid axis keys (must stay in sync with src/utils/axisKeyValidation.ts) ──
+// All recognized axis keys: canonical AX01–AX10 + every legacy named pole.
+const VALID_AXIS_KEYS = new Set([
+  'AX01', 'AX02', 'AX03', 'AX04', 'AX05', 'AX06', 'AX07', 'AX08', 'AX09', 'AX10',
+  'curiosity', 'openness', 'security', 'guardedness',
+  'logic', 'observation', 'pattern', 'emotion', 'authenticity', 'present',
+  'independence', 'connection', 'belonging', 'social',
+  'action', 'courage',
+  'future', 'change',
+  'risk', 'thrill', 'adventure', 'danger', 'spontaneity', 'control',
+  'pragmatism', 'idealism', 'contradiction',
+  'stability', 'consistency', 'hesitation', 'resilience', 'transformation',
+  'nature', 'technology',
+  'creator', 'idea_creator', 'builder',
+]);
+
 // ─── JSON axis validator ──────────────────────────────────────────────────────
 
 function validateAxisJson(raw) {
@@ -107,6 +123,8 @@ function validateAxisJson(raw) {
   if (keys.length === 0) return { ok: false, reason: 'empty JSON object {}' };
   for (const k of keys) {
     if (typeof parsed[k] !== 'number') return { ok: false, reason: `axis "${k}" has non-numeric value: ${parsed[k]}` };
+    // Unknown axis key — hard error, not a warning
+    if (!VALID_AXIS_KEYS.has(k)) return { ok: false, reason: `unknown axis key "${k}" — not in AX01–AX10 or POLE_MAP` };
   }
   return { ok: true };
 }

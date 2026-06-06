@@ -1,4 +1,5 @@
 import { useT } from '../context/LangContext';
+import ScreenBackground from '../components/ScreenBackground';
 
 interface Props {
   testNumber: number;
@@ -13,13 +14,12 @@ export default function TestIntroScreen({ testNumber, onBegin }: Props) {
   return (
     <div
       className="screen-centered"
-      style={{
-        background: 'radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.07) 0%, transparent 65%), var(--bg)',
-      }}
+      style={{ position: 'relative', overflow: 'hidden' }}
     >
+      <ScreenBackground src="/backgrounds/core/gateway-portal.png" dim={0.50} />
       <main
-        className="auth-inner animate-up"
-        style={{ gap: '22px', maxWidth: '360px' }}
+        className="auth-inner animate-up test-intro-inner--with-bg"
+        style={{ gap: '22px', maxWidth: '360px', position: 'relative', zIndex: 1 }}
         aria-label={intro.title}
       >
         <div className="age-gate-logo">The Other 99</div>

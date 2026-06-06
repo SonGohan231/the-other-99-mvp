@@ -1001,3 +1001,72 @@ body {
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ─── Screen background support ──────────────── */
+
+/* Cards become semi-transparent glass over background images */
+.screen--has-bg .card {
+  background: rgba(10, 10, 15, 0.74);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+.screen--has-bg .card-elevated {
+  background: rgba(16, 16, 26, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Dashboard header glass */
+.dashboard-header--with-bg {
+  background: rgba(10, 10, 15, 0.80) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Age gate / entry screen: inner content panel */
+.age-gate-inner--with-bg {
+  background: rgba(10, 10, 15, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 36px 28px;
+}
+
+/* Test intro screen content panel */
+.test-intro-inner--with-bg {
+  background: rgba(10, 10, 15, 0.52);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 32px 24px;
+}
+
+/* Reward screen over background */
+.reward-screen--with-bg .status-bar {
+  background: rgba(10, 10, 15, 0.76);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Reward blocks: subtle glass lift over the star field */
+.reward-screen--with-bg .rb-profile,
+.reward-screen--with-bg .rb-rarity,
+.reward-screen--with-bg .rb-community,
+.reward-screen--with-bg .rb-unlock,
+.reward-screen--with-bg .rb-plain,
+.reward-screen--with-bg .rb-hook,
+.reward-screen--with-bg .rb-hidden {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Reward analyzing spinner area */
+.reward-screen--with-bg .reward-analyzing {
+  background: rgba(10, 10, 15, 0.45);
+}

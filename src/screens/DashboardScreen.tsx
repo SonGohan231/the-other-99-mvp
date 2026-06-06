@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UserProfile } from '../lib/supabase';
+import ScreenBackground from '../components/ScreenBackground';
 import { ProfileVector, DIMENSIONS, getMaxValue } from '../utils/profileVector';
 import { FeedEvent } from '../utils/eventFeed';
 import { ProfileFragment } from '../utils/profileFragments';
@@ -84,10 +85,14 @@ export default function DashboardScreen({
   void lang;
 
   return (
-    <div className="screen" style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
+    <div className="screen screen--has-bg" style={{ position: 'relative', minHeight: '100dvh' }}>
+      <ScreenBackground src="/backgrounds/core/cosmic-nebula.png" dim={0.50} />
+
       {/* Header */}
       <div
+        className="dashboard-header--with-bg"
         style={{
+          position: 'relative', zIndex: 1,
           padding: '16px 20px 12px',
           borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -121,6 +126,7 @@ export default function DashboardScreen({
 
       <main
         style={{
+          position: 'relative', zIndex: 1,
           flex: 1, padding: '20px 20px 32px',
           maxWidth: '480px', margin: '0 auto', width: '100%',
           display: 'flex', flexDirection: 'column', gap: '12px',
@@ -129,7 +135,7 @@ export default function DashboardScreen({
       >
         {/* Profile progress header */}
         <div style={{ marginBottom: '4px' }}>
-          <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
+          <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', marginBottom: '2px', textShadow: '0 1px 8px rgba(0,0,0,0.8)' }}>
             {t.dashboard.profileHiddenLabel}
           </p>
           <p className="body-sm" style={{ fontSize: '0.72rem', marginBottom: '8px' }}>

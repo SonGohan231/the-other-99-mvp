@@ -1,4 +1,5 @@
 import { SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent } from '../types';
+import { CanonicalVector } from './canonicalVector';
 
 const KEY = 'to99_in_progress_test';
 const VERSION = 4;
@@ -31,6 +32,8 @@ export interface InProgressTestState {
   lang: string;
   startedAt: string;
   premiumState: PremiumStateSnapshot | null;
+  // Canonical 10D vector snapshot — persisted so resume restores the exact vector state
+  canonicalVector?: CanonicalVector;
 }
 
 // ─── Internal save/load ──────────────────────────────────────────────────────

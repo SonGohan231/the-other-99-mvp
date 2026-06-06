@@ -13,6 +13,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "validate:content": "node scripts/validate-content.mjs",
+    "validate:v2content": "node scripts/validate-v2-content.mjs",
     "mobile:build": "npm run build && npx cap sync",
     "mobile:sync": "npx cap sync",
     "mobile:android": "npm run build && npx cap sync android",

@@ -1,4 +1,5 @@
 import { ProfileState, Interaction } from '../types';
+import { CanonicalVector } from './canonicalVector';
 
 export const KEYS = {
   AGE_CONFIRMED:  'to99_age_confirmed',
@@ -148,6 +149,7 @@ export function exportSession(): string {
 
 export function exportFullSession(extras: {
   profileVector?: Record<string, number>;
+  canonicalVector?: CanonicalVector | null;
   skipEvents?: unknown[];
   swapEvents?: unknown[];
   exitEvents?: unknown[];
@@ -171,6 +173,7 @@ export function exportFullSession(extras: {
         premium_state: extras.premiumState ?? null,
       },
       profile_vector: extras.profileVector ?? null,
+      canonical_vector: extras.canonicalVector ?? null,
       behavioral_events: {
         skip: extras.skipEvents ?? [],
         swap: extras.swapEvents ?? [],

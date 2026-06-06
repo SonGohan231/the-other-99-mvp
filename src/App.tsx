@@ -265,6 +265,7 @@ export default function App() {
       lang,
       startedAt: testStartedAt ?? new Date().toISOString(),
       premiumState: { unlocked: isPremium, source: premiumSrc },
+      canonicalVector,
     });
   }
 
@@ -317,6 +318,11 @@ export default function App() {
                   if (saved.swapEvents?.length) setSwapEvents(saved.swapEvents);
                   if (saved.exitEvents?.length) setExitEvents(saved.exitEvents);
                   if (saved.returnEvents?.length) setReturnEvents(saved.returnEvents);
+                  // Restore canonical 10D vector so scoring is consistent on resume
+                  if (saved.canonicalVector) {
+                    setCanonicalVector(saved.canonicalVector);
+                    saveCanonicalVector(saved.canonicalVector);
+                  }
                   // Record return-to-session event
                   const timeAway = Date.now() - new Date(saved.updatedAt).getTime();
                   const returnEvent: ReturnToSessionEvent = {
@@ -772,6 +778,7 @@ export default function App() {
       isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null;
     const json = exportFullSession({
       profileVector: profileVector as Record<string, number>,
+      canonicalVector,
       skipEvents,
       swapEvents,
       exitEvents,
@@ -1018,13 +1025,19 @@ export default function App() {
   // ─── Loading ───────────────────────────────────────────────────────────────────────
   if (loading || authLoading) {
     return (
-      <div className="loading-screen">
-        <div className="loading-dots">
+      <div className="loading-screen" style={{
+        position: 'relative', overflow: 'hidden',
+        backgroundImage: 'url(/backgrounds/core/deep-stars.png)',
+        backgroundSize: 'cover', backgroundPosition: 'center top',
+      }}>
+        {/* dim overlay so dots/text are legible */}
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,15,0.58)', pointerEvents: 'none' }} />
+        <div className="loading-dots" style={{ position: 'relative', zIndex: 1 }}>
           <div className="loading-dot" />
           <div className="loading-dot" />
           <div className="loading-dot" />
         </div>
-        <p className="loading-text">{t.loading}</p>
+        <p className="loading-text" style={{ position: 'relative', zIndex: 1 }}>{t.loading}</p>
       </div>
     );
   }
