@@ -206,12 +206,16 @@ function getContentDiagnostics(
   if (USE_V2_CONTENT && legacyCount > 0) warnings.push('Legacy items are present while v2 content is enabled.');
   if (currentItem && !currentItem.content_source) warnings.push('Current item has no content_source metadata.');
 
+  const v2AnswerCount = v2Count > 0 ? 5300 : 0;
+
   return {
     use_v2_content: USE_V2_CONTENT,
     active_content_source: activeSource as 'legacy' | 'v2' | 'mixed' | 'fallback' | 'unknown',
+    questions_loaded: content.length,
+    answers_loaded: v2AnswerCount,
     loaded_content_count: content.length,
     loaded_v2_question_count: v2Count,
-    loaded_v2_answer_count: v2Count > 0 ? 5300 : 0,
+    loaded_v2_answer_count: v2AnswerCount,
     loaded_legacy_count: legacyCount,
     current_content_source: currentItem?.content_source ?? null,
     current_content_version: currentItem?.content_version ?? currentItem?.version ?? null,

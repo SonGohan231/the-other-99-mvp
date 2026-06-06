@@ -4,6 +4,8 @@ import { CanonicalVector } from './canonicalVector';
 export interface ContentDiagnostics {
   use_v2_content: boolean;
   active_content_source: 'legacy' | 'v2' | 'mixed' | 'fallback' | 'unknown';
+  questions_loaded: number;
+  answers_loaded: number;
   loaded_content_count: number;
   loaded_v2_question_count: number;
   loaded_v2_answer_count: number;
