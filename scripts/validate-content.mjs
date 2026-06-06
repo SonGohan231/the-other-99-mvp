@@ -352,55 +352,115 @@ try {
   }
 } catch {}
 
-// ─── MVP-03: Axis coverage matrix ────────────────────────────────────────────
-// Groups by PRIMARY axis (first segment when axis_target contains semicolons).
-// Warns when any primary axis has fewer than MIN_AXIS_COVERAGE questions.
-const MIN_AXIS_COVERAGE = 10;
+// ─── MVP-03: 10-axis canonical coverage matrix ────────────────────────────────
+// The Other 99 has exactly 10 canonical axis pairs (AX01–AX10).
+// Every axis_target pole maps to one canonical axis.
+// Questions may list multiple poles (semicolon-separated); each pole is counted
+// for its axis, but a question only counts ONCE per axis (de-duplicated).
+// Warns if any canonical axis has fewer than MIN_AXIS_COVERAGE questions.
+
+const CANONICAL_AXES = [
+  { id: 'AX01', label: 'Curiosity ↔ Security',      poles: ['curiosity', 'security'] },
+  { id: 'AX02', label: 'Logic ↔ Emotion',            poles: ['logic', 'emotion', 'consistency', 'hesitation', 'guardedness', 'openness', 'contradiction'] },
+  { id: 'AX03', label: 'Independence ↔ Belonging',   poles: ['independence', 'belonging'] },
+  { id: 'AX04', label: 'Observation ↔ Action',        poles: ['observation', 'action'] },
+  { id: 'AX05', label: 'Present ↔ Future',            poles: ['present', 'future'] },
+  { id: 'AX06', label: 'Spontaneity ↔ Control',       poles: ['spontaneity', 'control', 'avoidance'] },
+  { id: 'AX07', label: 'Pragmatism ↔ Idealism',       poles: ['pragmatism', 'idealism'] },
+  { id: 'AX08', label: 'Stability ↔ Transformation',  poles: ['stability', 'transformation', 'change', 'risk', 'connection'] },
+  { id: 'AX09', label: 'Nature ↔ Technology',         poles: ['nature', 'technology'] },
+  { id: 'AX10', label: 'Idea Creator ↔ Builder',      poles: ['idea creator', 'builder'] },
+];
+
+// Build a lookup: normalized pole → axis id
+const POLE_TO_AXIS = {};
+for (const ax of CANONICAL_AXES) {
+  for (const pole of ax.poles) {
+    POLE_TO_AXIS[pole] = ax.id;
+  }
+}
+
+const MIN_AXIS_COVERAGE = 15;
 
 try {
-  const axisCounts = {};
+  // Per-axis: Set of question IDs that contribute to it, plus delta sums
+  const axisQuestionIds = {};
   const axisDeltaSums = {};
   const axisDeltaCount = {};
+  for (const ax of CANONICAL_AXES) {
+    axisQuestionIds[ax.id] = new Set();
+    axisDeltaSums[ax.id] = 0;
+    axisDeltaCount[ax.id] = 0;
+  }
+  const unmappedPoles = {};  // poles that don't map to any canonical axis
 
   for (const row of allRows) {
     const rawAxis = (row.axis_target || '').trim().replace(/^"/, '').replace(/"$/, '');
     if (!rawAxis) continue;
-    // Use only the primary axis (first segment before any semicolon), normalized to lowercase
-    const axis = rawAxis.split(';')[0].trim().toLowerCase();
-    if (!axis) continue;
-    axisCounts[axis] = (axisCounts[axis] || 0) + 1;
 
-    const rawDelta = row.axis_delta_json || '';
-    if (rawDelta.trim().startsWith('{')) {
+    // Parse axis_delta_json once per row for delta contribution
+    let avgAbsDelta = null;
+    const rawDelta = (row.axis_delta_json || '').trim();
+    if (rawDelta.startsWith('{')) {
       try {
-        const parsed = JSON.parse(rawDelta.trim());
+        const parsed = JSON.parse(rawDelta);
         const vals = Object.values(parsed).map(Number).filter(v => !isNaN(v));
         if (vals.length > 0) {
-          const avgAbs = vals.reduce((s, v) => s + Math.abs(v), 0) / vals.length;
-          axisDeltaSums[axis] = (axisDeltaSums[axis] || 0) + avgAbs;
-          axisDeltaCount[axis] = (axisDeltaCount[axis] || 0) + 1;
+          avgAbsDelta = vals.reduce((s, v) => s + Math.abs(v), 0) / vals.length;
         }
       } catch {}
     }
-  }
 
-  const axes = Object.keys(axisCounts).sort((a, b) => axisCounts[b] - axisCounts[a]);
-  console.log('\nAxis coverage matrix (by primary axis):');
-  console.log(`  ${'Axis'.padEnd(24)} ${'Qs'.padStart(4)} ${'Avg|Δ|'.padStart(7)}`);
-  console.log(`  ${'─'.repeat(38)}`);
-  for (const ax of axes) {
-    const count = axisCounts[ax];
-    const avgDelta = axisDeltaCount[ax]
-      ? (axisDeltaSums[ax] / axisDeltaCount[ax]).toFixed(2)
-      : ' —';
-    const flag = count < MIN_AXIS_COVERAGE ? ' ⚠ LOW' : '';
-    console.log(`  ${ax.padEnd(24)} ${String(count).padStart(4)} ${String(avgDelta).padStart(7)}${flag}`);
-    if (count < MIN_AXIS_COVERAGE) {
-      console.log(`  WARN:  Primary axis "${ax}" has only ${count} questions (min: ${MIN_AXIS_COVERAGE})`);
-      totalWarnings++;
+    // Each pole in axis_target (semicolon-separated) may map to a canonical axis
+    const poles = rawAxis.split(';').map(p => p.trim().toLowerCase()).filter(Boolean);
+    const axesSeen = new Set();  // prevent counting same question twice for same axis
+
+    for (const pole of poles) {
+      const axId = POLE_TO_AXIS[pole];
+      if (!axId) {
+        unmappedPoles[pole] = (unmappedPoles[pole] || 0) + 1;
+        continue;
+      }
+      if (axesSeen.has(axId)) continue;
+      axesSeen.add(axId);
+
+      axisQuestionIds[axId].add(row.id);
+      if (avgAbsDelta !== null) {
+        axisDeltaSums[axId] += avgAbsDelta;
+        axisDeltaCount[axId]++;
+      }
     }
   }
-  console.log(`  Total primary axes: ${axes.length}`);
+
+  console.log('\nCanonical axis coverage (AX01–AX10):');
+  console.log(`  ${'ID'.padEnd(5)} ${'Axis pair'.padEnd(30)} ${'Qs'.padStart(4)} ${'Avg|Δ|'.padStart(7)}`);
+  console.log(`  ${'─'.repeat(52)}`);
+  let axisErrors = 0;
+  for (const ax of CANONICAL_AXES) {
+    const count = axisQuestionIds[ax.id].size;
+    const avgDelta = axisDeltaCount[ax.id]
+      ? (axisDeltaSums[ax.id] / axisDeltaCount[ax.id]).toFixed(2)
+      : '   —';
+    const flag = count < MIN_AXIS_COVERAGE ? ' ⚠ LOW' : '';
+    console.log(`  ${ax.id.padEnd(5)} ${ax.label.padEnd(30)} ${String(count).padStart(4)} ${String(avgDelta).padStart(7)}${flag}`);
+    if (count < MIN_AXIS_COVERAGE) {
+      console.log(`  WARN:  ${ax.id} (${ax.label}) has only ${count} questions (min: ${MIN_AXIS_COVERAGE})`);
+      totalWarnings++;
+      axisErrors++;
+    }
+  }
+
+  // Report unmapped poles as info (not error — content may use editorial tags)
+  const unmappedList = Object.entries(unmappedPoles).sort((a, b) => b[1] - a[1]);
+  if (unmappedList.length > 0) {
+    console.log(`\n  Unmapped axis poles (not part of AX01–AX10, counted as editorial tags):`);
+    unmappedList.slice(0, 10).forEach(([p, n]) => console.log(`    ${p.padEnd(28)} ${n}`));
+    if (unmappedList.length > 10) console.log(`    … and ${unmappedList.length - 10} more`);
+  }
+
+  if (axisErrors === 0) {
+    console.log(`\n  ✓ All 10 canonical axes meet the minimum coverage threshold (${MIN_AXIS_COVERAGE} questions).`);
+  }
 } catch (e) {
   console.log(`\n  WARN:  Axis coverage matrix failed: ${e.message}`);
   totalWarnings++;
