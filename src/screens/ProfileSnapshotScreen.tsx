@@ -2,6 +2,7 @@ import { ProfileVector } from '../utils/profileVector';
 import { ProfileFragment } from '../utils/profileFragments';
 import { getInteractions } from '../utils/storage';
 import { summarizeBehavioralProfile } from '../utils/behavioralSignals';
+import { getInProgressEventQueues } from '../utils/inProgressTest';
 import { generateProfileInsights } from '../content/profileInsights';
 import ProfileRadarChart from '../components/ProfileRadarChart';
 import { useT, useLang } from '../context/LangContext';
@@ -139,7 +140,8 @@ export default function ProfileSnapshotScreen({
   const [lang] = useLang();
   const isPl = lang === 'pl';
 
-  const summary = summarizeBehavioralProfile(getInteractions());
+  const { skipEvents, swapEvents, exitEvents } = getInProgressEventQueues();
+  const summary = summarizeBehavioralProfile(getInteractions(), skipEvents, swapEvents, exitEvents);
   const insights = generateProfileInsights(profileVector, summary, lang, totalAnswers);
   const rarity = computeEstimatedRarity(profileVector);
   const lockedSections = isPl ? LOCKED_SECTIONS_PL : LOCKED_SECTIONS_EN;

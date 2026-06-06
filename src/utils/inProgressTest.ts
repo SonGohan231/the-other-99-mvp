@@ -102,3 +102,19 @@ export function restoreQuizSnapshot(): InProgressTestState | null {
 export function clearQuizSnapshot(): void {
   clearInProgressTest();
 }
+
+/** Return just the behavioral event queues from the persisted snapshot (or empty arrays). */
+export function getInProgressEventQueues(): {
+  skipEvents: SkipEvent[];
+  swapEvents: SwapEvent[];
+  exitEvents: ExitToMenuEvent[];
+  returnEvents: ReturnToSessionEvent[];
+} {
+  const s = _load();
+  return {
+    skipEvents: s?.skipEvents ?? [],
+    swapEvents: s?.swapEvents ?? [],
+    exitEvents: s?.exitEvents ?? [],
+    returnEvents: s?.returnEvents ?? [],
+  };
+}

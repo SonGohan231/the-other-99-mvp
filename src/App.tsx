@@ -41,7 +41,7 @@ import HiddenParametersScreen from './screens/HiddenParametersScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
 import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
 import { isGuestModeActive, enableGuestMode, disableGuestMode, getGuestTestsUsed, incrementGuestTestsUsed, GUEST_USER_ID } from './utils/guestSession';
-import { clearInProgressTest, saveQuizSnapshot, restoreQuizSnapshot } from './utils/inProgressTest';
+import { clearInProgressTest, saveQuizSnapshot, restoreQuizSnapshot, getInProgressEventQueues } from './utils/inProgressTest';
 import { debugLog, debugError } from './utils/debugStore';
 import { isAdminEmail } from './config/admin';
 import { LegalPage } from './types';
@@ -199,9 +199,10 @@ export default function App() {
   const [showPremiumUnlockedModal, setShowPremiumUnlockedModal] = useState(false);
 
   // Behavioral summary (computed from stored interactions)
-  const [behavioralSummary, setBehavioralSummary] = useState<BehavioralSummary | null>(() =>
-    summarizeBehavioralProfile(getInteractions())
-  );
+  const [behavioralSummary, setBehavioralSummary] = useState<BehavioralSummary | null>(() => {
+    const { skipEvents: se, swapEvents: sw, exitEvents: ex } = getInProgressEventQueues();
+    return summarizeBehavioralProfile(getInteractions(), se, sw, ex);
+  });
   // Last answer's behavioral metadata (for debug display)
   const [lastBehavioralMetadata, setLastBehavioralMetadata] = useState<BehavioralMetadata | null>(null);
 
@@ -474,7 +475,7 @@ export default function App() {
       behavioral_metadata: behavioralMeta,
     };
     addInteraction(localInteraction);
-    setBehavioralSummary(summarizeBehavioralProfile(getInteractions()));
+    setBehavioralSummary(summarizeBehavioralProfile(getInteractions(), skipEvents, swapEvents, exitEvents));
     updateUserVoteProfile({
       contentId: currentItem.id,
       selectedAnswer: answer,
@@ -639,7 +640,7 @@ export default function App() {
 
     // Mark the undone interaction in localStorage before removing it
     markLastInteractionUndone(entry.contentId);
-    setBehavioralSummary(summarizeBehavioralProfile(getInteractions()));
+    setBehavioralSummary(summarizeBehavioralProfile(getInteractions(), skipEvents, swapEvents, exitEvents));
 
     saveVector(entry.profileVectorSnapshot);
     setProfileVector({ ...entry.profileVectorSnapshot });
