@@ -3,8 +3,8 @@ import { ContentItem } from '../types';
 import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField } from '../i18n';
 import { submitVote, VoteResult, getDistributionLabel } from '../utils/communityVotes';
-import { getRevealTemplate } from '../content/revealTemplates';
 import QuestionBackground from '../components/QuestionBackground';
+import { resolveInsightCopy } from '../utils/insightCopyResolver';
 import { getQuestionBg, preloadBg } from '../utils/questionBackgrounds';
 
 interface Props {
@@ -144,20 +144,19 @@ export default function InteractionScreen({
   }
 
   function getInsightCopy(): string {
-    // TIER_1: per-answer reveal from v2 content (answerRevealShorts keyed by answer label)
-    if (selected && answerRevealShorts?.[selected]) {
-      const rev = answerRevealShorts[selected];
-      return lang === 'pl' ? rev.pl : rev.en;
-    }
-    // Reveal template lookup
-    const template = getRevealTemplate(item.reveal_template_id);
-    if (template) return lang === 'pl' ? template.insightCopy.pl : template.insightCopy.en;
-    // Fallback: rarity-based copy from i18n
-    const r = item.rarity_tier;
-    if (r === 'legendary') return t.interaction.reveal.insightLegendary;
-    if (r === 'epic') return t.interaction.reveal.insightEpic;
-    if (r === 'rare') return t.interaction.reveal.insightRare;
-    return t.interaction.reveal.insight;
+    return resolveInsightCopy({
+      selectedAnswer: selected,
+      answerRevealShorts,
+      revealTemplateId: item.reveal_template_id,
+      rarityTier: item.rarity_tier,
+      lang,
+      fallbacks: {
+        insightLegendary: t.interaction.reveal.insightLegendary,
+        insightEpic: t.interaction.reveal.insightEpic,
+        insightRare: t.interaction.reveal.insightRare,
+        insight: t.interaction.reveal.insight,
+      },
+    });
   }
 
   // Is the reveal sequence running?

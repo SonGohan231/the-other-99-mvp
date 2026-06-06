@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ContentItem, NextCard, RarityTier } from '../types';
+import ScreenBackground from '../components/ScreenBackground';
 import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField } from '../i18n';
 import { getCommunityPercentages } from '../utils/communityStats';
@@ -102,9 +103,11 @@ export default function RewardScreen({
   const showContinue = !hasCards || cardsDismissed;
 
   return (
-    <div className="reward-screen">
+    <div className="reward-screen reward-screen--with-bg" style={{ position: 'relative' }}>
+      <ScreenBackground src="/backgrounds/core/deep-stars.png" dim={0.55} />
+
       {/* Status bar */}
-      <div className="status-bar" role="status">
+      <div className="status-bar" role="status" style={{ position: 'relative', zIndex: 1 }}>
         <div className="status-bar-left">
           <span className="status-label">{t.interaction.profileDiscovered}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -118,7 +121,7 @@ export default function RewardScreen({
       </div>
 
       {analyzing ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '16px', padding: '40px 20px' }}>
+        <div className="reward-analyzing" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '16px', padding: '40px 20px', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', gap: '6px' }}>
             <div className="loading-dot" />
             <div className="loading-dot" style={{ animationDelay: '0.15s' }} />
@@ -132,7 +135,7 @@ export default function RewardScreen({
           </p>
         </div>
       ) : (
-      <div className="reward-content">
+      <div className="reward-content" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ── Your Profile (radar chart + axis chips) ── */}
         <div className="reward-block rb-profile animate-in">

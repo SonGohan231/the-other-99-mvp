@@ -1,4 +1,5 @@
 import { useT } from '../context/LangContext';
+import ScreenBackground from '../components/ScreenBackground';
 
 interface Props {
   onConfirm: () => void;
@@ -7,8 +8,9 @@ interface Props {
 export default function AgeGate({ onConfirm }: Props) {
   const t = useT();
   return (
-    <div className="screen-centered age-gate">
-      <div className="age-gate-inner animate-in">
+    <div className="screen-centered" style={{ position: 'relative', overflow: 'hidden' }}>
+      <ScreenBackground src="/backgrounds/core/gateway-portal.png" dim={0.45} />
+      <div className="age-gate-inner age-gate-inner--with-bg animate-in" style={{ position: 'relative', zIndex: 1 }}>
         <div className="age-gate-logo">The Other 99</div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

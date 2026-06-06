@@ -31,6 +31,7 @@ const POLE_MAP: Record<string, { axis: CanonicalAxisId; dir: 1 | -1 }> = {
   social:         { axis: 'AX03', dir: -1 },
   // AX04: Observation ↔ Action
   action:         { axis: 'AX04', dir: -1 },
+  courage:        { axis: 'AX04', dir: -1 }, // courage = action-taking tendency
   // AX05: Present ↔ Future
   future:         { axis: 'AX05', dir: -1 },
   change:         { axis: 'AX05', dir: -1 },
@@ -39,20 +40,24 @@ const POLE_MAP: Record<string, { axis: CanonicalAxisId; dir: 1 | -1 }> = {
   thrill:         { axis: 'AX06', dir:  1 },
   adventure:      { axis: 'AX06', dir:  1 },
   danger:         { axis: 'AX06', dir:  1 },
+  spontaneity:    { axis: 'AX06', dir:  1 },
   control:        { axis: 'AX06', dir: -1 },
   // AX07: Pragmatism ↔ Idealism
   pragmatism:     { axis: 'AX07', dir:  1 },
   idealism:       { axis: 'AX07', dir: -1 },
+  contradiction:  { axis: 'AX07', dir: -1 }, // contradiction = anti-pragmatic
   // AX08: Stability ↔ Transformation
   stability:      { axis: 'AX08', dir:  1 },
   consistency:    { axis: 'AX08', dir:  1 },
   hesitation:     { axis: 'AX08', dir:  1 },
+  resilience:     { axis: 'AX08', dir:  1 }, // resilience = stability
   transformation: { axis: 'AX08', dir: -1 },
   // AX09: Nature ↔ Technology
   nature:         { axis: 'AX09', dir:  1 },
   technology:     { axis: 'AX09', dir: -1 },
   // AX10: Idea Creator ↔ Builder
   creator:        { axis: 'AX10', dir:  1 },
+  idea_creator:   { axis: 'AX10', dir:  1 }, // alias used in legacy CSVs
   builder:        { axis: 'AX10', dir: -1 },
 };
 
