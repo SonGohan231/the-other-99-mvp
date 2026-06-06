@@ -115,3 +115,77 @@ export interface ContentItemV2 {
   productionStatus: string;
   answers: AnswerOptionV2[];
 }
+
+// ─── Data contract registry ────────────────────────────────────────────────────
+
+export const DATA_CONTRACT_V2 = {
+  version: '2.0.0',
+  questionsFile: 'questions_all_2650.csv',
+  answersFile: 'answers_all_5300.csv',
+  expectedQuestionCount: 2650,
+  expectedAnswerCount: 5300,
+  canonicalAxes: ['AX01','AX02','AX03','AX04','AX05','AX06','AX07','AX08','AX09','AX10'] as const,
+  hiddenParams: ['HP01','HP02','HP03'] as const,
+  validRevealTiers: ['TIER_1','TIER_2','TIER_3','TIER_5'] as const,
+  tier1RevealMaxChars: 200,
+  patternEngineStatus: 'pattern_ready_v2',
+} as const;
+
+// ─── Supplemental dataset shapes (files expected in future drops) ──────────────
+
+export interface HiddenEvent {
+  event_id: string;
+  trigger_condition: string;        // e.g. "HP01 >= 0.7 AND AX03 >= 2"
+  event_type: string;               // e.g. "reveal" | "unlock" | "nudge"
+  payload_pl: string;
+  payload_en: string;
+  cooldown_answers: number;
+  requires_premium: boolean;
+}
+
+export interface PatternRule {
+  rule_id: string;
+  pattern_signal_id: string;
+  axis_direction: string;           // e.g. "AX03:positive"
+  min_occurrences: number;
+  confidence_weight: number;
+  reveal_template_id: string;
+  hidden_signal: string;
+  active: boolean;
+}
+
+export interface ContradictionRule {
+  rule_id: string;
+  question_id_a: string;
+  question_id_b: string;
+  contradiction_type: string;       // e.g. "axis_flip" | "value_conflict"
+  reveal_pl: string;
+  reveal_en: string;
+  confidence_threshold: number;
+}
+
+export interface EmergingArchetypeState {
+  template_id: string;
+  archetype_id: string;
+  axis_thresholds_json: string;     // JSON: Record<string, number>
+  unlock_answer_count: number;
+  reveal_title_pl: string;
+  reveal_title_en: string;
+  reveal_body_pl: string;
+  reveal_body_en: string;
+}
+
+export interface RevealDosingTemplate {
+  template_id: string;
+  dosing_policy: string;            // e.g. "immediate" | "delayed_3" | "pattern_gated"
+  min_answers_before_reveal: number;
+  max_reveals_per_session: number;
+  cooldown_answers: number;
+  applies_to_tiers: string;         // comma-separated: "TIER_1,TIER_2"
+}
+
+// ─── Convenience aliases ───────────────────────────────────────────────────────
+
+/** Alias for ergonomic imports in runtime code */
+export type QuestionItem = ContentItemV2;
+export type AnswerOption = AnswerOptionV2;
