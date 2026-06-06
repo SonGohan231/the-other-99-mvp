@@ -32,13 +32,21 @@ interface Props {
   onAccount?: () => void;
   onPremiumDepth?: () => void;
   onArchetypes?: () => void;
+  onGalaxyMap?: () => void;
 }
 
 const RARITY_LABEL_COLOR: Record<string, string> = {
-  standard: 'rgba(255,255,255,0.45)',
+  standard: 'rgba(255,255,255,0.38)',
   rare: '#22d3ee',
   epic: '#a855f7',
   legendary: '#f59e0b',
+};
+
+const RARITY_ICON: Record<string, string> = {
+  standard: '◦',
+  rare: '◈',
+  epic: '◆',
+  legendary: '✦',
 };
 
 export default function DashboardScreen({
@@ -63,6 +71,7 @@ export default function DashboardScreen({
   onAccount,
   onPremiumDepth,
   onArchetypes,
+  onGalaxyMap,
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
@@ -71,6 +80,7 @@ export default function DashboardScreen({
   void twinFeedEvents;
   void timeline;
   void onTruthOrDare;
+  void onMyProfile;
 
   const { free_profile_tests_used, total_answers } = userProfile;
   const freeTestsUsed = free_profile_tests_used ?? 0;
@@ -85,10 +95,11 @@ export default function DashboardScreen({
   const primaryArch = archetypeMixUnlocked ? ARCHETYPES[archetypeMix.primary] : null;
 
   const answersToArchetype = Math.max(0, 100 - totalProfileAnswers);
+  const reversedFragments = [...profileFragments].reverse();
 
   return (
     <div className="screen screen--has-bg" style={{ position: 'relative', minHeight: '100dvh' }}>
-      <ScreenBackground src="/backgrounds/core/cosmic-nebula.png" dim={0.48} />
+      <ScreenBackground src="/backgrounds/core/cosmic-nebula.png" dim={0.46} />
 
       {/* ── Glass Header ─────────────────────────── */}
       <header
@@ -118,7 +129,7 @@ export default function DashboardScreen({
           )}
           {onAccount && (
             <button
-              className="btn btn-ghost"
+              className="btn btn-ghost tappable"
               onClick={onAccount}
               style={{ padding: '4px 10px', fontSize: '0.72rem' }}
             >
@@ -140,47 +151,70 @@ export default function DashboardScreen({
 
         {/* ── 1. Hero Archetype Section ─────────── */}
         <section className="home-hero animate-in">
+          {/* Actual background artwork */}
+          <img
+            src="/backgrounds/core/purple-glow-background.png"
+            alt=""
+            aria-hidden
+            className="home-hero-artwork"
+          />
+          <img
+            src="/backgrounds/core/floating-particles.png"
+            alt=""
+            aria-hidden
+            className="home-hero-particles"
+          />
+          <div className="home-hero-overlay" />
           <div className="home-hero-glow" />
+
           {primaryArch ? (
             <>
               <div style={{
-                fontSize: '4rem', lineHeight: 1, marginBottom: '14px',
-                filter: `drop-shadow(0 0 20px ${primaryArch.color}66)`,
+                position: 'relative', zIndex: 1,
+                fontSize: '3.8rem', lineHeight: 1, marginBottom: '14px',
+                filter: `drop-shadow(0 0 28px ${primaryArch.color}88)`,
               }}>
                 {primaryArch.symbol}
               </div>
               <h1 style={{
+                position: 'relative', zIndex: 1,
                 fontSize: 'clamp(1.7rem, 5.5vw, 2.3rem)', fontWeight: 800,
                 letterSpacing: '-0.02em', lineHeight: 1.1,
-                color: 'var(--text)', textShadow: '0 2px 16px rgba(0,0,0,0.7)',
+                color: 'var(--text)', textShadow: '0 2px 20px rgba(0,0,0,0.8)',
                 marginBottom: '6px',
               }}>
                 {primaryArch.name}
               </h1>
-              <p style={{ fontSize: '0.78rem', color: primaryArch.color, fontWeight: 600 }}>
-                {archetypeMix.confidence}% {lang === 'pl' ? 'pewności' : 'confidence'}
+              <p style={{ position: 'relative', zIndex: 1, fontSize: '0.78rem', color: primaryArch.color, fontWeight: 600 }}>
+                {archetypeMix.confidence}%{' '}{lang === 'pl' ? 'pewności' : 'confidence'}
               </p>
               <p style={{
-                fontSize: '0.72rem', color: 'var(--text-dim)',
-                fontStyle: 'italic', marginTop: '4px', maxWidth: '260px', lineHeight: 1.5,
+                position: 'relative', zIndex: 1,
+                fontSize: '0.72rem', color: 'rgba(255,255,255,0.48)',
+                fontStyle: 'italic', marginTop: '4px', maxWidth: '260px', lineHeight: 1.55,
               }}>
                 {primaryArch.coreDrive}
               </p>
             </>
           ) : (
             <>
-              <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '14px', color: 'var(--text-dim)', opacity: 0.5 }}>
+              <div style={{
+                position: 'relative', zIndex: 1,
+                fontSize: '2.8rem', lineHeight: 1, marginBottom: '14px',
+                color: 'rgba(255,255,255,0.16)',
+              }}>
                 ◌
               </div>
               <h1 style={{
-                fontSize: 'clamp(1.3rem, 4vw, 1.7rem)', fontWeight: 700,
-                color: 'var(--text-dim)', letterSpacing: '-0.01em', lineHeight: 1.2,
+                position: 'relative', zIndex: 1,
+                fontSize: 'clamp(1.25rem, 4vw, 1.6rem)', fontWeight: 700,
+                color: 'rgba(255,255,255,0.5)', letterSpacing: '-0.01em', lineHeight: 1.25,
                 textShadow: '0 2px 12px rgba(0,0,0,0.6)', marginBottom: '8px',
               }}>
                 {lang === 'pl' ? 'Twój wzorzec się formuje' : 'Your pattern is forming'}
               </h1>
               {answersToArchetype > 0 && (
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                <p style={{ position: 'relative', zIndex: 1, fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>
                   {lang === 'pl'
                     ? `${answersToArchetype} odpowiedzi do odkrycia archetypu`
                     : `${answersToArchetype} more answers to reveal your archetype`}
@@ -190,14 +224,17 @@ export default function DashboardScreen({
           )}
 
           <button
-            className="btn btn-primary"
+            className="btn btn-primary tappable"
             onClick={onStartTest}
             disabled={!canStartTest}
             style={{
+              position: 'relative', zIndex: 1,
               marginTop: '22px', minWidth: '200px',
               opacity: canStartTest ? 1 : 0.4,
-              background: 'linear-gradient(90deg, var(--accent), rgba(124,58,237,0.75))',
-              boxShadow: canStartTest ? '0 4px 24px rgba(124,58,237,0.35)' : 'none',
+              background: canStartTest
+                ? 'linear-gradient(90deg, var(--accent), rgba(124,58,237,0.8))'
+                : undefined,
+              boxShadow: canStartTest ? '0 4px 28px rgba(124,58,237,0.4)' : 'none',
             }}
           >
             {canStartTest
@@ -206,25 +243,27 @@ export default function DashboardScreen({
           </button>
 
           {!canStartTest && (
-            <p style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '8px' }}>
+            <p style={{ position: 'relative', zIndex: 1, fontSize: '0.68rem', color: 'rgba(255,255,255,0.32)', marginTop: '8px' }}>
               {t.dashboard.noFreeTestsNote}
             </p>
           )}
 
-          {/* Answer / free-test counter chips */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{
+            position: 'relative', zIndex: 1,
+            display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center',
+          }}>
             <span style={{
               padding: '3px 10px', borderRadius: '20px', fontSize: '0.62rem', fontWeight: 600,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-              color: 'var(--text-dim)',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
+              color: 'rgba(255,255,255,0.40)',
             }}>
               {total_answers} {lang === 'pl' ? 'sygnałów' : 'signals'}
             </span>
             {!isPremium && (
               <span style={{
                 padding: '3px 10px', borderRadius: '20px', fontSize: '0.62rem', fontWeight: 600,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-                color: freeTestsUsed >= 3 ? 'var(--text-dim)' : 'var(--accent-light)',
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
+                color: freeTestsUsed >= 3 ? 'rgba(255,255,255,0.22)' : 'var(--accent-light)',
               }}>
                 {Math.max(0, 3 - freeTestsUsed)}/3 {lang === 'pl' ? 'darmowych' : 'free'}
               </span>
@@ -236,41 +275,53 @@ export default function DashboardScreen({
         <section style={{ padding: '0 16px' }}>
           <div className="bento-grid">
 
-            {/* Hidden Profile */}
+            {/* Hidden Profile → forest */}
             <div
-              className={`bento-tile ${hiddenUnlocked ? 'bento-tile--accent' : ''}`}
+              className={`bento-tile ${hiddenUnlocked ? 'bento-tile--accent tappable' : ''}`}
               onClick={hiddenUnlocked ? onHiddenParams : undefined}
               style={{ cursor: hiddenUnlocked ? 'pointer' : 'default' }}
             >
+              <div
+                className="bento-tile-bg"
+                style={{ backgroundImage: 'url(/backgrounds/questions/question-forest.png)' }}
+              />
               <span className="bento-tile-label">
                 {lang === 'pl' ? 'Ukryty profil' : 'Hidden Profile'}
               </span>
               {hiddenUnlocked ? (
                 <>
-                  <span className="bento-tile-value" style={{ fontSize: '0.9rem', color: 'var(--accent-light)' }}>
+                  <span className="bento-tile-value" style={{ fontSize: '0.88rem', color: 'var(--accent-light)' }}>
                     {hiddenProfileData.primaryDriver}
                   </span>
                   <span className="bento-tile-sub">
-                    {hiddenProfileData.confidence}% {lang === 'pl' ? 'zmapowane' : 'mapped'} →
+                    {hiddenProfileData.confidence}% {lang === 'pl' ? 'zmapowane →' : 'mapped →'}
                   </span>
                 </>
               ) : (
                 <span className="bento-tile-sub">
                   {lang === 'pl'
-                    ? `Odblokuj przy 51 odpowiedziach · ${totalProfileAnswers} do tej pory`
-                    : `Unlocks at 51 answers · ${totalProfileAnswers} so far`}
+                    ? `51 odpowiedzi · ${totalProfileAnswers} do tej pory`
+                    : `51 answers · ${totalProfileAnswers} so far`}
                 </span>
               )}
             </div>
 
-            {/* Human Twin */}
-            <div className={`bento-tile ${twinDataReady ? 'bento-tile--teal' : ''}`}>
+            {/* Human Twin → lake */}
+            <div
+              className={`bento-tile ${twinDataReady ? 'bento-tile--teal tappable' : ''}`}
+              onClick={twinDataReady ? onMyProfile : undefined}
+              style={{ cursor: twinDataReady ? 'pointer' : 'default' }}
+            >
+              <div
+                className="bento-tile-bg"
+                style={{ backgroundImage: 'url(/backgrounds/questions/question-lake.png)' }}
+              />
               <span className="bento-tile-label">
                 {lang === 'pl' ? 'Ludzki Bliźniak' : 'Human Twin'}
               </span>
               {twinDataReady ? (
                 <>
-                  <span className="bento-tile-value" style={{ color: 'var(--teal-light)', fontSize: '1.4rem' }}>
+                  <span className="bento-tile-value" style={{ color: 'var(--teal-light)', fontSize: '1.5rem' }}>
                     {humanTwinMatch}%
                   </span>
                   <span className="bento-tile-sub">
@@ -280,14 +331,17 @@ export default function DashboardScreen({
               ) : (
                 <span className="bento-tile-sub">
                   {lang === 'pl' ? 'Kalibracja…' : 'Calibrating…'}
-                  <br />
-                  {5 - totalProfileAnswers} {lang === 'pl' ? 'odpowiedzi' : 'answers needed'}
+                  <br />{5 - totalProfileAnswers}{' '}{lang === 'pl' ? 'odpowiedzi' : 'answers needed'}
                 </span>
               )}
             </div>
 
-            {/* Rare Signal */}
+            {/* Rare Signal → nebula */}
             <div className="bento-tile">
+              <div
+                className="bento-tile-bg"
+                style={{ backgroundImage: 'url(/backgrounds/core/cosmic-nebula.png)', opacity: 0.20 }}
+              />
               <span className="bento-tile-label">
                 {lang === 'pl' ? 'Rzadki sygnał' : 'Rare Signal'}
               </span>
@@ -310,13 +364,17 @@ export default function DashboardScreen({
               )}
             </div>
 
-            {/* Shadow */}
+            {/* Shadow → fog */}
             <div className="bento-tile">
+              <div
+                className="bento-tile-bg"
+                style={{ backgroundImage: 'url(/backgrounds/questions/question-fog.png)' }}
+              />
               <span className="bento-tile-label">
                 {lang === 'pl' ? 'Cień' : 'Shadow'}
               </span>
               {primaryArch ? (
-                <span className="bento-tile-value" style={{ fontSize: '0.8rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                <span className="bento-tile-value" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.58)', lineHeight: 1.35 }}>
                   {primaryArch.shadow}
                 </span>
               ) : (
@@ -326,14 +384,22 @@ export default function DashboardScreen({
               )}
             </div>
 
-            {/* Relationship Pattern */}
-            <div className="bento-tile" onClick={primaryArch ? onFullProfile : undefined} style={{ cursor: primaryArch ? 'pointer' : 'default' }}>
+            {/* Relationship → mountains */}
+            <div
+              className={`bento-tile ${primaryArch ? 'tappable' : ''}`}
+              onClick={primaryArch ? onFullProfile : undefined}
+              style={{ cursor: primaryArch ? 'pointer' : 'default' }}
+            >
+              <div
+                className="bento-tile-bg"
+                style={{ backgroundImage: 'url(/backgrounds/questions/question-mountains.png)' }}
+              />
               <span className="bento-tile-label">
                 {lang === 'pl' ? 'Wzorzec relacji' : 'Relationship'}
               </span>
               {primaryArch ? (
                 <>
-                  <span className="bento-tile-value" style={{ fontSize: '0.78rem', lineHeight: 1.3 }}>
+                  <span className="bento-tile-value" style={{ fontSize: '0.76rem', lineHeight: 1.35 }}>
                     {primaryArch.relationshipPattern}
                   </span>
                   <span className="bento-tile-sub">→</span>
@@ -345,12 +411,19 @@ export default function DashboardScreen({
               )}
             </div>
 
-            {/* Premium Depth */}
+            {/* Premium Depth → portal */}
             <div
-              className={`bento-tile ${isPremium ? 'bento-tile--gold' : ''}`}
+              className={`bento-tile ${isPremium ? 'bento-tile--gold' : ''} tappable`}
               onClick={onPremiumDepth}
               style={{ cursor: onPremiumDepth ? 'pointer' : 'default' }}
             >
+              <div
+                className="bento-tile-bg"
+                style={{
+                  backgroundImage: 'url(/backgrounds/core/gateway-portal.png)',
+                  opacity: isPremium ? 0.24 : 0.14,
+                }}
+              />
               <span className="bento-tile-label">
                 {isPremium
                   ? (lang === 'pl' ? 'Głębszy profil' : 'Premium Depth')
@@ -379,15 +452,18 @@ export default function DashboardScreen({
 
         {/* ── 3. Discovery Collection ───────────── */}
         <section style={{ padding: '0 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginBottom: '12px',
+          }}>
             <span className="section-eyebrow">
               {lang === 'pl' ? 'Kolekcja odkryć' : 'Discovery Collection'}
             </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--accent-light)', fontWeight: 600 }}>
-              {profileFragments.length > 0
-                ? `${profileFragments.length} ${lang === 'pl' ? 'fragmentów' : 'found'}`
-                : ''}
-            </span>
+            {profileFragments.length > 0 && (
+              <span style={{ fontSize: '0.68rem', color: 'var(--accent-light)', fontWeight: 600 }}>
+                {profileFragments.length} {lang === 'pl' ? 'fragmentów' : 'found'}
+              </span>
+            )}
           </div>
 
           {profileFragments.length === 0 ? (
@@ -398,18 +474,34 @@ export default function DashboardScreen({
             </p>
           ) : (
             <div className="collection-rail">
-              {[...profileFragments].reverse().map((frag) => (
-                <div key={frag.id} className={`fragment-card fragment-card--${frag.rarity}`}>
+              {reversedFragments.map((frag, idx) => (
+                <div
+                  key={frag.id}
+                  className={`fragment-card fragment-card--${frag.rarity} tappable${idx === 0 ? ' fragment-card--new' : ''}`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      color: RARITY_LABEL_COLOR[frag.rarity] ?? 'var(--text-dim)',
+                    }}>
+                      {RARITY_ICON[frag.rarity] ?? '◦'}
+                    </span>
+                    <span style={{
+                      fontSize: '0.54rem', fontWeight: 700, textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: RARITY_LABEL_COLOR[frag.rarity] ?? 'var(--text-dim)',
+                    }}>
+                      {frag.rarity}
+                    </span>
+                  </div>
                   <span style={{
-                    fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase',
-                    letterSpacing: '0.1em', color: RARITY_LABEL_COLOR[frag.rarity] ?? 'var(--text-dim)',
+                    fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.2,
                   }}>
-                    {frag.rarity}
-                  </span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>
                     {frag.title}
                   </span>
-                  <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', lineHeight: 1.45 }}>
+                  <p style={{
+                    fontSize: '0.67rem', color: 'var(--text-dim)', lineHeight: 1.45, marginTop: 'auto',
+                  }}>
                     {frag.text}
                   </p>
                 </div>
@@ -418,7 +510,7 @@ export default function DashboardScreen({
           )}
         </section>
 
-        {/* ── 4. Discovery Timeline (milestones) ── */}
+        {/* ── 4. Discovery Path (milestones) ─────── */}
         <section style={{ padding: '0 16px' }}>
           <div style={{ marginBottom: '12px' }}>
             <span className="section-eyebrow">
@@ -441,64 +533,79 @@ export default function DashboardScreen({
           </div>
         </section>
 
-        {/* ── 5. Galaxy Navigation Map ─────────── */}
+        {/* ── 5. Galaxy Map Entry ───────────────── */}
         <section style={{ padding: '0 16px' }}>
           <div style={{ marginBottom: '12px' }}>
             <span className="section-eyebrow">
               {lang === 'pl' ? 'Nawigacja' : 'Navigate'}
             </span>
           </div>
-          <div className="galaxy-nav">
-            {[
-              {
-                icon: '◎',
-                label: lang === 'pl' ? 'Profil' : 'Profile',
-                action: onMyProfile,
-                locked: false,
-              },
-              {
-                icon: '⬡',
-                label: lang === 'pl' ? 'Archetypy' : 'Archetypes',
-                action: onArchetypes ?? undefined,
-                locked: !archetypeMixUnlocked,
-              },
-              {
-                icon: '◈',
-                label: lang === 'pl' ? 'Bliźniak' : 'Twin',
-                action: twinDataReady ? onMyProfile : undefined,
-                locked: !twinDataReady,
-              },
-              {
-                icon: '◑',
-                label: lang === 'pl' ? 'Cień' : 'Shadow',
-                action: hiddenUnlocked ? onHiddenParams : undefined,
-                locked: !hiddenUnlocked,
-              },
-              {
-                icon: '◇',
-                label: lang === 'pl' ? 'Relacje' : 'Relations',
-                action: primaryArch ? onFullProfile : undefined,
-                locked: !primaryArch,
-              },
-              {
-                icon: '✦',
-                label: lang === 'pl' ? 'Premium' : 'Premium',
-                action: onPremiumDepth ?? undefined,
-                locked: false,
-              },
-            ].map(({ icon, label, action, locked }) => (
-              <button
-                key={label}
-                className={`galaxy-node ${locked ? 'galaxy-node--locked' : ''}`}
-                onClick={locked ? undefined : action}
-                disabled={locked}
-                aria-label={label}
-              >
-                <span className="galaxy-node-icon">{icon}</span>
-                <span className="galaxy-node-label">{label}</span>
-              </button>
-            ))}
-          </div>
+          <button
+            className="galaxy-entry-btn"
+            onClick={onGalaxyMap}
+            aria-label={lang === 'pl' ? 'Otwórz Mapę Galaktyki' : 'Open Galaxy Map'}
+          >
+            <img
+              src="/backgrounds/core/cosmic-nebula.png"
+              alt=""
+              aria-hidden
+              className="galaxy-entry-bg"
+            />
+            <div className="galaxy-entry-overlay" />
+            <div style={{
+              position: 'relative', zIndex: 1,
+              display: 'flex', alignItems: 'center', gap: '16px',
+              padding: '0 20px', width: '100%',
+            }}>
+              <span style={{ fontSize: '1.8rem', lineHeight: 1 }}>⬡</span>
+              <div>
+                <p style={{
+                  fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', marginBottom: '2px',
+                }}>
+                  {lang === 'pl' ? 'Mapa Galaktyki' : 'Galaxy Map'}
+                </p>
+                <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.42)' }}>
+                  {lang === 'pl'
+                    ? 'Zbadaj wszystkie wymiary profilu'
+                    : 'Explore all profile dimensions'}
+                </p>
+              </div>
+              <span style={{ marginLeft: 'auto', fontSize: '1.1rem', color: 'rgba(255,255,255,0.35)' }}>
+                →
+              </span>
+            </div>
+          </button>
+
+          {(archetypeMixUnlocked || hiddenUnlocked) && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+              {archetypeMixUnlocked && onArchetypes && (
+                <button
+                  className="tappable"
+                  onClick={onArchetypes}
+                  style={{
+                    padding: '6px 12px', fontSize: '0.65rem', fontWeight: 600,
+                    background: 'rgba(168,85,247,0.10)', border: '1px solid rgba(168,85,247,0.28)',
+                    borderRadius: '12px', color: 'var(--accent-light)', cursor: 'pointer',
+                  }}
+                >
+                  ⬡ {lang === 'pl' ? 'Archetypy' : 'Archetypes'} →
+                </button>
+              )}
+              {hiddenUnlocked && (
+                <button
+                  className="tappable"
+                  onClick={onHiddenParams}
+                  style={{
+                    padding: '6px 12px', fontSize: '0.65rem', fontWeight: 600,
+                    background: 'rgba(192,132,252,0.10)', border: '1px solid rgba(192,132,252,0.25)',
+                    borderRadius: '12px', color: '#c084fc', cursor: 'pointer',
+                  }}
+                >
+                  ◑ {lang === 'pl' ? 'Cień' : 'Shadow'} →
+                </button>
+              )}
+            </div>
+          )}
         </section>
 
         {/* ── 6. Premium Gateway ───────────────── */}
@@ -528,11 +635,12 @@ export default function DashboardScreen({
               </p>
               {onPremiumDepth && (
                 <button
-                  className="btn btn-primary"
+                  className="btn btn-primary tappable"
                   onClick={onPremiumDepth}
                   style={{
                     marginTop: '6px', position: 'relative',
                     background: 'linear-gradient(90deg, rgba(245,158,11,0.85), rgba(124,58,237,0.85))',
+                    boxShadow: '0 4px 24px rgba(245,158,11,0.2)',
                   }}
                 >
                   {t.premiumBadge.upgrade} →
@@ -542,17 +650,20 @@ export default function DashboardScreen({
           </section>
         )}
 
-        {/* Profile snapshot CTA (51+ answers, not premium) */}
+        {/* Profile snapshot CTA */}
         {totalProfileAnswers >= 51 && !isPremium && (
           <section style={{ padding: '0 16px' }}>
             <div style={{
               padding: '18px 20px',
-              background: 'rgba(124,58,237,0.08)',
-              border: '1px solid rgba(124,58,237,0.25)',
+              background: 'rgba(124,58,237,0.07)',
+              border: '1px solid rgba(124,58,237,0.22)',
               borderRadius: '16px',
               backdropFilter: 'blur(8px)',
             }}>
-              <p style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--accent-light)', textTransform: 'uppercase', marginBottom: '6px' }}>
+              <p style={{
+                fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.12em',
+                color: 'var(--accent-light)', textTransform: 'uppercase', marginBottom: '6px',
+              }}>
                 {lang === 'pl' ? 'Migawka profilu gotowa' : 'Profile Snapshot Ready'}
               </p>
               <p style={{ fontSize: '0.8rem', color: 'var(--text)', marginBottom: '12px', lineHeight: 1.5 }}>
@@ -560,7 +671,11 @@ export default function DashboardScreen({
                   ? 'System zaczyna widzieć wzorzec.'
                   : 'The system is starting to see a pattern.'}
               </p>
-              <button className="btn btn-primary" onClick={onProfileSnapshot} style={{ fontSize: '0.82rem', padding: '10px 20px' }}>
+              <button
+                className="btn btn-primary tappable"
+                onClick={onProfileSnapshot}
+                style={{ fontSize: '0.82rem', padding: '10px 20px' }}
+              >
                 {lang === 'pl' ? 'Zobacz migawkę' : 'See Profile Snapshot'}
               </button>
             </div>
@@ -578,7 +693,10 @@ export default function DashboardScreen({
             display: 'flex', flexDirection: 'column', gap: '10px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <span style={{
+                fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+              }}>
                 {t.dashboard.language}
               </span>
               <div style={{ display: 'flex', gap: '4px' }}>
@@ -586,6 +704,7 @@ export default function DashboardScreen({
                   <button
                     key={l}
                     onClick={() => setLang(l)}
+                    className="tappable"
                     style={{
                       padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700,
                       letterSpacing: '0.05em', textTransform: 'uppercase',

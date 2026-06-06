@@ -1351,3 +1351,286 @@ body {
   background: radial-gradient(circle, rgba(245, 158, 11, 0.14) 0%, transparent 70%);
   pointer-events: none;
 }
+
+/* ─── V2 Polish: Microinteractions ──────────── */
+
+/* Scale-on-tap for all interactive tiles */
+.tappable {
+  transition: transform 0.14s ease, opacity 0.14s ease;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+.tappable:active { transform: scale(0.955); opacity: 0.88; }
+
+/* Hero artwork layers (actual background images) */
+.home-hero-artwork {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  opacity: 0.30;
+  pointer-events: none;
+}
+
+.home-hero-particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.10;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.home-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(10,10,15,0.30) 0%,
+    rgba(10,10,15,0.00) 30%,
+    rgba(10,10,15,0.00) 60%,
+    rgba(10,10,15,0.72) 100%
+  );
+  pointer-events: none;
+}
+
+/* Hero glow pulse */
+@keyframes heroPulse {
+  0%, 100% { opacity: 0.26; transform: scale(1); }
+  50%       { opacity: 0.44; transform: scale(1.03); }
+}
+.home-hero-glow { animation: heroPulse 5s ease-in-out infinite; }
+
+/* Bento tile background image layer */
+.bento-tile-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.16;
+  border-radius: 16px;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.bento-tile:hover .bento-tile-bg { opacity: 0.22; }
+
+/* Fragment card: position context + shimmer */
+.fragment-card { position: relative; overflow: hidden; }
+
+.fragment-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(
+    105deg,
+    transparent 25%,
+    rgba(255,255,255,0.06) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.fragment-card:active::after { opacity: 1; }
+
+/* Unlock burst animation for newest fragment card */
+@keyframes unlockBurst {
+  0%   { transform: scale(0.82) translateY(8px); opacity: 0; }
+  55%  { transform: scale(1.04) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.fragment-card--new {
+  animation: unlockBurst 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.fragment-card--new::after { opacity: 1; animation: shimmer 1.8s ease 0.3s infinite; }
+
+/* Legendary card stack depth effect */
+.fragment-card--legendary::before {
+  content: '';
+  position: absolute;
+  inset: 5px -5px -7px 5px;
+  border-radius: 14px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.18);
+  z-index: -1;
+}
+
+/* Epic card depth effect */
+.fragment-card--epic::before {
+  content: '';
+  position: absolute;
+  inset: 5px -4px -6px 4px;
+  border-radius: 14px;
+  background: rgba(168,85,247,0.07);
+  border: 1px solid rgba(168,85,247,0.15);
+  z-index: -1;
+}
+
+/* Galaxy entry CTA button */
+.galaxy-entry-btn {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 86px;
+  border-radius: 20px;
+  border: 1px solid rgba(124,58,237,0.28);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  color: inherit;
+  transition: border-color 0.2s, transform 0.14s;
+  text-align: left;
+}
+.galaxy-entry-btn:active { transform: scale(0.975); }
+
+.galaxy-entry-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+  opacity: 0.32;
+  pointer-events: none;
+}
+
+.galaxy-entry-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(10,10,15,0.76) 0%, rgba(10,10,15,0.40) 100%);
+  pointer-events: none;
+}
+
+/* ─── Galaxy Map Screen ──────────────────────── */
+
+.galaxy-map-screen {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.galaxy-map-header {
+  position: relative;
+  z-index: 1;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(10,10,15,0.74);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.galaxy-map-body {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  padding: 24px 16px 48px;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.galaxy-map-intro { text-align: center; padding: 4px 0; }
+
+.galaxy-map-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.galaxy-map-node {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.09);
+  height: 156px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: block;
+  width: 100%;
+  background: rgba(10,10,15,0.4);
+  transition: border-color 0.2s, transform 0.14s;
+}
+.galaxy-map-node:not(:disabled):active { transform: scale(0.965); }
+
+.galaxy-map-node-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.4s ease;
+  opacity: 0.85;
+}
+.galaxy-map-node:not(:disabled):active .galaxy-map-node-img { transform: scale(1.06); }
+
+.galaxy-map-node-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.galaxy-map-node-lock {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  background: rgba(10,10,15,0.78);
+  border-radius: 20px;
+  padding: 2px 8px;
+  color: rgba(255,255,255,0.35);
+}
+
+.galaxy-map-node-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  padding: 12px 14px 14px;
+}
+
+.galaxy-map-node-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.galaxy-map-node-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+  line-height: 1.2;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+}
+
+.galaxy-map-node-tagline {
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.52);
+  line-height: 1.4;
+}
+
+.galaxy-map-node--locked {
+  opacity: 0.44;
+  cursor: default;
+}
