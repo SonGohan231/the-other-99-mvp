@@ -208,6 +208,41 @@ function validateFile(filePath, { checkCardPaths = false, requireBilingual = fal
           warnings.push(`${id}: ${field} must be 0–10 (got '${row[field]}')`);
       }
     }
+
+    // ── Canon archetype checks ───────────────────────────────────────────────
+    const LEGACY_ARCHETYPE_IDS = new Set(['seeker', 'pathfinder']);
+    const DISALLOWED_PUBLIC_ARCHETYPES = new Set(['builder']);
+    const DISALLOWED_PL_CATALYST_NAMES = new Set(['katalizator']);
+
+    for (const field of ['axis_target', 'archetype_hint_en', 'card_path']) {
+      const val = (row[field] || '').toLowerCase();
+      for (const legacy of LEGACY_ARCHETYPE_IDS) {
+        if (val === legacy) warnings.push(`${id}: ${field} uses legacy archetype id '${legacy}' — use 'weaver' or 'dreamer'`);
+      }
+      for (const disallowed of DISALLOWED_PUBLIC_ARCHETYPES) {
+        if (val === disallowed) errors.push(`${id}: ${field} references 'builder' which is NOT a public archetype`);
+      }
+    }
+
+    // PL catalyst name check
+    const plFields = ['reward_after_answer_pl', 'sample_reward_screen_pl', 'next_hook_pl'];
+    for (const field of plFields) {
+      if (row[field] && DISALLOWED_PL_CATALYST_NAMES.has((row[field] || '').toLowerCase())) {
+        warnings.push(`${id}: ${field} contains 'Katalizator' — public PL name must be 'Iskra'`);
+      }
+    }
+
+    // ── Social data status check (user-facing copy only) ─────────────────────
+    // community_reveal_type is a content-design field, not a UI label — skip it
+    const DISALLOWED_SOCIAL_LABELS = ['How others answered', 'Projected distribution', 'Early community distribution'];
+
+    for (const field of ['reward_after_answer_pl', 'sample_reward_screen_pl', 'reward_en']) {
+      for (const label of DISALLOWED_SOCIAL_LABELS) {
+        if (row[field] && row[field].includes(label)) {
+          warnings.push(`${id}: ${field} contains disallowed social label '${label}'`);
+        }
+      }
+    }
   });
 
   // Near-duplicate detection (warnings)
@@ -278,6 +313,42 @@ for (const { path, label, opts } of FILES) {
   totalWarnings += warnings.length;
   report.push({ label, rows: rows.length, errors: fileErrors, warnings: warnings.length });
 }
+
+// ─── Canon metadata check ────────────────────────────────────────────────────
+// Warn if archetypes.ts still references legacy IDs or missing canon marker.
+try {
+  const archetypesSrc = readFileSync(resolve(ROOT, 'src/utils/archetypes.ts'), 'utf-8');
+  if (archetypesSrc.includes("'seeker'") || archetypesSrc.includes('"seeker"')) {
+    console.log('\n  WARN:  archetypes.ts still references legacy id "seeker"');
+    totalWarnings++;
+  }
+  if (archetypesSrc.includes("'pathfinder'") || archetypesSrc.includes('"pathfinder"')) {
+    console.log('\n  WARN:  archetypes.ts still references legacy id "pathfinder"');
+    totalWarnings++;
+  }
+  if (!archetypesSrc.includes('TO99_ARCHETYPE_CANON_1.0') && !archetypesSrc.includes('canon_version')) {
+    console.log('\n  WARN:  archetypes.ts missing canon_version TO99_ARCHETYPE_CANON_1.0 marker');
+    totalWarnings++;
+  }
+  // Check PL catalyst name
+  const blendsSrc = readFileSync(resolve(ROOT, 'src/content/archetypeBlends.ts'), 'utf-8');
+  if (blendsSrc.includes('Katalizator')) {
+    console.log('\n  WARN:  archetypeBlends.ts still uses "Katalizator" — PL public name must be "Iskra"');
+    totalWarnings++;
+  }
+} catch {}
+
+// ─── i18n social label check ────────────────────────────────────────────────
+try {
+  const i18nSrc = readFileSync(resolve(ROOT, 'src/i18n.ts'), 'utf-8');
+  const badLabels = ['Projected distribution', 'Early community distribution'];
+  for (const label of badLabels) {
+    if (i18nSrc.includes(label)) {
+      console.log(`\n  WARN:  i18n.ts contains disallowed social label "${label}"`);
+      totalWarnings++;
+    }
+  }
+} catch {}
 
 // Premium distribution summary
 try {

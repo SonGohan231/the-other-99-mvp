@@ -20,6 +20,7 @@ describe('inProgressTest', () => {
       testContentIds: ['A', 'B', 'C'],
       currentItemId: 'B',
       pendingAnswer: '',
+      pendingSelection: null,
       selectedCard: null,
       canUndoAnswer: false,
       nextCardIds: [],

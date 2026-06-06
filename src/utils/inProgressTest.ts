@@ -12,6 +12,7 @@ export interface InProgressTestState {
   testContentIds: string[];
   currentItemId: string | null;
   pendingAnswer: string;
+  pendingSelection: string | null;  // pre-confirmation selection within current question
   selectedCard: string | null;
   canUndoAnswer: boolean;
   nextCardIds: string[];
@@ -55,6 +56,7 @@ function _load(): InProgressTestState | null {
       if (age > MAX_AGE_MS) { localStorage.removeItem(KEY); return null; }
     }
     if (!parsed.nextCardIds) parsed.nextCardIds = [];
+    if (parsed.pendingSelection === undefined) parsed.pendingSelection = null;
     if (!parsed.skipEvents) parsed.skipEvents = [];
     if (!parsed.swapEvents) parsed.swapEvents = [];
     if (!parsed.exitEvents) parsed.exitEvents = [];

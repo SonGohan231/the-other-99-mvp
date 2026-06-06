@@ -156,6 +156,7 @@ export default function App() {
   // Per-question state
   const [currentItem, setCurrentItem] = useState<ContentItem | null>(null);
   const [pendingAnswer, setPendingAnswer] = useState('');
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null); // pre-confirm selection
   const [profileState, setProfileState] = useState<ProfileState>(getProfileState());
   const [nextCards, setNextCards] = useState<NextCard[]>([]);
   const [changedAxes, setChangedAxes] = useState<string[]>([]);
@@ -218,12 +219,13 @@ export default function App() {
   }, [isPremium]);
 
   // ─── Persist in-progress test ─────────────────────────────────────────────
-  function persistInProgress(overrides?: { nextCards?: NextCard[]; testAnswerIndex?: number; testContent?: ContentItem[]; currentItem?: ContentItem | null }) {
+  function persistInProgress(overrides?: { nextCards?: NextCard[]; testAnswerIndex?: number; testContent?: ContentItem[]; currentItem?: ContentItem | null; pendingSelection?: string | null }) {
     const tc = overrides?.testContent ?? testContent;
     if (!tc.length) return;
     const tai = overrides?.testAnswerIndex ?? testAnswerIndex;
     const ci = overrides?.currentItem !== undefined ? overrides.currentItem : currentItem;
     const nc = overrides?.nextCards ?? nextCards;
+    const ps = overrides?.pendingSelection !== undefined ? overrides.pendingSelection : pendingSelection;
     saveQuizSnapshot({
       testNumber,
       testSessionId,
@@ -231,6 +233,7 @@ export default function App() {
       testContentIds: tc.map((i) => i.id),
       currentItemId: ci?.id ?? null,
       pendingAnswer,
+      pendingSelection: ps,
       selectedCard,
       canUndoAnswer,
       nextCardIds: nc.map((c) => c.linkedContentId ?? '').filter(Boolean),
@@ -279,6 +282,8 @@ export default function App() {
                 if (itemToRestore) {
                   restoredInProgressRef.current = true;
                   setCurrentItem(itemToRestore);
+                  // Restore pre-confirmation selection
+                  if (saved.pendingSelection) setPendingSelection(saved.pendingSelection);
                   // Restore persisted event queues
                   if (saved.skipEvents?.length) setSkipEvents(saved.skipEvents);
                   if (saved.swapEvents?.length) setSwapEvents(saved.swapEvents);
@@ -415,6 +420,7 @@ export default function App() {
     firstReactionMs: number | null = null,
   ) {
     if (!currentItem) return;
+    setPendingSelection(null); // confirmed — clear pre-confirm selection
 
     let axisDeltas: Record<string, number> | null = null;
     try {
@@ -769,7 +775,7 @@ export default function App() {
     }
   }
 
-  function handleSkipQuestionEvent(timeOnQuestionMs: number, hadSelection: boolean) {
+  function handleSkipQuestionEvent(timeOnQuestionMs: number, hadSelection: boolean, selectedAnswer: string | null) {
     if (!currentItem) return;
     const skipCountInSession = skipEvents.length + 1;
     const skipCountInCategory = skipEvents.filter((e) => e.question_context.category === currentItem.category).length + 1;
@@ -796,21 +802,24 @@ export default function App() {
       skip_count_in_category: skipCountInCategory,
       skip_count_on_axis: skipCountOnAxis,
     };
-    const updated = [...skipEvents, event];
-    setSkipEvents(updated);
+    const updatedSkips = [...skipEvents, event];
+    setSkipEvents(updatedSkips);
+    setPendingSelection(null); // selection gone after skip
 
     const nextIndex = testAnswerIndex + 1;
     if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
+      const nextItem = testContent[nextIndex];
       setTestAnswerIndex(nextIndex);
-      setCurrentItem(testContent[nextIndex]);
-      persistInProgress({ testAnswerIndex: nextIndex, currentItem: testContent[nextIndex] });
+      setCurrentItem(nextItem);
+      persistInProgress({ testAnswerIndex: nextIndex, currentItem: nextItem, pendingSelection: null });
       setScreen('profile-test');
     } else {
       void finishTest();
     }
+    void selectedAnswer; // stored in event.had_selection_before_skip; not re-offered after skip
   }
 
-  function handleExitToMenuEvent(timeOnQuestionMs: number, hadSelection: boolean, phase: string) {
+  function handleExitToMenuEvent(timeOnQuestionMs: number, hadSelection: boolean, phase: string, selectedAnswer: string | null) {
     if (!currentItem) return;
     const event: ExitToMenuEvent = {
       event_type: 'exit_to_menu',
@@ -824,8 +833,73 @@ export default function App() {
     };
     const updatedExits = [...exitEvents, event];
     setExitEvents(updatedExits);
-    persistInProgress();
+    setPendingSelection(selectedAnswer);
+    persistInProgress({ pendingSelection: selectedAnswer });
     setScreen('dashboard');
+  }
+
+  function handleSwapQuestionEvent(timeOnQuestionMs: number, hadSelection: boolean, selectedAnswer: string | null) {
+    if (!currentItem || !testContent.length) return;
+
+    // Pick a new question: not in answeredIds, not current item, from the remaining pool
+    const answeredIds = new Set(testAnswers.map((a) => a.content_id));
+    answeredIds.add(currentItem.id);
+    const swappedOutIds = new Set(swapEvents.map((e) => e.old_question_id));
+
+    // Find a replacement from the full content pool (not testContent, to get a fresh item)
+    const candidateItem = content.find(
+      (item) => !answeredIds.has(item.id) && !swappedOutIds.has(item.id) && item.id !== currentItem.id
+    );
+    if (!candidateItem) {
+      // No swap available — silently skip instead
+      handleSkipQuestionEvent(timeOnQuestionMs, hadSelection, selectedAnswer);
+      return;
+    }
+
+    // Replace current item in testContent queue at current index
+    const updatedContent = [...testContent];
+    updatedContent[testAnswerIndex] = candidateItem;
+
+    const event: SwapEvent = {
+      event_type: 'swap_question',
+      old_question_id: currentItem.id,
+      new_question_id: candidateItem.id,
+      timestamp: new Date().toISOString(),
+      time_to_swap_ms: timeOnQuestionMs,
+      had_selection_before_swap: hadSelection,
+      old_question_context: {
+        question_id: currentItem.id,
+        category: currentItem.category,
+        content_type: currentItem.content_type,
+        rarity_tier: currentItem.rarity_tier,
+        axis_target: currentItem.axis_target,
+        darkness_level: currentItem.darkness_level,
+        intimacy_level: currentItem.intimacy_level,
+        psychological_intensity: currentItem.psychological_intensity,
+        content_tier: (currentItem.access_tier ?? 'free') as 'free' | 'premium',
+      },
+      new_question_context: {
+        question_id: candidateItem.id,
+        category: candidateItem.category,
+        content_type: candidateItem.content_type,
+        rarity_tier: candidateItem.rarity_tier,
+        axis_target: candidateItem.axis_target,
+        darkness_level: candidateItem.darkness_level,
+        intimacy_level: candidateItem.intimacy_level,
+        psychological_intensity: candidateItem.psychological_intensity,
+        content_tier: (candidateItem.access_tier ?? 'free') as 'free' | 'premium',
+      },
+      swap_count_in_session: swapEvents.length + 1,
+    };
+
+    const updatedSwaps = [...swapEvents, event];
+    setSwapEvents(updatedSwaps);
+    setTestContent(updatedContent);
+    setCurrentItem(candidateItem);
+    setPendingSelection(null);
+    persistInProgress({ testContent: updatedContent, currentItem: candidateItem, pendingSelection: null });
+    setScreen('profile-test');
+    void selectedAnswer;
   }
 
   function handleSkipToQuestion(n: number) {
@@ -963,6 +1037,8 @@ export default function App() {
           canUndo={canUndoAnswer}
           onSkip={handleSkipQuestionEvent}
           onExitToMenu={handleExitToMenuEvent}
+          onSwap={handleSwapQuestionEvent}
+          initialSelected={pendingSelection}
         />
       )}
 
@@ -1067,6 +1143,14 @@ export default function App() {
           profileFragments={profileFragments}
           onUnlockFull={handleUnlockFull}
           onDashboard={() => setScreen('dashboard')}
+          onContinueAnswering={() => {
+            // If there's an active test, return to it; otherwise go to dashboard to start a new one
+            if (currentItem && testContent.length > 0) {
+              setScreen('profile-test');
+            } else {
+              setScreen('dashboard');
+            }
+          }}
         />
       )}
 

@@ -14,8 +14,10 @@ interface Props {
   onAnswer: (answer: string, responseTimeMs: number, changeCount: number, firstReactionMs: number | null) => void;
   onUndo?: () => void;
   canUndo?: boolean;
-  onSkip?: (timeOnQuestionMs: number, hadSelection: boolean) => void;
-  onExitToMenu?: (timeOnQuestionMs: number, hadSelection: boolean, phase: string) => void;
+  onSkip?: (timeOnQuestionMs: number, hadSelection: boolean, selectedAnswer: string | null) => void;
+  onExitToMenu?: (timeOnQuestionMs: number, hadSelection: boolean, phase: string, selectedAnswer: string | null) => void;
+  onSwap?: (timeOnQuestionMs: number, hadSelection: boolean, selectedAnswer: string | null) => void;
+  initialSelected?: string | null;
 }
 
 // Reveal state machine: question → saved → analyzing → comparing → insight
@@ -39,6 +41,8 @@ export default function InteractionScreen({
   canUndo,
   onSkip,
   onExitToMenu,
+  onSwap,
+  initialSelected,
 }: Props) {
   const t = useT();
   const [lang] = useLang();
@@ -59,13 +63,13 @@ export default function InteractionScreen({
 
   useEffect(() => {
     startTimeRef.current = Date.now();
-    setSelected(null);
+    setSelected(initialSelected ?? null);
     setChangeCount(0);
     setPhase('question');
     setVoteResult(null);
     setBarsVisible(false);
     firstReactionRef.current = null;
-  }, [item.id]);
+  }, [item.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fields = item as unknown as Record<string, string>;
   const promptText = localizedCsvField(fields, 'prompt', lang);
@@ -115,9 +119,10 @@ export default function InteractionScreen({
   const typeLabel = t.interaction.typeLabel[item.content_type] ?? item.content_type;
 
   const communityPercs = voteResult?.percs ?? [];
-  const distributionLabel = voteResult
+  const rawDistributionLabel = voteResult
     ? voteResult.distributionLabel
     : getDistributionLabel(0);
+  const distributionLabel = t.interaction.distributionLabels?.[rawDistributionLabel] ?? rawDistributionLabel;
 
   function getCommunityMicrocopy(): string {
     if (!selected || communityPercs.length === 0) return t.interaction.communityShifted;
@@ -143,12 +148,17 @@ export default function InteractionScreen({
 
   function handleSkip() {
     const elapsed = Date.now() - startTimeRef.current;
-    onSkip?.(elapsed, selected !== null);
+    onSkip?.(elapsed, selected !== null, selected);
   }
 
   function handleExitToMenu() {
     const elapsed = Date.now() - startTimeRef.current;
-    onExitToMenu?.(elapsed, selected !== null, phase);
+    onExitToMenu?.(elapsed, selected !== null, phase, selected);
+  }
+
+  function handleSwap() {
+    const elapsed = Date.now() - startTimeRef.current;
+    onSwap?.(elapsed, selected !== null, selected);
   }
 
   return (
@@ -176,20 +186,28 @@ export default function InteractionScreen({
           )}
         </div>
       )}
-      {/* Top-right: Skip */}
-      {phase === 'question' && onSkip && (
-        <button
-          onClick={handleSkip}
-          style={{
-            position: 'absolute', top: '12px', right: '12px',
-            fontSize: '0.72rem', color: 'var(--text-dim)',
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '4px 8px', zIndex: 10,
-          }}
-          aria-label={t.interaction.skipQuestion}
-        >
-          {t.interaction.skipQuestion} →
-        </button>
+      {/* Top-right: Swap + Skip */}
+      {phase === 'question' && (onSwap || onSkip) && (
+        <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', gap: '6px', zIndex: 10 }}>
+          {onSwap && (
+            <button
+              onClick={handleSwap}
+              style={{ fontSize: '0.72rem', color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+              aria-label={t.interaction.swapQuestion}
+            >
+              ⇄ {t.interaction.swapQuestion}
+            </button>
+          )}
+          {onSkip && (
+            <button
+              onClick={handleSkip}
+              style={{ fontSize: '0.72rem', color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+              aria-label={t.interaction.skipQuestion}
+            >
+              {t.interaction.skipQuestion} →
+            </button>
+          )}
+        </div>
       )}
 
       {/* Status bar */}
