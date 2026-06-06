@@ -68,6 +68,7 @@ import TruthOrDareScreen from './screens/TruthOrDareScreen';
 import TestIntroScreen from './screens/TestIntroScreen';
 import PremiumPlaceholder from './screens/PremiumPlaceholder';
 import ArchetypeMixScreen from './screens/ArchetypeMixScreen';
+import GalaxyMapScreen from './screens/GalaxyMapScreen';
 import DebugPanel from './screens/DebugPanel';
 
 const TEST_TOTAL = 17;
@@ -1089,6 +1090,7 @@ export default function App() {
           onAccount={() => setScreen('account')}
           onPremiumDepth={() => setScreen('premium-depth')}
           onArchetypes={() => setScreen('archetypes')}
+          onGalaxyMap={() => setScreen('galaxy-map')}
         />
       )}
 
@@ -1097,6 +1099,21 @@ export default function App() {
           profileVector={profileVector}
           totalAnswers={profileState.total_profile_answers}
           onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'galaxy-map' && userProfile && (
+        <GalaxyMapScreen
+          totalProfileAnswers={profileState.total_profile_answers}
+          profileVector={profileVector}
+          isPremium={isPremium}
+          humanTwinMatch={calcHumanTwinMatch(profileVector, profileState.total_profile_answers)}
+          onBack={() => setScreen('dashboard')}
+          onMyProfile={() => setScreen('my-profile')}
+          onArchetypes={() => setScreen('archetypes')}
+          onPremiumDepth={() => setScreen('premium-depth')}
+          onHiddenParams={() => setScreen('hidden-parameters')}
+          onFullProfile={() => setScreen('full-profile')}
         />
       )}
 
