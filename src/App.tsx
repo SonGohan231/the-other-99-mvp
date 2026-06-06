@@ -5,7 +5,9 @@ import {
   SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent,
 } from './types';
 import { loadContent } from './utils/csvLoader';
-import { selectProfileTestContent, calcProfileProgress } from './utils/contentSelector';
+import { selectProfileTestContent, calcProfileProgress, selectContentByCategory } from './utils/contentSelector';
+import { recommendCategories } from './utils/categoryRecommender';
+import CategoryPickerScreen from './screens/CategoryPickerScreen';
 import {
   isAgeConfirmed, confirmAge,
   getSeenIds, addSeenId, addSeenIds,
@@ -114,28 +116,6 @@ function buildNextCard(item: ContentItem): NextCard {
   };
 }
 
-// ─── Helper: pick 3 candidate items with rarity variety ──────────────────────────────────────
-function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
-  const available = pool.slice(fromIndex);
-  if (available.length === 0) return [];
-
-  const standard = available.filter((i) => i.rarity_tier === 'standard');
-  const rare = available.filter((i) => i.rarity_tier === 'rare');
-  const epicLegendary = available.filter((i) => i.rarity_tier === 'epic' || i.rarity_tier === 'legendary');
-
-  const picks: ContentItem[] = [];
-
-  if (standard.length > 0) picks.push(standard[0]);
-  if (rare.length > 0) picks.push(rare[0]);
-  if (epicLegendary.length > 0) picks.push(epicLegendary[0]);
-
-  for (const item of available) {
-    if (picks.length >= 3) break;
-    if (!picks.includes(item)) picks.push(item);
-  }
-
-  return picks.slice(0, 3).map(buildNextCard);
-}
 
 // ─── Stage 2 helpers: per-answer deltas + content diagnostics ─────────────────
 
@@ -270,6 +250,9 @@ export default function App() {
   const [twinFeedEvents, setTwinFeedEvents] = useState<TwinFeedEvent[]>(getTwinFeedEvents);
   const [timeline, setTimeline] = useState<TimelineEvent[]>(getTimeline);
   const [newFragment, setNewFragment] = useState<ProfileFragment | null>(null);
+
+  // Category-first discovery
+  const [recommendedCategories, setRecommendedCategories] = useState<string[]>([]);
 
   // Undo state
   const [canUndoAnswer, setCanUndoAnswer] = useState(false);
@@ -719,48 +702,64 @@ export default function App() {
     setPendingAnswer(answer);
     setTestAnswerIndex(testAnswerIndex + 1);
 
-    const cards = pickNextCards(testContent, testAnswerIndex + 1);
-    setNextCards(cards);
+    setNextCards([]);
 
     debugLog('answer_submitted', { contentId: currentItem?.id, answer, testAnswerIndex });
-    // Pass fresh cards + index directly since setState is async
-    persistInProgress({ nextCards: cards, testAnswerIndex: testAnswerIndex + 1 });
+    persistInProgress({ nextCards: [], testAnswerIndex: testAnswerIndex + 1 });
     setScreen('reward');
   }
 
-  async function handleRewardNext(card: NextCard | null) {
+  async function handleRewardNext(_card: NextCard | null) {
     setNewFragment(null);
+    setSelectedCard(null);
     const nextIndex = testAnswerIndex;
 
-    if (card !== null) {
-      setSelectedCard(card.title);
-      addFeedEvent({ type: 'card_pick', label: card.title });
-      setFeedEvents(getFeedEvents());
-    } else {
-      setSelectedCard(null);
-    }
-
-    if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
-      let items = testContent;
-
-      if (card !== null) {
-        const matchIdx = items.findIndex((item, idx) => {
-          return idx > nextIndex && item.id === card.linkedContentId;
-        });
-
-        if (matchIdx > nextIndex) {
-          const newItems = [...items];
-          [newItems[nextIndex], newItems[matchIdx]] = [newItems[matchIdx], newItems[nextIndex]];
-          setTestContent(newItems);
-          items = newItems;
-        }
-      }
-
-      setCurrentItem(items[nextIndex]);
-      setScreen('profile-test');
-    } else {
+    if (nextIndex >= TEST_TOTAL || nextIndex >= testContent.length) {
       await finishTest();
+      return;
     }
+
+    // Recommend two categories based on current canonical vector uncertainty
+    const seenIds = getSeenIds();
+    const cats = recommendCategories(content, seenIds, canonicalVector, 2);
+    setRecommendedCategories(cats.length >= 2 ? cats : ['General', 'Relationships']);
+    setScreen('category-pick');
+  }
+
+  function handleCategorySelected(categoryEn: string) {
+    const nextIndex = testAnswerIndex;
+
+    if (nextIndex >= TEST_TOTAL || nextIndex >= testContent.length) {
+      void finishTest();
+      return;
+    }
+
+    let items = [...testContent];
+
+    // Try to bring a matching item to the front of the remaining queue
+    const matchIdx = items.findIndex(
+      (item, idx) =>
+        idx >= nextIndex &&
+        (item.theme_category === categoryEn || item.category === categoryEn),
+    );
+
+    if (matchIdx > nextIndex) {
+      [items[nextIndex], items[matchIdx]] = [items[matchIdx], items[nextIndex]];
+      setTestContent(items);
+    } else if (matchIdx === -1) {
+      // No pre-selected item matches — pick one from full pool
+      const seenIds = getSeenIds();
+      const picked = selectContentByCategory(content, seenIds, categoryEn);
+      if (picked) {
+        items = [...items];
+        items[nextIndex] = picked;
+        setTestContent(items);
+      }
+    }
+
+    setCurrentItem(items[nextIndex]);
+    persistInProgress({ testContent: items, currentItem: items[nextIndex] });
+    setScreen('profile-test');
   }
 
   function handleUndoAnswer() {
@@ -1239,6 +1238,15 @@ export default function App() {
           onNext={handleRewardNext}
           onChangeAnswer={handleUndoAnswer}
           canChangeAnswer={canUndoAnswer}
+        />
+      )}
+
+      {screen === 'category-pick' && (
+        <CategoryPickerScreen
+          categories={recommendedCategories}
+          questionsAnswered={testAnswerIndex}
+          testTotal={TEST_TOTAL}
+          onPick={handleCategorySelected}
         />
       )}
 

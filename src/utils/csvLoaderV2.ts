@@ -53,6 +53,22 @@ function parseRevealTemplateIds(raw: string): string[] {
   return raw ? [raw] : [];
 }
 
+// Categories that are not psychological discovery content — excluded from runtime pool.
+const BLOCKED_CATEGORY_KEYWORDS = [
+  'product research',
+  'transparent product',
+  'developer',
+  'roadmap',
+  'feature voting',
+  'app development',
+  'feedback',
+];
+
+function isBlockedCategory(categoryEn: string): boolean {
+  const lower = (categoryEn || '').toLowerCase();
+  return BLOCKED_CATEGORY_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 /**
  * Load and join the v2 question + answer CSVs from public/v2/.
  * Returns fully joined ContentItemV2 array, filtered to items with
@@ -77,6 +93,8 @@ export async function loadContentV2(): Promise<ContentItemV2[]> {
 
   for (const q of questionRows) {
     if (!q.question_id || !q.question_pl || !q.question_en) continue;
+
+    if (isBlockedCategory(q.category_en)) continue;
 
     const rawAnswers = answerMap.get(q.question_id) ?? [];
     if (rawAnswers.length < 2) continue;

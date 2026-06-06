@@ -183,6 +183,7 @@ export async function loadContent(): Promise<ContentItem[]> {
     if (seen.has(item.id)) return false;
     if (!item.prompt_pl && !item.prompt_en) return false;
     if (!item.answer_options_pl && !item.answer_options_en) return false;
+    if (item.card_path === 'Pattern Break') return false;
 
     seen.add(item.id);
     return true;
