@@ -1,5 +1,6 @@
 import type { Snapshot51Result } from '../engine/snapshot51';
 import { getProfileConfidence, TIER_COLOR } from '../utils/profileConfidence';
+import { getUnlockMilestoneText } from '../utils/microReveals';
 
 interface Props {
   snapshot: Snapshot51Result;
@@ -156,6 +157,22 @@ function LockedState({ totalAnswers, onStartTest }: { totalAnswers: number; onSt
             <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.35)' }}>{item}</span>
           </div>
         ))}
+      </div>
+
+      {/* Unlock meter N/99 */}
+      <div style={{ marginBottom: '20px', padding: '10px 14px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)' }}>Profile unlocked</span>
+          <span style={{ fontSize: '0.6rem', fontWeight: 600, color: TIER_COLOR[conf.tier] }}>{Math.min(totalAnswers, 99)} / 99</span>
+        </div>
+        <div style={{ height: '2px', background: 'rgba(255,255,255,0.06)', borderRadius: '1px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${Math.min(100, Math.round((totalAnswers / 99) * 100))}%`, background: TIER_COLOR[conf.tier], borderRadius: '1px', transition: 'width 0.6s ease' }} />
+        </div>
+        {getUnlockMilestoneText(totalAnswers) && (
+          <p style={{ fontSize: '0.62rem', color: 'var(--accent-light)', marginTop: '4px', fontStyle: 'italic' }}>
+            {getUnlockMilestoneText(totalAnswers)}
+          </p>
+        )}
       </div>
 
       {onStartTest && (

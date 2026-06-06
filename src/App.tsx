@@ -67,6 +67,11 @@ import { computeContradiction } from './engine/contradictionEngine';
 import { computeHumanTwin } from './engine/humanTwin';
 import { computeSnapshot51 } from './engine/snapshot51';
 import { computeHiddenParameters } from './engine/hiddenParameters';
+import { recordActivity, getStreak } from './utils/streak';
+import {
+  getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
+  type RevealResult,
+} from './utils/revealPacing';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -261,6 +266,10 @@ export default function App() {
   // Adaptive next-question reason (for DebugPanel)
   const [nextQuestionReason, setNextQuestionReason] = useState<string | null>(null);
 
+  // Preloaded next question (computed at end of handleAnswer for instant transition)
+  const [nextPreparedQuestion, setNextPreparedQuestion] = useState<ContentItem | null>(null);
+  const [nextPreparedReason, setNextPreparedReason] = useState<string | null>(null);
+
   // Undo state
   const [canUndoAnswer, setCanUndoAnswer] = useState(false);
 
@@ -319,6 +328,26 @@ export default function App() {
       summary: engineResults.archetype.user_facing_summary,
     };
   }, [profileState.total_profile_answers, engineResults.archetype]);
+
+  // Curiosity loop — computed per answer
+  const revealResult: RevealResult = useMemo(
+    () => getRevealResult(
+      profileState.total_profile_answers,
+      engineResults.archetype,
+      engineResults.contradiction,
+      canonicalVector,
+      nextPreparedQuestion,
+    ),
+    [profileState.total_profile_answers, engineResults, canonicalVector, nextPreparedQuestion],
+  );
+  const microFeedback = useMemo(
+    () => getMicroFeedback(profileState.total_profile_answers),
+    [profileState.total_profile_answers],
+  );
+  const nextTease = useMemo(
+    () => getNextTease(nextPreparedQuestion, profileState.total_profile_answers),
+    [nextPreparedQuestion, profileState.total_profile_answers],
+  );
 
   // Apply persisted theme + reduced motion on mount
   useState(() => {
@@ -632,6 +661,7 @@ export default function App() {
 
     let updatedVec = profileVector;
     const newChangedAxes: string[] = [];
+    let canonForPreload = canonicalVector;
 
     if (axisDeltas) {
       const isHidden = currentItem.profile_reveal_type?.toLowerCase().includes('hidden') ?? false;
@@ -659,6 +689,7 @@ export default function App() {
       const { next: newCanonical } = applyCanonicalDeltas(canonicalVector, axisDeltas);
       saveCanonicalVector(newCanonical);
       setCanonicalVector(newCanonical);
+      canonForPreload = newCanonical;
     }
 
     setChangedAxes(newChangedAxes);
@@ -736,6 +767,21 @@ export default function App() {
 
     debugLog('answer_submitted', { contentId: currentItem?.id, answer, testAnswerIndex });
     persistInProgress({ nextCards: [], testAnswerIndex: testAnswerIndex + 1 });
+
+    // Record streak activity
+    recordActivity();
+
+    // Preload next question immediately using the updated canonical vector
+    const nextPreloadIdx = testAnswerIndex + 1;
+    if (nextPreloadIdx < TEST_TOTAL && nextPreloadIdx < testContent.length) {
+      const prep = selectNextAdaptiveQuestion(content, getSeenIds(), canonForPreload, testContent, nextPreloadIdx);
+      setNextPreparedQuestion(prep?.item ?? null);
+      setNextPreparedReason(prep?.reason ?? null);
+    } else {
+      setNextPreparedQuestion(null);
+      setNextPreparedReason(null);
+    }
+
     setScreen('reward');
   }
 
@@ -749,8 +795,16 @@ export default function App() {
       return;
     }
 
-    const seenIds = getSeenIds();
-    const selection = selectNextAdaptiveQuestion(content, seenIds, canonicalVector, testContent, nextIndex);
+    // Use preloaded question if available, otherwise compute on demand
+    let selection: { item: ContentItem; reason: string } | null = null;
+    if (nextPreparedQuestion) {
+      selection = { item: nextPreparedQuestion, reason: nextPreparedReason ?? 'preloaded' };
+      setNextPreparedQuestion(null);
+      setNextPreparedReason(null);
+    } else {
+      const sel = selectNextAdaptiveQuestion(content, getSeenIds(), canonicalVector, testContent, nextIndex);
+      selection = sel ?? null;
+    }
     if (!selection) { await finishTest(); return; }
 
     let items = [...testContent];
@@ -870,6 +924,8 @@ export default function App() {
     const ai = getAppInfo();
     const premiumSrc =
       isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null;
+    const streakData = getStreak();
+    const nextLayer = getNextLayerInfo(profileState.total_profile_answers);
     const json = exportFullSession({
       profileVector: profileVector as Record<string, number>,
       canonicalVector,
@@ -894,6 +950,22 @@ export default function App() {
         deploySource: ai.deploySource,
         platform: ai.platform,
         environment: ai.environment,
+      },
+      dopamineLoop: {
+        streak_current: streakData.current,
+        streak_longest: streakData.longest,
+        streak_last_date: streakData.lastDate,
+      },
+      curiosityLoop: {
+        last_reveal_type: revealResult.reveal_type,
+        last_reveal_intensity: revealResult.intensity,
+        last_micro_feedback: microFeedback,
+        last_next_tease: nextTease,
+        next_prepared_question_id: nextPreparedQuestion?.id ?? null,
+        next_selection_reason: nextPreparedReason ?? null,
+        next_layer_threshold: nextLayer?.threshold ?? null,
+        next_layer_label: nextLayer?.label ?? null,
+        auto_advance_enabled: isAutoAdvanceEnabled(),
       },
     });
     const blob = new Blob([json], { type: 'application/json' });
@@ -1256,6 +1328,10 @@ export default function App() {
           onChangeAnswer={handleUndoAnswer}
           canChangeAnswer={canUndoAnswer}
           evolutionData={evolutionData}
+          revealResult={revealResult}
+          microFeedback={microFeedback}
+          nextTease={nextTease}
+          autoAdvanceEnabled={isAutoAdvanceEnabled()}
         />
       )}
 
@@ -1485,6 +1561,11 @@ export default function App() {
           hiddenParameters={engineResults.hiddenParams}
           snapshot51={engineResults.snapshot}
           nextQuestionReason={nextQuestionReason}
+          revealResult={revealResult}
+          microFeedback={microFeedback}
+          nextTease={nextTease}
+          nextPreparedQuestionId={nextPreparedQuestion?.id ?? null}
+          nextSelectionReason={nextPreparedReason}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

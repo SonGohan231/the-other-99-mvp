@@ -9,6 +9,10 @@ import { computeHiddenProfile, isHiddenProfileUnlocked } from '../utils/hiddenPr
 import { canContinueTest, MILESTONES } from '../utils/premiumProgression';
 import { computeArchetypeMix, isArchetypeMixUnlocked, ARCHETYPES } from '../utils/archetypes';
 import { useT, useLang } from '../context/LangContext';
+import { getProfileConfidence, TIER_COLOR } from '../utils/profileConfidence';
+import { getStreak } from '../utils/streak';
+import { getDailyMysteryCard } from '../utils/dailyMysteryCard';
+import { getUnlockMilestoneText } from '../utils/microReveals';
 
 interface Props {
   userProfile: UserProfile;
@@ -83,6 +87,13 @@ export default function DashboardScreen({
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
+
+  const conf          = getProfileConfidence(totalProfileAnswers);
+  const signalPct     = Math.min(100, Math.round((totalProfileAnswers / 100) * 100));
+  const unlockCount   = Math.min(totalProfileAnswers, 99);
+  const streak        = getStreak();
+  const dailyMystery  = getDailyMysteryCard();
+  const milestoneText = getUnlockMilestoneText(totalProfileAnswers);
 
   void feedEvents;
   void twinFeedEvents;
@@ -276,6 +287,49 @@ export default function DashboardScreen({
                 {Math.max(0, 3 - freeTestsUsed)}/3 {lang === 'pl' ? 'darmowych' : 'free'}
               </span>
             )}
+            {streak.current > 1 && (
+              <span style={{
+                padding: '3px 10px', borderRadius: '20px', fontSize: '0.62rem', fontWeight: 600,
+                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+                color: 'var(--gold-light)',
+              }}>
+                🔥 {streak.current}-{lang === 'pl' ? 'dniowa seria' : 'day streak'}
+              </span>
+            )}
+          </div>
+
+          {/* Profile signal + unlock meter */}
+          <div style={{
+            position: 'relative', zIndex: 1,
+            width: '100%', maxWidth: '300px', marginTop: '18px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+              <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)' }}>
+                {lang === 'pl' ? 'Sygnał profilu' : 'Profile signal'} · {signalPct}%
+              </span>
+              <span style={{ fontSize: '0.58rem', fontWeight: 700, color: TIER_COLOR[conf.tier] }}>
+                {conf.label}
+              </span>
+            </div>
+            <div style={{ height: '3px', background: 'rgba(255,255,255,0.07)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
+              <div style={{ height: '100%', width: `${signalPct}%`, background: TIER_COLOR[conf.tier], borderRadius: '2px', transition: 'width 0.6s ease' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+              <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.22)' }}>
+                {lang === 'pl' ? 'Odblokowany profil' : 'Profile unlocked'}
+              </span>
+              <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.32)', fontWeight: 600 }}>
+                {unlockCount} / 99
+              </span>
+            </div>
+            <div style={{ height: '2px', background: 'rgba(255,255,255,0.05)', borderRadius: '1px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${(unlockCount / 99) * 100}%`, background: 'rgba(255,255,255,0.18)', borderRadius: '1px', transition: 'width 0.6s ease' }} />
+            </div>
+            {milestoneText && (
+              <p style={{ fontSize: '0.56rem', color: 'var(--accent-light)', marginTop: '4px', fontStyle: 'italic' }}>
+                {milestoneText}
+              </p>
+            )}
           </div>
         </section>
 
@@ -333,13 +387,14 @@ export default function DashboardScreen({
                     {humanTwinMatch}%
                   </span>
                   <span className="bento-tile-sub">
-                    {lang === 'pl' ? 'wynik podobieństwa' : 'match score'}
+                    {lang === 'pl' ? 'szacowane dopasowanie' : 'projected match'}
                   </span>
                 </>
               ) : (
                 <span className="bento-tile-sub">
-                  {lang === 'pl' ? 'Kalibracja…' : 'Calibrating…'}
-                  <br />{5 - totalProfileAnswers}{' '}{lang === 'pl' ? 'odpowiedzi' : 'answers needed'}
+                  {lang === 'pl'
+                    ? 'Szukam najbliższego dopasowania…'
+                    : 'Searching for your closest projected match…'}
                 </span>
               )}
             </div>
@@ -458,6 +513,42 @@ export default function DashboardScreen({
           </div>
         </section>
 
+        {/* ── 2.5. What's Unlocking ────────────── */}
+        <section style={{ padding: '0 16px' }}>
+          <div style={{ marginBottom: '10px' }}>
+            <span className="section-eyebrow">
+              {lang === 'pl' ? 'Co się otwiera' : "What's unlocking"}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            {[
+              { label: lang === 'pl' ? 'Archetyp'         : 'Archetype',        threshold: 10,  color: 'var(--accent-light)' },
+              { label: lang === 'pl' ? 'Ukryty profil'    : 'Hidden Profile',   threshold: 51,  color: 'var(--teal-light)'   },
+              { label: lang === 'pl' ? 'Ludzki Bliźniak'  : 'Human Twin',       threshold: 25,  color: 'var(--teal-light)'   },
+              { label: 'Snapshot 51',                                             threshold: 51,  color: 'var(--gold-light)'   },
+              { label: lang === 'pl' ? 'Mapa sprzeczności': 'Contradiction Map', threshold: 10,  color: '#c084fc'             },
+            ].map(({ label, threshold, color }) => {
+              const pct      = Math.min(100, Math.round((totalProfileAnswers / threshold) * 100));
+              const unlocked = totalProfileAnswers >= threshold;
+              return (
+                <div key={label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ fontSize: '0.62rem', color: unlocked ? color : 'var(--text-dim)' }}>{label}</span>
+                    <span style={{ fontSize: '0.58rem', fontWeight: 600, color: unlocked ? color : 'var(--text-dim)' }}>
+                      {unlocked
+                        ? (lang === 'pl' ? 'Odblokowany' : 'Unlocked')
+                        : `${totalProfileAnswers} / ${threshold}`}
+                    </span>
+                  </div>
+                  <div style={{ height: '2px', background: 'rgba(255,255,255,0.05)', borderRadius: '1px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: unlocked ? color : 'rgba(255,255,255,0.12)', borderRadius: '1px', transition: 'width 0.6s ease' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
         {/* ── 3. Discovery Collection ───────────── */}
         <section style={{ padding: '0 16px' }}>
           <div style={{
@@ -538,6 +629,27 @@ export default function DashboardScreen({
                 </div>
               );
             })}
+          </div>
+        </section>
+
+        {/* ── Daily Mystery Card ───────────────── */}
+        <section style={{ padding: '0 16px' }}>
+          <div style={{
+            padding: '16px 18px',
+            background: 'rgba(124,58,237,0.06)',
+            border: '1px solid rgba(124,58,237,0.16)',
+            borderRadius: '14px',
+            backdropFilter: 'blur(8px)',
+          }}>
+            <p style={{
+              fontSize: '0.56rem', fontWeight: 700, letterSpacing: '0.14em',
+              textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: '5px',
+            }}>
+              {dailyMystery.title}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              {dailyMystery.body}
+            </p>
           </div>
         </section>
 

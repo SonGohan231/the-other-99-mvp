@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ContentItem, ProfileState, BehavioralMetadata, SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent } from '../types';
-import { ContentDiagnostics, exportFullSession, resetSession } from '../utils/storage';
+import { ContentDiagnostics, exportFullSession, resetSession, getSeenIds } from '../utils/storage';
 import { CanonicalVector } from '../utils/canonicalVector';
 import { isPremiumUnlocked, unlockPremium, disablePremiumUnlock, enablePremiumPreview, disablePremiumPreview, isPremiumPreviewEnabled } from '../utils/premiumProgression';
 import { debugLog, getLogs, getErrors, clearLogs } from '../utils/debugStore';
@@ -16,6 +16,8 @@ import type { ContradictionResult } from '../engine/contradictionEngine';
 import type { HumanTwinResult } from '../engine/humanTwin';
 import type { HiddenParametersResult } from '../engine/hiddenParameters';
 import type { Snapshot51Result } from '../engine/snapshot51';
+import { getStreak } from '../utils/streak';
+import { getNextLayerInfo, isAutoAdvanceEnabled, setAutoAdvanceEnabled, type RevealResult } from '../utils/revealPacing';
 
 interface Props {
   profileState: ProfileState;
@@ -56,6 +58,11 @@ interface Props {
   hiddenParameters?: HiddenParametersResult | null;
   snapshot51?: Snapshot51Result | null;
   nextQuestionReason?: string | null;
+  revealResult?: RevealResult | null;
+  microFeedback?: string;
+  nextTease?: string;
+  nextPreparedQuestionId?: string | null;
+  nextSelectionReason?: string | null;
 }
 
 export default function DebugPanel({
@@ -97,8 +104,14 @@ export default function DebugPanel({
   hiddenParameters,
   snapshot51,
   nextQuestionReason,
+  revealResult,
+  microFeedback,
+  nextTease,
+  nextPreparedQuestionId,
+  nextSelectionReason,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(() => isAutoAdvanceEnabled());
   const [uiLang] = useLang();
   const exportLang = sessionLang ?? uiLang;
   const inTest = testContent.length > 0 && testAnswerIndex < testContent.length;
@@ -368,6 +381,64 @@ export default function DebugPanel({
                   )}
                 </>
               ) : <div>No snapshot data.</div>}
+            </div>
+          </details>
+
+          {/* ── F: CURIOSITY LOOP ──────────────────────────── */}
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em', color: '#c084fc', textTransform: 'uppercase', padding: '6px 0 2px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>F · Curiosity Loop</div>
+
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Reveal &amp; Pacing {revealResult ? `(${revealResult.reveal_type} · ${revealResult.intensity})` : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.8 }}>
+              <div>Reveal type: <span style={{ color: 'var(--accent-light)' }}>{revealResult?.reveal_type ?? '—'}</span></div>
+              <div>Intensity: {revealResult?.intensity ?? '—'} | Show: {String(revealResult?.should_show ?? false)}</div>
+              <div>Micro feedback: <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>{microFeedback ?? '—'}</span></div>
+              <div>Next tease: <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>{nextTease ?? '—'}</span></div>
+              {revealResult?.should_show && (
+                <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div>Title: {revealResult.title}</div>
+                  <div>Body: {revealResult.body}</div>
+                </div>
+              )}
+            </div>
+          </details>
+
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Next Question &amp; Layer
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.8 }}>
+              <div>Prepared Q: <span style={{ color: nextPreparedQuestionId ? '#86efac' : '#f87171' }}>{nextPreparedQuestionId ?? 'none'}</span></div>
+              <div>Selection reason: {nextSelectionReason ?? nextQuestionReason ?? '—'}</div>
+              {(() => {
+                const nl = getNextLayerInfo(totalProfileAnswers);
+                return nl
+                  ? <div>Next layer: <span style={{ color: 'var(--accent-light)' }}>{nl.label}</span> in {nl.answersLeft} answers (threshold {nl.threshold})</div>
+                  : <div>Next layer: <span style={{ color: 'var(--text-dim)' }}>all reached</span></div>;
+              })()}
+              <div>Seen IDs: {getSeenIds().length}</div>
+              <div>Answers (total): {totalProfileAnswers}</div>
+              {(() => {
+                const s = getStreak();
+                return <div>Streak: {s.current} day{s.current !== 1 ? 's' : ''} (longest {s.longest})</div>;
+              })()}
+              <div style={{ marginTop: '4px', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <span>Auto-advance:</span>
+                <span style={{ color: autoAdvance ? '#4ade80' : '#f87171' }}>{autoAdvance ? 'ON' : 'OFF'}</span>
+                <button
+                  className="debug-btn"
+                  style={{ fontSize: '0.58rem', padding: '2px 6px', marginLeft: '4px' }}
+                  onClick={() => {
+                    const next = !autoAdvance;
+                    setAutoAdvanceEnabled(next);
+                    setAutoAdvance(next);
+                  }}
+                >
+                  {autoAdvance ? 'Disable' : 'Enable'}
+                </button>
+              </div>
             </div>
           </details>
 

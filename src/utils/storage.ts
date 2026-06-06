@@ -185,6 +185,9 @@ export function exportFullSession(extras: {
   humanTwin?: unknown;
   snapshot51?: unknown;
   hiddenParameters?: unknown;
+  // Engagement loop data
+  dopamineLoop?: unknown;
+  curiosityLoop?: unknown;
 } = {}): string {
   const base = JSON.parse(exportSession());
   return JSON.stringify(
@@ -212,6 +215,8 @@ export function exportFullSession(extras: {
       human_twin: extras.humanTwin ?? null,
       snapshot_51: extras.snapshot51 ?? null,
       hidden_parameters: extras.hiddenParameters ?? null,
+      dopamine_loop: extras.dopamineLoop ?? null,
+      curiosity_loop: extras.curiosityLoop ?? null,
     },
     null,
     2
