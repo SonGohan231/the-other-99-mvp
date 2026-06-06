@@ -11,6 +11,11 @@ import { getVoteDebugInfo, resetLocalVotes, exportVoteState, getOrCreateAnonId }
 import { localizedCsvField } from '../i18n';
 import { useLang } from '../context/LangContext';
 import { getAppInfo } from '../utils/appVersion';
+import type { EmergingArchetypeResult } from '../engine/emergingArchetype';
+import type { ContradictionResult } from '../engine/contradictionEngine';
+import type { HumanTwinResult } from '../engine/humanTwin';
+import type { HiddenParametersResult } from '../engine/hiddenParameters';
+import type { Snapshot51Result } from '../engine/snapshot51';
 
 interface Props {
   profileState: ProfileState;
@@ -45,6 +50,11 @@ interface Props {
   onForceSnapshot?: () => void;
   onResetPremiumModal?: () => void;
   onForcePremiumModule?: (moduleId: string) => void;
+  emergingArchetype?: EmergingArchetypeResult | null;
+  contradictionResult?: ContradictionResult | null;
+  humanTwinResult?: HumanTwinResult | null;
+  hiddenParameters?: HiddenParametersResult | null;
+  snapshot51?: Snapshot51Result | null;
 }
 
 export default function DebugPanel({
@@ -80,6 +90,11 @@ export default function DebugPanel({
   onForceSnapshot,
   onResetPremiumModal,
   onForcePremiumModule,
+  emergingArchetype,
+  contradictionResult,
+  humanTwinResult,
+  hiddenParameters,
+  snapshot51,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [uiLang] = useLang();
@@ -237,6 +252,105 @@ export default function DebugPanel({
                   ))}
                 </>
               }
+            </div>
+          </details>
+
+          {/* EMERGING ARCHETYPE */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Emerging Archetype {emergingArchetype ? `(${emergingArchetype.confidence})` : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              {emergingArchetype ? (
+                <>
+                  <div>Primary: <span style={{ color: 'var(--accent-light)' }}>{emergingArchetype.primary.name}</span> ({emergingArchetype.primary.percentage}%)</div>
+                  <div>Secondary: {emergingArchetype.secondary.name} ({emergingArchetype.secondary.percentage}%)</div>
+                  <div>Blend: {emergingArchetype.blend_label} | Distance: {emergingArchetype.distance}pp</div>
+                  <div>Confidence: {emergingArchetype.confidence} | Answers: {emergingArchetype.answer_count}</div>
+                  <div style={{ color: 'var(--text-dim)', fontStyle: 'italic', marginTop: '2px' }}>{emergingArchetype.user_facing_summary}</div>
+                </>
+              ) : <div>No archetype data.</div>}
+            </div>
+          </details>
+
+          {/* CONTRADICTION */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Contradiction {contradictionResult ? `(${contradictionResult.level}, score=${contradictionResult.contradiction_score})` : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              {contradictionResult ? (
+                <>
+                  <div>Score: {contradictionResult.contradiction_score} | Consistency: {contradictionResult.consistency_score}</div>
+                  <div>Level: <span style={{ color: contradictionResult.level === 'high' ? '#f87171' : contradictionResult.level === 'medium' ? '#fbbf24' : 'var(--accent-light)' }}>{contradictionResult.level}</span></div>
+                  {contradictionResult.primary_axis && <div>Primary axis: {contradictionResult.primary_axis}</div>}
+                  <div>Signals ({contradictionResult.signals.length}): {contradictionResult.signals.join(', ') || 'none'}</div>
+                  <div>revision:{contradictionResult.signal_counts.answer_revision} spike:{contradictionResult.signal_counts.latency_spike} axis:{contradictionResult.signal_counts.opposite_axis_movement} skip:{contradictionResult.signal_counts.skip_sensitive} return:{contradictionResult.signal_counts.return_to_question}</div>
+                </>
+              ) : <div>No contradiction data.</div>}
+            </div>
+          </details>
+
+          {/* HUMAN TWIN */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Human Twin {humanTwinResult ? `(${humanTwinResult.tier}, ${humanTwinResult.similarity_percent}%)` : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              {humanTwinResult ? (
+                <>
+                  <div>Source: <span style={{ color: '#fbbf24' }}>{humanTwinResult.source_label}</span></div>
+                  <div>Tier: {humanTwinResult.tier} | Unlocked: {String(humanTwinResult.is_unlocked)}</div>
+                  {humanTwinResult.is_unlocked && (
+                    <>
+                      <div>Match: <span style={{ color: 'var(--accent-light)' }}>{humanTwinResult.closest_reference_name}</span> ({humanTwinResult.closest_reference_id})</div>
+                      <div>Similarity: {humanTwinResult.similarity_percent}% | Distance: {humanTwinResult.distance}</div>
+                      {humanTwinResult.shared_patterns.length > 0 && <div>Shared: {humanTwinResult.shared_patterns.join(', ')}</div>}
+                    </>
+                  )}
+                </>
+              ) : <div>No human twin data.</div>}
+            </div>
+          </details>
+
+          {/* HIDDEN PARAMETERS */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Hidden Parameters {hiddenParameters ? `(sufficient=${String(hiddenParameters.is_sufficient)})` : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              {hiddenParameters ? (
+                <>
+                  <div>HP01 Confidence: {hiddenParameters.confidence.score}/100 (<span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.confidence.label}</span>) → {hiddenParameters.confidence.user_facing_label}</div>
+                  <div>HP02 Openness: {hiddenParameters.openness.score}/100 (<span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.openness.label}</span>) → {hiddenParameters.openness.user_facing_label}</div>
+                  <div>HP03 Consistency: {hiddenParameters.consistency.score}/100 (<span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.consistency.label}</span>) → {hiddenParameters.consistency.user_facing_label}</div>
+                  {hiddenParameters.raw_hp && (
+                    <div style={{ color: 'var(--text-dim)', fontSize: '0.6rem' }}>Raw HP: HP01={hiddenParameters.raw_hp.HP01} HP02={hiddenParameters.raw_hp.HP02} HP03={hiddenParameters.raw_hp.HP03}</div>
+                  )}
+                </>
+              ) : <div>No hidden parameters data.</div>}
+            </div>
+          </details>
+
+          {/* SNAPSHOT 51 */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Snapshot 51 {snapshot51 ? (snapshot51.is_available ? '(available)' : `(locked — ${51 - snapshot51.answer_count} more)`) : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              {snapshot51 ? (
+                <>
+                  <div>Available: <span style={{ color: snapshot51.is_available ? '#4ade80' : '#f87171' }}>{String(snapshot51.is_available)}</span>{snapshot51.debug_forced ? ' (debug forced)' : ''}</div>
+                  <div>Confidence: {snapshot51.profile_confidence} — {snapshot51.profile_confidence_label}</div>
+                  {snapshot51.is_available && (
+                    <>
+                      <div>Strongest: {snapshot51.strongest_axes.map((a) => `${a.axis}(${a.label}, ${a.normalized_value.toFixed(2)})`).join(', ')}</div>
+                      <div>Uncertain: {snapshot51.uncertain_axes.map((a) => `${a.axis}(${a.label})`).join(', ')}</div>
+                      <div>Contradiction: {snapshot51.contradiction_summary.level} ({snapshot51.contradiction_summary.score})</div>
+                    </>
+                  )}
+                </>
+              ) : <div>No snapshot data.</div>}
             </div>
           </details>
 

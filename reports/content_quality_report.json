@@ -1,0 +1,905 @@
+{
+  "generated_at": "2026-06-06T18:00:53.350Z",
+  "totals": {
+    "questions": 2650,
+    "answers": 5300,
+    "answers_with_deltas": 5300,
+    "answers_without_deltas": 0,
+    "delta_coverage_pct": 100
+  },
+  "issue_counts": {
+    "blocked_category": 200,
+    "missing_english_question": 0,
+    "missing_primary_axis": 0,
+    "invalid_primary_axis": 0,
+    "too_few_answers": 0,
+    "vague_answers": 0,
+    "no_axis_deltas": 0,
+    "duplicate_answer_templates": 0,
+    "unclear_questions": 0
+  },
+  "category_distribution": {
+    "Consistency and tension": 400,
+    "Controversial choices": 300,
+    "Transparent product research": 200,
+    "Archetype: Mirror": 150,
+    "Mask and Core": 144,
+    "Pressure": 141,
+    "Contradiction": 141,
+    "Shadow": 139,
+    "Relationships": 136,
+    "Archetype: Weaver": 100,
+    "Archetype: Catalyst": 100,
+    "Archetype: Dreamer": 100,
+    "Uncomfortable questions": 100,
+    "Daily life": 39,
+    "Future": 37,
+    "Boundaries": 33,
+    "Decisions and emotion": 30,
+    "Relationships and boundaries": 30,
+    "Movement and observation": 30,
+    "Time and direction": 30,
+    "Control and spontaneity": 30,
+    "Meaning and effectiveness": 30,
+    "Stability and transformation": 30,
+    "Regulation and tools": 30,
+    "Vision and execution": 30,
+    "Body and Technology": 27,
+    "Decisions": 26,
+    "Change": 25,
+    "Closeness": 24,
+    "Curiosity": 3,
+    "Work": 2,
+    "Growth": 2,
+    "Identity": 1,
+    "Values": 1,
+    "Social": 1,
+    "Pragmatics": 1,
+    "Emotion": 1,
+    "Stability": 1,
+    "Choice": 1,
+    "Start": 1,
+    "Uncertainty": 1,
+    "Risk": 1,
+    "Inner voice": 1
+  },
+  "axis_distribution": {
+    "AX01": 306,
+    "AX02": 250,
+    "AX03": 324,
+    "AX04": 234,
+    "AX05": 274,
+    "AX06": 200,
+    "AX07": 356,
+    "AX08": 233,
+    "AX09": 240,
+    "AX10": 233
+  },
+  "axis_answer_hit_count": {
+    "AX01": 932,
+    "AX02": 1180,
+    "AX03": 990,
+    "AX04": 1032,
+    "AX05": 900,
+    "AX06": 1032,
+    "AX07": 1026,
+    "AX08": 1118,
+    "AX09": 1234,
+    "AX10": 1156
+  },
+  "rarity_distribution": {
+    "legendary": 2650
+  },
+  "issues": {
+    "blocked_category": [
+      {
+        "question_id": "Q2451",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2452",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2453",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2454",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2455",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2456",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2457",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2458",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2459",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2460",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2461",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2462",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2463",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2464",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2465",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2466",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2467",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2468",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2469",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2470",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2471",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2472",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2473",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2474",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2475",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2476",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2477",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2478",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2479",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2480",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2481",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2482",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2483",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2484",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2485",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2486",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2487",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2488",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2489",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2490",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2491",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2492",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2493",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2494",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2495",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2496",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2497",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2498",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2499",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2500",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2501",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2502",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2503",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2504",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2505",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2506",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2507",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2508",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2509",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2510",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2511",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2512",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2513",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2514",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2515",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2516",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2517",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2518",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2519",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2520",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2521",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2522",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2523",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2524",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2525",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2526",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2527",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2528",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2529",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2530",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2531",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2532",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2533",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2534",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2535",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2536",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2537",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2538",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2539",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2540",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2541",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2542",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2543",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2544",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2545",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2546",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2547",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2548",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2549",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2550",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2551",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2552",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2553",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2554",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2555",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2556",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2557",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2558",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2559",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2560",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2561",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2562",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2563",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2564",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2565",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2566",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2567",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2568",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2569",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2570",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2571",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2572",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2573",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2574",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2575",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2576",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2577",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2578",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2579",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2580",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2581",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2582",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2583",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2584",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2585",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2586",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2587",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2588",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2589",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2590",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2591",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2592",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2593",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2594",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2595",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2596",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2597",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2598",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2599",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2600",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2601",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2602",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2603",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2604",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2605",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2606",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2607",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2608",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2609",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2610",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2611",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2612",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2613",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2614",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2615",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2616",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2617",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2618",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2619",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2620",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2621",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2622",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2623",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2624",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2625",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2626",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2627",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2628",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2629",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2630",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2631",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2632",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2633",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2634",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2635",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2636",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2637",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2638",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2639",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2640",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2641",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2642",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2643",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2644",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2645",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2646",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2647",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2648",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2649",
+        "category_en": "Transparent product research"
+      },
+      {
+        "question_id": "Q2650",
+        "category_en": "Transparent product research"
+      }
+    ],
+    "missing_english_question": [],
+    "missing_primary_axis": [],
+    "invalid_primary_axis": [],
+    "too_few_answers": [],
+    "vague_answers": [],
+    "no_axis_deltas": [],
+    "duplicate_answer_templates": [],
+    "unclear_questions": []
+  }
+}

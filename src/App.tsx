@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { User } from '@supabase/supabase-js';
 import {
   AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, NextCard, BehavioralMetadata,
@@ -60,6 +60,11 @@ import SubscriptionScreen from './screens/SubscriptionScreen';
 import PremiumDepthScreen from './screens/PremiumDepthScreen';
 import PremiumUnlockedModal, { hasPremiumUnlockedBeenSeen, resetPremiumUnlockedSeen } from './components/PremiumUnlockedModal';
 import { USE_V2_CONTENT } from './config/features';
+import { computeEmergingArchetype } from './engine/emergingArchetype';
+import { computeContradiction } from './engine/contradictionEngine';
+import { computeHumanTwin } from './engine/humanTwin';
+import { computeSnapshot51 } from './engine/snapshot51';
+import { computeHiddenParameters } from './engine/hiddenParameters';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -289,6 +294,18 @@ export default function App() {
   });
   // Last answer's behavioral metadata (for debug display)
   const [lastBehavioralMetadata, setLastBehavioralMetadata] = useState<BehavioralMetadata | null>(null);
+
+  // Profile intelligence — recomputed whenever answers, vectors, or events change
+  const engineResults = useMemo(() => {
+    const interactions = getInteractions();
+    const answeredCount = profileState.total_profile_answers;
+    const archetype = computeEmergingArchetype(canonicalVector, answeredCount);
+    const contradiction = computeContradiction(interactions, skipEvents, swapEvents, exitEvents, canonicalVector);
+    const humanTwin = computeHumanTwin(canonicalVector, answeredCount, archetype, null);
+    const hiddenParams = computeHiddenParameters(behavioralSummary, interactions, returnEvents, contradiction);
+    const snapshot = computeSnapshot51(canonicalVector, answeredCount, archetype, contradiction, humanTwin, hiddenParams);
+    return { archetype, contradiction, humanTwin, hiddenParams, snapshot };
+  }, [profileState.total_profile_answers, canonicalVector, skipEvents, swapEvents, exitEvents, returnEvents, behavioralSummary]);
 
   // Apply persisted theme + reduced motion on mount
   useState(() => {
@@ -874,6 +891,11 @@ export default function App() {
       startedAt: testStartedAt,
       premiumState: { unlocked: isPremium, source: premiumSrc },
       contentDiagnostics: getContentDiagnostics(content, currentItem, lang),
+      emergingArchetype: engineResults.archetype,
+      contradictionProfile: engineResults.contradiction,
+      humanTwin: engineResults.humanTwin,
+      snapshot51: engineResults.snapshot,
+      hiddenParameters: engineResults.hiddenParams,
       buildInfo: {
         version: ai.version,
         commit: ai.commit,
@@ -1436,6 +1458,11 @@ export default function App() {
           startedAt={testStartedAt}
           premiumState={{ unlocked: isPremium, source: isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null }}
           contentDiagnostics={getContentDiagnostics(content, currentItem, lang)}
+          emergingArchetype={engineResults.archetype}
+          contradictionResult={engineResults.contradiction}
+          humanTwinResult={engineResults.humanTwin}
+          hiddenParameters={engineResults.hiddenParams}
+          snapshot51={engineResults.snapshot}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

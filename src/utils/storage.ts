@@ -179,6 +179,12 @@ export function exportFullSession(extras: {
   lang?: string;
   startedAt?: string | null;
   premiumState?: { unlocked: boolean; source: string | null } | null;
+  // Profile intelligence engine results
+  emergingArchetype?: unknown;
+  contradictionProfile?: unknown;
+  humanTwin?: unknown;
+  snapshot51?: unknown;
+  hiddenParameters?: unknown;
 } = {}): string {
   const base = JSON.parse(exportSession());
   return JSON.stringify(
@@ -201,6 +207,11 @@ export function exportFullSession(extras: {
       },
       build_info: extras.buildInfo ?? null,
       content_diagnostics: extras.contentDiagnostics ?? null,
+      emerging_archetype: extras.emergingArchetype ?? null,
+      contradiction_profile: extras.contradictionProfile ?? null,
+      human_twin: extras.humanTwin ?? null,
+      snapshot_51: extras.snapshot51 ?? null,
+      hidden_parameters: extras.hiddenParameters ?? null,
     },
     null,
     2
