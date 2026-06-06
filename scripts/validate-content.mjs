@@ -36,6 +36,9 @@ const VALID_CARD_PATHS = new Set([
 ]);
 const VALID_RARITIES = new Set(['common', 'uncommon', 'rare', 'epic', 'legendary', 'standard']);
 const OPEN_TYPES = new Set(['open']);
+const VALID_SAFETY_LABELS = new Set(['safe', 'mild', 'sensitive', 'intimate', 'taboo', 'forbidden']);
+const VALID_REVEAL_TEMPLATES = new Set(['reveal_standard', 'reveal_rare', 'reveal_epic', 'reveal_legendary', 'reveal_sensitive', 'reveal_open']);
+const VALID_CONTRACT_STATUSES = new Set(['draft', 'migrated_needs_editorial_review', 'reviewed', 'approved']);
 
 // ─── CSV parser ───────────────────────────────────────────────────────────────
 
@@ -232,6 +235,45 @@ function validateFile(filePath, { checkCardPaths = false, requireBilingual = fal
       }
     }
 
+    // ── v2 content contract fields ────────────────────────────────────────────
+
+    // canon_version: must be present
+    if (!row.canon_version) {
+      errors.push(`${id}: missing canon_version (run migrate-content-v2.mjs)`);
+    } else if (row.canon_version !== 'TO99_ARCHETYPE_CANON_1.0') {
+      warnings.push(`${id}: unknown canon_version '${row.canon_version}'`);
+    }
+
+    // safety_label: must be present and valid
+    if (!row.safety_label) {
+      errors.push(`${id}: missing safety_label`);
+    } else if (!VALID_SAFETY_LABELS.has(row.safety_label)) {
+      errors.push(`${id}: invalid safety_label '${row.safety_label}'`);
+    }
+
+    // reveal_template_id: must be present and valid
+    if (!row.reveal_template_id) {
+      errors.push(`${id}: missing reveal_template_id`);
+    } else if (!VALID_REVEAL_TEMPLATES.has(row.reveal_template_id)) {
+      warnings.push(`${id}: unknown reveal_template_id '${row.reveal_template_id}'`);
+    }
+
+    // content_contract_status: must be present and valid
+    if (!row.content_contract_status) {
+      errors.push(`${id}: missing content_contract_status`);
+    } else if (!VALID_CONTRACT_STATUSES.has(row.content_contract_status)) {
+      warnings.push(`${id}: unknown content_contract_status '${row.content_contract_status}'`);
+    }
+
+    // sensitivity_level / controversy_level: optional but must be numeric 0-10 if present
+    for (const field of ['sensitivity_level', 'controversy_level']) {
+      if (row[field] !== undefined && row[field] !== '') {
+        const n = parseInt(row[field], 10);
+        if (isNaN(n) || n < 0 || n > 10)
+          warnings.push(`${id}: ${field} must be 0–10 (got '${row[field]}')`);
+      }
+    }
+
     // ── Social data status check (user-facing copy only) ─────────────────────
     // community_reveal_type is a content-design field, not a UI label — skip it
     const DISALLOWED_SOCIAL_LABELS = ['How others answered', 'Projected distribution', 'Early community distribution'];
@@ -278,6 +320,7 @@ let totalErrors = 0;
 let totalWarnings = 0;
 const allIds = new Set();
 const report = [];
+const allRows = [];  // collected for axis coverage matrix
 
 for (const { path, label, opts } of FILES) {
   let result;
@@ -312,6 +355,7 @@ for (const { path, label, opts } of FILES) {
   totalErrors += fileErrors;
   totalWarnings += warnings.length;
   report.push({ label, rows: rows.length, errors: fileErrors, warnings: warnings.length });
+  allRows.push(...rows);
 }
 
 // ─── Canon metadata check ────────────────────────────────────────────────────
@@ -349,6 +393,120 @@ try {
     }
   }
 } catch {}
+
+// ─── MVP-03: 10-axis canonical coverage matrix ────────────────────────────────
+// The Other 99 has exactly 10 canonical axis pairs (AX01–AX10).
+// Every axis_target pole maps to one canonical axis.
+// Questions may list multiple poles (semicolon-separated); each pole is counted
+// for its axis, but a question only counts ONCE per axis (de-duplicated).
+// Warns if any canonical axis has fewer than MIN_AXIS_COVERAGE questions.
+
+const CANONICAL_AXES = [
+  { id: 'AX01', label: 'Curiosity ↔ Security',      poles: ['curiosity', 'security'] },
+  { id: 'AX02', label: 'Logic ↔ Emotion',            poles: ['logic', 'emotion', 'consistency', 'hesitation', 'guardedness', 'openness', 'contradiction'] },
+  { id: 'AX03', label: 'Independence ↔ Belonging',   poles: ['independence', 'belonging'] },
+  { id: 'AX04', label: 'Observation ↔ Action',        poles: ['observation', 'action'] },
+  { id: 'AX05', label: 'Present ↔ Future',            poles: ['present', 'future'] },
+  { id: 'AX06', label: 'Spontaneity ↔ Control',       poles: ['spontaneity', 'control', 'avoidance'] },
+  { id: 'AX07', label: 'Pragmatism ↔ Idealism',       poles: ['pragmatism', 'idealism'] },
+  { id: 'AX08', label: 'Stability ↔ Transformation',  poles: ['stability', 'transformation', 'change', 'risk', 'connection'] },
+  { id: 'AX09', label: 'Nature ↔ Technology',         poles: ['nature', 'technology'] },
+  { id: 'AX10', label: 'Idea Creator ↔ Builder',      poles: ['idea creator', 'builder'] },
+];
+
+// Build a lookup: normalized pole → axis id
+const POLE_TO_AXIS = {};
+for (const ax of CANONICAL_AXES) {
+  for (const pole of ax.poles) {
+    POLE_TO_AXIS[pole] = ax.id;
+  }
+}
+
+const MIN_AXIS_COVERAGE = 15;
+
+try {
+  // Per-axis: Set of question IDs that contribute to it, plus delta sums
+  const axisQuestionIds = {};
+  const axisDeltaSums = {};
+  const axisDeltaCount = {};
+  for (const ax of CANONICAL_AXES) {
+    axisQuestionIds[ax.id] = new Set();
+    axisDeltaSums[ax.id] = 0;
+    axisDeltaCount[ax.id] = 0;
+  }
+  const unmappedPoles = {};  // poles that don't map to any canonical axis
+
+  for (const row of allRows) {
+    const rawAxis = (row.axis_target || '').trim().replace(/^"/, '').replace(/"$/, '');
+    if (!rawAxis) continue;
+
+    // Parse axis_delta_json once per row for delta contribution
+    let avgAbsDelta = null;
+    const rawDelta = (row.axis_delta_json || '').trim();
+    if (rawDelta.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(rawDelta);
+        const vals = Object.values(parsed).map(Number).filter(v => !isNaN(v));
+        if (vals.length > 0) {
+          avgAbsDelta = vals.reduce((s, v) => s + Math.abs(v), 0) / vals.length;
+        }
+      } catch {}
+    }
+
+    // Each pole in axis_target (semicolon-separated) may map to a canonical axis
+    const poles = rawAxis.split(';').map(p => p.trim().toLowerCase()).filter(Boolean);
+    const axesSeen = new Set();  // prevent counting same question twice for same axis
+
+    for (const pole of poles) {
+      const axId = POLE_TO_AXIS[pole];
+      if (!axId) {
+        unmappedPoles[pole] = (unmappedPoles[pole] || 0) + 1;
+        continue;
+      }
+      if (axesSeen.has(axId)) continue;
+      axesSeen.add(axId);
+
+      axisQuestionIds[axId].add(row.id);
+      if (avgAbsDelta !== null) {
+        axisDeltaSums[axId] += avgAbsDelta;
+        axisDeltaCount[axId]++;
+      }
+    }
+  }
+
+  console.log('\nCanonical axis coverage (AX01–AX10):');
+  console.log(`  ${'ID'.padEnd(5)} ${'Axis pair'.padEnd(30)} ${'Qs'.padStart(4)} ${'Avg|Δ|'.padStart(7)}`);
+  console.log(`  ${'─'.repeat(52)}`);
+  let axisErrors = 0;
+  for (const ax of CANONICAL_AXES) {
+    const count = axisQuestionIds[ax.id].size;
+    const avgDelta = axisDeltaCount[ax.id]
+      ? (axisDeltaSums[ax.id] / axisDeltaCount[ax.id]).toFixed(2)
+      : '   —';
+    const flag = count < MIN_AXIS_COVERAGE ? ' ⚠ LOW' : '';
+    console.log(`  ${ax.id.padEnd(5)} ${ax.label.padEnd(30)} ${String(count).padStart(4)} ${String(avgDelta).padStart(7)}${flag}`);
+    if (count < MIN_AXIS_COVERAGE) {
+      console.log(`  WARN:  ${ax.id} (${ax.label}) has only ${count} questions (min: ${MIN_AXIS_COVERAGE})`);
+      totalWarnings++;
+      axisErrors++;
+    }
+  }
+
+  // Report unmapped poles as info (not error — content may use editorial tags)
+  const unmappedList = Object.entries(unmappedPoles).sort((a, b) => b[1] - a[1]);
+  if (unmappedList.length > 0) {
+    console.log(`\n  Unmapped axis poles (not part of AX01–AX10, counted as editorial tags):`);
+    unmappedList.slice(0, 10).forEach(([p, n]) => console.log(`    ${p.padEnd(28)} ${n}`));
+    if (unmappedList.length > 10) console.log(`    … and ${unmappedList.length - 10} more`);
+  }
+
+  if (axisErrors === 0) {
+    console.log(`\n  ✓ All 10 canonical axes meet the minimum coverage threshold (${MIN_AXIS_COVERAGE} questions).`);
+  }
+} catch (e) {
+  console.log(`\n  WARN:  Axis coverage matrix failed: ${e.message}`);
+  totalWarnings++;
+}
 
 // Premium distribution summary
 try {

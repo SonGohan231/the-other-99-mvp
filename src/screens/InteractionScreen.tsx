@@ -3,6 +3,7 @@ import { ContentItem } from '../types';
 import { useT, useLang } from '../context/LangContext';
 import { localizedCsvField } from '../i18n';
 import { submitVote, VoteResult, getDistributionLabel } from '../utils/communityVotes';
+import { getRevealTemplate } from '../content/revealTemplates';
 
 interface Props {
   item: ContentItem;
@@ -134,6 +135,9 @@ export default function InteractionScreen({
   }
 
   function getInsightCopy(): string {
+    const template = getRevealTemplate(item.reveal_template_id);
+    if (template) return lang === 'pl' ? template.insightCopy.pl : template.insightCopy.en;
+    // Fallback: rarity-based copy from i18n
     const r = item.rarity_tier;
     if (r === 'legendary') return t.interaction.reveal.insightLegendary;
     if (r === 'epic') return t.interaction.reveal.insightEpic;

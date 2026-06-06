@@ -10,7 +10,7 @@ import {
   isAgeConfirmed, confirmAge,
   getSeenIds, addSeenId, addSeenIds,
   addInteraction, getInteractions, getProfileState, saveProfileState,
-  resetSession, exportSession,
+  resetSession, exportFullSession,
   removeSeenId, removeLastInteraction, markLastInteractionUndone,
 } from './utils/storage';
 import { computeBehavioralMetadata, summarizeBehavioralProfile, BehavioralSummary } from './utils/behavioralSignals';
@@ -43,6 +43,7 @@ import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTes
 import { isGuestModeActive, enableGuestMode, disableGuestMode, getGuestTestsUsed, incrementGuestTestsUsed, GUEST_USER_ID } from './utils/guestSession';
 import { clearInProgressTest, saveQuizSnapshot, restoreQuizSnapshot, getInProgressEventQueues } from './utils/inProgressTest';
 import { debugLog, debugError } from './utils/debugStore';
+import { getAppInfo } from './utils/appVersion';
 import { isAdminEmail } from './config/admin';
 import { LegalPage } from './types';
 import AccountScreen from './screens/AccountScreen';
@@ -726,7 +727,22 @@ export default function App() {
   }
 
   function handleExportJson() {
-    const json = exportSession();
+    const ai = getAppInfo();
+    const json = exportFullSession({
+      profileVector: profileVector as Record<string, number>,
+      skipEvents,
+      swapEvents,
+      exitEvents,
+      returnEvents,
+      buildInfo: {
+        version: ai.version,
+        commit: ai.commit,
+        buildDate: ai.buildDate,
+        deploySource: ai.deploySource,
+        platform: ai.platform,
+        environment: ai.environment,
+      },
+    });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1237,6 +1253,10 @@ export default function App() {
           isTestMode={isTestMode}
           lastBehavioralMetadata={lastBehavioralMetadata}
           behavioralSummary={behavioralSummary}
+          skipEvents={skipEvents}
+          swapEvents={swapEvents}
+          exitEvents={exitEvents}
+          returnEvents={returnEvents}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}
