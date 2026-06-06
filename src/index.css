@@ -1070,3 +1070,567 @@ body {
 .reward-screen--with-bg .reward-analyzing {
   background: rgba(10, 10, 15, 0.45);
 }
+
+/* ─── Home Screen Redesign ───────────────────── */
+
+.section-eyebrow {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+.home-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 52px 24px 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.home-hero-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,58,237,0.28) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.bento-tile {
+  position: relative;
+  padding: 16px 14px 14px;
+  background: rgba(10, 10, 15, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 108px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bento-tile--accent {
+  border-color: rgba(124, 58, 237, 0.32);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.bento-tile--teal {
+  border-color: rgba(34, 211, 238, 0.28);
+  background: rgba(34, 211, 238, 0.05);
+}
+
+.bento-tile--gold {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.bento-tile-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+.bento-tile-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.bento-tile-sub {
+  font-size: 0.63rem;
+  color: var(--text-dim);
+  margin-top: auto;
+  line-height: 1.5;
+}
+
+.collection-rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-snap-type: x mandatory;
+}
+
+.collection-rail::-webkit-scrollbar { display: none; }
+
+.collection-empty {
+  padding: 20px 0;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.fragment-card {
+  flex-shrink: 0;
+  width: 158px;
+  padding: 14px 12px;
+  background: rgba(10, 10, 15, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fragment-card--rare {
+  border-color: rgba(34, 211, 238, 0.38);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.10);
+}
+
+.fragment-card--epic {
+  border-color: rgba(168, 85, 247, 0.42);
+  box-shadow: 0 0 18px rgba(124, 58, 237, 0.18);
+}
+
+.fragment-card--legendary {
+  border-color: rgba(245, 158, 11, 0.48);
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.18);
+  animation: legendaryGlow 3s ease-in-out infinite;
+}
+
+.milestone-path {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 0 8px;
+}
+
+.milestone-path::-webkit-scrollbar { display: none; }
+
+.milestone-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 72px;
+  position: relative;
+}
+
+.milestone-step::after {
+  content: '';
+  position: absolute;
+  top: 11px;
+  left: calc(50% + 12px);
+  right: calc(-50% + 12px);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.milestone-step:last-child::after { display: none; }
+
+.milestone-step--reached::after {
+  background: rgba(45, 212, 191, 0.35);
+}
+
+.milestone-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.13);
+  background: rgba(10, 10, 15, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  position: relative;
+  z-index: 1;
+}
+
+.milestone-dot--reached {
+  border-color: rgba(45, 212, 191, 0.65);
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--teal-light);
+}
+
+.milestone-step-label {
+  font-size: 0.5rem;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 6px;
+  line-height: 1.3;
+  max-width: 66px;
+}
+
+.milestone-step--reached .milestone-step-label {
+  color: var(--teal-light);
+}
+
+.galaxy-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.galaxy-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 16px 8px 12px;
+  background: rgba(10, 10, 15, 0.70);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+  -webkit-tap-highlight-color: transparent;
+  color: inherit;
+}
+
+.galaxy-node:active {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(124, 58, 237, 0.38);
+}
+
+.galaxy-node-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.galaxy-node-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.galaxy-node--locked {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.premium-gate {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  background: rgba(10, 10, 15, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 30px 24px 26px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.premium-gate-glow {
+  position: absolute;
+  top: -50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.14) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ─── V2 Polish: Microinteractions ──────────── */
+
+/* Scale-on-tap for all interactive tiles */
+.tappable {
+  transition: transform 0.14s ease, opacity 0.14s ease;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+.tappable:active { transform: scale(0.955); opacity: 0.88; }
+
+/* Hero artwork layers (actual background images) */
+.home-hero-artwork {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  opacity: 0.30;
+  pointer-events: none;
+}
+
+.home-hero-particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.10;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.home-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(10,10,15,0.30) 0%,
+    rgba(10,10,15,0.00) 30%,
+    rgba(10,10,15,0.00) 60%,
+    rgba(10,10,15,0.72) 100%
+  );
+  pointer-events: none;
+}
+
+/* Hero glow pulse */
+@keyframes heroPulse {
+  0%, 100% { opacity: 0.26; transform: scale(1); }
+  50%       { opacity: 0.44; transform: scale(1.03); }
+}
+.home-hero-glow { animation: heroPulse 5s ease-in-out infinite; }
+
+/* Bento tile background image layer */
+.bento-tile-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.16;
+  border-radius: 16px;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.bento-tile:hover .bento-tile-bg { opacity: 0.22; }
+
+/* Fragment card: position context + shimmer */
+.fragment-card { position: relative; overflow: hidden; }
+
+.fragment-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(
+    105deg,
+    transparent 25%,
+    rgba(255,255,255,0.06) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.fragment-card:active::after { opacity: 1; }
+
+/* Unlock burst animation for newest fragment card */
+@keyframes unlockBurst {
+  0%   { transform: scale(0.82) translateY(8px); opacity: 0; }
+  55%  { transform: scale(1.04) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.fragment-card--new {
+  animation: unlockBurst 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.fragment-card--new::after { opacity: 1; animation: shimmer 1.8s ease 0.3s infinite; }
+
+/* Legendary card stack depth effect */
+.fragment-card--legendary::before {
+  content: '';
+  position: absolute;
+  inset: 5px -5px -7px 5px;
+  border-radius: 14px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.18);
+  z-index: -1;
+}
+
+/* Epic card depth effect */
+.fragment-card--epic::before {
+  content: '';
+  position: absolute;
+  inset: 5px -4px -6px 4px;
+  border-radius: 14px;
+  background: rgba(168,85,247,0.07);
+  border: 1px solid rgba(168,85,247,0.15);
+  z-index: -1;
+}
+
+/* Galaxy entry CTA button */
+.galaxy-entry-btn {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 86px;
+  border-radius: 20px;
+  border: 1px solid rgba(124,58,237,0.28);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  color: inherit;
+  transition: border-color 0.2s, transform 0.14s;
+  text-align: left;
+}
+.galaxy-entry-btn:active { transform: scale(0.975); }
+
+.galaxy-entry-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+  opacity: 0.32;
+  pointer-events: none;
+}
+
+.galaxy-entry-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(10,10,15,0.76) 0%, rgba(10,10,15,0.40) 100%);
+  pointer-events: none;
+}
+
+/* ─── Galaxy Map Screen ──────────────────────── */
+
+.galaxy-map-screen {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.galaxy-map-header {
+  position: relative;
+  z-index: 1;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(10,10,15,0.74);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.galaxy-map-body {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  padding: 24px 16px 48px;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.galaxy-map-intro { text-align: center; padding: 4px 0; }
+
+.galaxy-map-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.galaxy-map-node {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.09);
+  height: 156px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: block;
+  width: 100%;
+  background: rgba(10,10,15,0.4);
+  transition: border-color 0.2s, transform 0.14s;
+}
+.galaxy-map-node:not(:disabled):active { transform: scale(0.965); }
+
+.galaxy-map-node-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.4s ease;
+  opacity: 0.85;
+}
+.galaxy-map-node:not(:disabled):active .galaxy-map-node-img { transform: scale(1.06); }
+
+.galaxy-map-node-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.galaxy-map-node-lock {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  background: rgba(10,10,15,0.78);
+  border-radius: 20px;
+  padding: 2px 8px;
+  color: rgba(255,255,255,0.35);
+}
+
+.galaxy-map-node-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  padding: 12px 14px 14px;
+}
+
+.galaxy-map-node-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.galaxy-map-node-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+  line-height: 1.2;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+}
+
+.galaxy-map-node-tagline {
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.52);
+  line-height: 1.4;
+}
+
+.galaxy-map-node--locked {
+  opacity: 0.44;
+  cursor: default;
+}

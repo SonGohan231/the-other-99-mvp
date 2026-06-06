@@ -201,7 +201,8 @@ export type AppScreen =
   | 'settings'
   | 'legal'
   | 'subscription'
-  | 'premium-depth';
+  | 'premium-depth'
+  | 'galaxy-map';
 
 export type LegalPage = 'terms' | 'privacy' | 'cookie' | 'subscription-terms' | 'disclaimer' | 'help';
 
