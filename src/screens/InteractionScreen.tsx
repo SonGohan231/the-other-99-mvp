@@ -14,11 +14,32 @@ interface Props {
   onAnswer: (answer: string, responseTimeMs: number, changeCount: number, firstReactionMs: number | null) => void;
   onUndo?: () => void;
   canUndo?: boolean;
+  onSkip?: (timeOnQuestionMs: number, hadSelection: boolean) => void;
+  onExitToMenu?: (timeOnQuestionMs: number, hadSelection: boolean, phase: string) => void;
 }
 
-type Phase = 'question' | 'community';
+// Reveal state machine: question → saved → analyzing → comparing → insight
+type Phase = 'question' | 'saved' | 'analyzing' | 'comparing' | 'insight';
 
-export default function InteractionScreen({ item, testIndex, testTotal, profileProgress: _profileProgress, selectedCard, userId, onAnswer, onUndo, canUndo }: Props) {
+// Timings (ms) — reduced by ~80% if prefers-reduced-motion
+const T_SAVED     = 200;
+const T_ANALYZING = 600;
+const T_COMPARING = 650;
+const T_INSIGHT   = 900;
+
+export default function InteractionScreen({
+  item,
+  testIndex,
+  testTotal,
+  profileProgress: _profileProgress,
+  selectedCard,
+  userId,
+  onAnswer,
+  onUndo,
+  canUndo,
+  onSkip,
+  onExitToMenu,
+}: Props) {
   const t = useT();
   const [lang] = useLang();
   const [selected, setSelected] = useState<string | null>(null);
@@ -30,6 +51,11 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
   const answerTimeRef = useRef<number>(0);
   const changeCountRef = useRef<number>(0);
   const firstReactionRef = useRef<number | null>(null);
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionScale = prefersReducedMotion ? 0.15 : 1;
 
   useEffect(() => {
     startTimeRef.current = Date.now();
@@ -59,12 +85,24 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
     answerTimeRef.current = Date.now() - startTimeRef.current;
     changeCountRef.current = changeCount;
 
-    // Submit vote and get updated distribution BEFORE showing community phase
+    // Submit vote synchronously before reveal sequence
     const result = submitVote(item.id, selected, answers, userId ?? null);
     setVoteResult(result);
 
-    setPhase('community');
-    setTimeout(() => setBarsVisible(true), 600);
+    // Start reveal state machine: saved → analyzing → comparing → insight
+    setPhase('saved');
+
+    const t1 = T_SAVED * motionScale;
+    const t2 = t1 + T_ANALYZING * motionScale;
+    const t3 = t2 + T_COMPARING * motionScale;
+    const t4 = t3 + T_INSIGHT * motionScale;
+
+    const id1 = setTimeout(() => setPhase('analyzing'), t1);
+    const id2 = setTimeout(() => { setPhase('comparing'); setBarsVisible(true); }, t2);
+    const id3 = setTimeout(() => setPhase('insight'), t3);
+
+    // Cleanup if item changes before sequence completes
+    return () => { clearTimeout(id1); clearTimeout(id2); clearTimeout(id3); void t4; };
   }
 
   function handleContinue() {
@@ -90,27 +128,67 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
     return t.interaction.communityMinority;
   }
 
+  function getInsightCopy(): string {
+    const r = item.rarity_tier;
+    if (r === 'legendary') return t.interaction.reveal.insightLegendary;
+    if (r === 'epic') return t.interaction.reveal.insightEpic;
+    if (r === 'rare') return t.interaction.reveal.insightRare;
+    return t.interaction.reveal.insight;
+  }
+
+  // Is the reveal sequence running?
+  const isRevealPhase = phase !== 'question';
+  const showDistribution = phase === 'comparing' || phase === 'insight';
+  const showContinue = phase === 'insight';
+
+  function handleSkip() {
+    const elapsed = Date.now() - startTimeRef.current;
+    onSkip?.(elapsed, selected !== null);
+  }
+
+  function handleExitToMenu() {
+    const elapsed = Date.now() - startTimeRef.current;
+    onExitToMenu?.(elapsed, selected !== null, phase);
+  }
+
   return (
     <div className="interaction-screen" style={{ position: 'relative' }}>
-      {/* Back / Undo button */}
-      {canUndo && onUndo && (
+      {/* Top-left: Back/Undo or Exit */}
+      {phase === 'question' && (
+        <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '6px', zIndex: 10 }}>
+          {canUndo && onUndo && (
+            <button
+              onClick={onUndo}
+              style={{ fontSize: '0.72rem', color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+              aria-label="Go back to previous question"
+            >
+              ← {t.interaction.reveal?.saved ? 'Back' : 'Back'}
+            </button>
+          )}
+          {onExitToMenu && (
+            <button
+              onClick={handleExitToMenu}
+              style={{ fontSize: '0.72rem', color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+              aria-label={t.interaction.exitToMenu}
+            >
+              {t.interaction.exitToMenu}
+            </button>
+          )}
+        </div>
+      )}
+      {/* Top-right: Skip */}
+      {phase === 'question' && onSkip && (
         <button
-          onClick={onUndo}
+          onClick={handleSkip}
           style={{
-            position: 'absolute',
-            top: '12px',
-            left: '12px',
-            fontSize: '0.72rem',
-            color: 'var(--text-dim)',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            zIndex: 10,
+            position: 'absolute', top: '12px', right: '12px',
+            fontSize: '0.72rem', color: 'var(--text-dim)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '4px 8px', zIndex: 10,
           }}
-          aria-label="Go back to previous question"
+          aria-label={t.interaction.skipQuestion}
         >
-          ← Back
+          {t.interaction.skipQuestion} →
         </button>
       )}
 
@@ -169,10 +247,10 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
               className={`answer-btn${selected === answer ? ' selected' : ''}`}
               onClick={() => phase === 'question' && handleSelect(answer)}
               aria-pressed={selected === answer}
-              disabled={phase === 'community' && selected !== answer}
+              disabled={isRevealPhase && selected !== answer}
               style={{
-                opacity: phase === 'community' && selected !== answer ? 0.3 : 1,
-                cursor: phase === 'community' ? 'default' : 'pointer',
+                opacity: isRevealPhase && selected !== answer ? 0.3 : 1,
+                cursor: isRevealPhase ? 'default' : 'pointer',
                 position: 'relative',
               }}
             >
@@ -184,7 +262,7 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
           ))}
         </div>
 
-        {/* Confirm button (question phase) */}
+        {/* Confirm button (question phase only) */}
         {phase === 'question' && selected && (
           <div className="animate-in" style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
             <button className="btn btn-teal" onClick={handleConfirm} style={{ maxWidth: '320px' }} aria-label={t.interaction.confirmAnswer}>
@@ -193,60 +271,103 @@ export default function InteractionScreen({ item, testIndex, testTotal, profileP
           </div>
         )}
 
-        {/* Community phase */}
-        {phase === 'community' && (
-          <div className="animate-in" style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Distribution label */}
-            <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-dim)', textAlign: 'center' }}>
-              {distributionLabel}
-            </p>
+        {/* ── Reveal state machine ──────────────────────────────── */}
+        {isRevealPhase && (
+          <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-            {/* Bars */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {communityPercs.map(({ option, pct }, i) => {
-                const isSelected = option === selected;
-                return (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', color: isSelected ? 'var(--text)' : 'var(--text-muted)', fontWeight: isSelected ? 600 : 400 }}>
-                        {option}
-                      </span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isSelected ? 'var(--accent-light)' : 'var(--text-muted)', minWidth: '36px', textAlign: 'right' }}>
-                        {barsVisible ? `${pct}%` : ''}
-                      </span>
-                    </div>
-                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          height: '100%',
-                          borderRadius: '3px',
-                          width: barsVisible ? `${pct}%` : '0%',
-                          transition: 'width 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
-                          background: isSelected
-                            ? 'linear-gradient(90deg, var(--accent), var(--accent-light))'
-                            : 'rgba(255,255,255,0.18)',
-                          boxShadow: isSelected ? '0 0 6px rgba(124,58,237,0.4)' : 'none',
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Phase microcopy strip */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              padding: '10px 16px',
+              background: phase === 'insight'
+                ? 'rgba(124,58,237,0.08)'
+                : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${phase === 'insight' ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.06)'}`,
+              borderRadius: '10px',
+              transition: 'background 0.4s ease, border-color 0.4s ease',
+            }}>
+              {(phase === 'saved' || phase === 'analyzing') && (
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <div className="loading-dot" style={{ width: '5px', height: '5px' }} />
+                  <div className="loading-dot" style={{ width: '5px', height: '5px', animationDelay: '0.15s' }} />
+                  <div className="loading-dot" style={{ width: '5px', height: '5px', animationDelay: '0.3s' }} />
+                </div>
+              )}
+              {phase === 'comparing' && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-light)', opacity: 0.6 }}>◈</span>
+              )}
+              {phase === 'insight' && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-light)' }}>◈</span>
+              )}
+              <p style={{
+                fontSize: '0.78rem',
+                fontWeight: phase === 'insight' ? 600 : 400,
+                color: phase === 'insight' ? 'var(--text)' : 'var(--text-dim)',
+                fontStyle: phase === 'saved' || phase === 'analyzing' ? 'italic' : 'normal',
+                margin: 0,
+                transition: 'color 0.3s ease',
+              }}>
+                {phase === 'saved' && t.interaction.reveal.saved}
+                {phase === 'analyzing' && t.interaction.reveal.analyzing}
+                {phase === 'comparing' && distributionLabel}
+                {phase === 'insight' && getInsightCopy()}
+              </p>
             </div>
 
-            {barsVisible && (
-              <p className="animate-in" style={{ fontSize: '0.78rem', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic' }}>
-                {getCommunityMicrocopy()}
-              </p>
+            {/* Distribution bars (shown from 'comparing' onward) */}
+            {showDistribution && (
+              <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {communityPercs.map(({ option, pct }, i) => {
+                  const isSelected = option === selected;
+                  return (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.8rem', color: isSelected ? 'var(--text)' : 'var(--text-muted)', fontWeight: isSelected ? 600 : 400 }}>
+                          {option}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isSelected ? 'var(--accent-light)' : 'var(--text-muted)', minWidth: '36px', textAlign: 'right' }}>
+                          {barsVisible ? `${pct}%` : ''}
+                        </span>
+                      </div>
+                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            height: '100%',
+                            borderRadius: '3px',
+                            width: barsVisible ? `${pct}%` : '0%',
+                            transition: 'width 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                            background: isSelected
+                              ? 'linear-gradient(90deg, var(--accent), var(--accent-light))'
+                              : 'rgba(255,255,255,0.18)',
+                            boxShadow: isSelected ? '0 0 6px rgba(124,58,237,0.4)' : 'none',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Community microcopy */}
+                {phase === 'insight' && (
+                  <p className="animate-in" style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic' }}>
+                    {getCommunityMicrocopy()}
+                  </p>
+                )}
+
+                {/* Projection disclaimer */}
+                {(voteResult?.realVotes ?? 0) < 30 && (
+                  <p style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic', opacity: 0.55 }}>
+                    {t.interaction.communityDisclaimer}
+                  </p>
+                )}
+              </div>
             )}
 
-            {barsVisible && (voteResult?.realVotes ?? 0) < 30 && (
-              <p style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic', opacity: 0.6 }}>
-                {t.interaction.communityDisclaimer ?? 'Projected estimate — not yet real user data'}
-              </p>
-            )}
-
-            {barsVisible && (
+            {/* Continue button (insight phase only) */}
+            {showContinue && (
               <div className="animate-in" style={{ display: 'flex', justifyContent: 'center' }}>
                 <button
                   className="btn btn-primary"

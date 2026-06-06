@@ -1,4 +1,5 @@
 import { ProfileVector } from './profileVector';
+import { BehavioralSummary } from './behavioralSignals';
 
 export type ParameterLevel = 'Low' | 'Medium' | 'High';
 
@@ -20,8 +21,15 @@ function level(value: number): ParameterLevel {
   return 'Medium';
 }
 
-export function computeHiddenParameters(vector: ProfileVector): HiddenParameter[] {
+export function computeHiddenParameters(vector: ProfileVector, behavioral?: BehavioralSummary | null): HiddenParameter[] {
   const v = vector;
+
+  // Behavioral adjustment modifiers derived from skip/swap/exit patterns
+  const skipPressure = behavioral ? Math.min(30, behavioral.skipRatePercent * 0.6) : 0;
+  const exitPressure = behavioral ? Math.min(20, behavioral.totalExits * 4) : 0;
+  const avoidanceBoost = behavioral ? (behavioral.avgAvoidanceSignal > 50 ? 15 : 0) : 0;
+  const contradictionBoost = behavioral ? Math.min(20, behavioral.avgContradictionSignal * 0.25) : 0;
+  const confidenceDip = behavioral ? (behavioral.avgConfidenceSignal < 40 ? 10 : 0) : 0;
 
   const params: Array<{ id: string; name: string; raw: number; value: number; descriptions: Record<ParameterLevel, string> }> = [
     {
@@ -39,7 +47,7 @@ export function computeHiddenParameters(vector: ProfileVector): HiddenParameter[
       id: 'p2',
       name: 'Decision Latency',
       raw: (v.security * 0.6 + v.emotion * 0.4) - v.risk,
-      value: clamp(50 + ((v.security * 0.6 + v.emotion * 0.4) - v.risk) * 5, 0, 100),
+      value: clamp(50 + ((v.security * 0.6 + v.emotion * 0.4) - v.risk) * 5 + skipPressure * 0.5, 0, 100),
       descriptions: {
         Low: 'Decisions arrive quickly. Some topics may not get the pause they need.',
         Medium: 'Some questions create a longer internal pause before choice.',
@@ -72,7 +80,7 @@ export function computeHiddenParameters(vector: ProfileVector): HiddenParameter[
       id: 'p5',
       name: 'Emotional Guarding',
       raw: v.control - v.emotion,
-      value: clamp(50 + (v.control - v.emotion) * 4, 0, 100),
+      value: clamp(50 + (v.control - v.emotion) * 4 + avoidanceBoost + exitPressure * 0.4, 0, 100),
       descriptions: {
         Low: 'Low. You express emotional content with less filtering than average.',
         Medium: 'Moderate guarding. You share selectively.',
@@ -138,7 +146,7 @@ export function computeHiddenParameters(vector: ProfileVector): HiddenParameter[
       id: 'p11',
       name: 'Contradiction Density',
       raw: Math.abs(v.independence - v.connection) + Math.abs(v.control - v.risk),
-      value: clamp((Math.abs(v.independence - v.connection) + Math.abs(v.control - v.risk)) * 4, 0, 100),
+      value: clamp((Math.abs(v.independence - v.connection) + Math.abs(v.control - v.risk)) * 4 + contradictionBoost, 0, 100),
       descriptions: {
         Low: 'Your behavioral pattern shows low internal tension.',
         Medium: 'Some contradictions exist — pulls in opposite directions.',
@@ -149,7 +157,7 @@ export function computeHiddenParameters(vector: ProfileVector): HiddenParameter[
       id: 'p12',
       name: 'Consistency Drift',
       raw: v.change - v.security,
-      value: clamp(50 + (v.change - v.security) * 4, 0, 100),
+      value: clamp(50 + (v.change - v.security) * 4 + confidenceDip * 0.5, 0, 100),
       descriptions: {
         Low: 'Your pattern is stable over time.',
         Medium: 'Moderate drift. Your answers suggest some evolution in underlying tendencies.',

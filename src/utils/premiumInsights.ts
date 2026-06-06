@@ -153,18 +153,22 @@ function maskVsCoreInsight(vec: ProfileVector, b: BehavioralSummary | null | und
 
   let line3: string;
   if (b) {
-    const contLevel =
-      b.avgContradictionSignal > 50 ? (isPl ? 'silne' : 'strong') :
-      b.avgContradictionSignal > 25 ? (isPl ? 'umiarkowane' : 'moderate') :
-      (isPl ? 'niskie' : 'low');
     const stabilityNote = b.stabilityLabel === 'volatile'
-      ? (isPl ? ' Wzorzec decyzyjny jest niestabilny — przepaść poszerza się pod presją.' : ' Your decision pattern is volatile — the gap widens under pressure.')
+      ? (isPl ? ' Twój wzorzec decyzyjny jest niestabilny — ta przepaść poszerza się pod presją.' : ' Your decision pattern is volatile — this gap widens under pressure.')
       : b.stabilityLabel === 'uncertain'
-      ? (isPl ? ' Przepaść widoczna jest w momentach niepewności.' : ' The gap shows most in moments of uncertainty.')
+      ? (isPl ? ' Przepaść jest najbardziej widoczna w momentach niepewności.' : ' The gap is most visible in moments of uncertainty.')
       : '';
     line3 = isPl
-      ? `Poziom sprzeczności: ${contLevel}.${stabilityNote}`
-      : `Contradiction level: ${contLevel}.${stabilityNote}`;
+      ? b.avgContradictionSignal > 50
+        ? `Twoje wybory regularnie zmierzają jednocześnie w dwóch kierunkach.${stabilityNote}`
+        : b.avgContradictionSignal > 25
+        ? `Czasem wybierasz wartości, które wzajemnie się ograniczają.${stabilityNote}`
+        : `Twoje wybory są w dużej mierze spójne z tym, co wyrażasz.${stabilityNote}`
+      : b.avgContradictionSignal > 50
+        ? `Your choices regularly pull in two different directions at once.${stabilityNote}`
+        : b.avgContradictionSignal > 25
+        ? `You sometimes choose values that compete with each other.${stabilityNote}`
+        : `Your choices are largely consistent with what you present.${stabilityNote}`;
   } else {
     line3 = isPl
       ? 'Przepaść między maską a rdzeniem tworzy wzorzec, który system może teraz odczytywać.'
@@ -189,34 +193,41 @@ function contradictionsInsight(vec: ProfileVector, b: BehavioralSummary | null |
   const secVal = v['security'] ?? 0;
   const changeVal = v['change'] ?? 0;
   const tension = Math.abs(riskVal - secVal);
-  const label = tension > 1.5
-    ? (isPl ? 'silna' : 'strong')
-    : tension > 0.8
-    ? (isPl ? 'umiarkowana' : 'moderate')
-    : (isPl ? 'łagodna' : 'mild');
 
   const line1 = isPl
-    ? `Wykryto ${label} sprzeczność wewnętrzną w Twoim wzorcu.`
-    : `A ${label} internal contradiction was detected in your pattern.`;
+    ? tension > 1.5
+      ? 'Twoje odpowiedzi pokazują wyraźne napięcie między pragnieniem zmiany a potrzebą bezpieczeństwa.'
+      : tension > 0.8
+      ? 'Twoje odpowiedzi wskazują na umiarkowane napięcie między stabilnością a ryzykiem.'
+      : 'W twoich odpowiedziach widać łagodne oscylowanie między kierunkiem a zakotwiczeniem.'
+    : tension > 1.5
+      ? 'Your answers show a clear tension between wanting change and needing security.'
+      : tension > 0.8
+      ? 'Your answers point to a moderate tension between stability and risk.'
+      : 'Your answers show a gentle oscillation between direction and anchoring.';
 
   let line2: string;
   if (b) {
     const contDesc =
       b.avgContradictionSignal > 50
-        ? (isPl ? 'Twoje zachowanie regularnie przeczy deklarowanemu kierunkowi.' : 'Your behavior regularly contradicts your stated direction.')
+        ? (isPl ? 'Czasem twoje działania zmierzają w innym kierunku niż to, co prezentujesz. System to widzi.' : 'You sometimes move toward values that compete with what you present. The system sees it.')
         : b.avgContradictionSignal > 20
-        ? (isPl ? 'Sporadyczne sprzeczności behawioralne wykryte w różnych typach pytań.' : 'Periodic behavioral contradictions detected across question types.')
-        : (isPl ? 'Twoje wybory behawioralne są w dużej mierze zgodne z kierunkiem profilu.' : 'Your behavioral choices are largely consistent with your profile direction.');
+        ? (isPl ? 'W różnych typach pytań pojawiają się konkurujące ze sobą pociągi. To zdarza się częściej, niż ludzie sądzą.' : 'Across different question types, competing pulls show up. This is more common than people realize.')
+        : (isPl ? 'Twoje wybory są w dużej mierze spójne — to rzadki poziom wewnętrznego wyrównania.' : 'Your choices are largely consistent — a rare degree of internal alignment.');
     const changeNote = b.totalAnswerChanges > 3
       ? (isPl
-        ? ` Zmieniłeś ${b.totalAnswerChanges} odpowiedzi — każde cofnięcie to punkt konfliktu.`
-        : ` You changed ${b.totalAnswerChanges} answers — each reversal marks a conflict point.`)
+        ? ` Zmieniłeś odpowiedź ${b.totalAnswerChanges} razy — każda zmiana to moment, w którym coś wymagało ponownego rozważenia.`
+        : ` You reconsidered your answer ${b.totalAnswerChanges} times — each marks a moment where something needed a second look.`)
       : '';
     line2 = contDesc + changeNote;
   } else {
     line2 = isPl
-      ? `Szukasz zmiany (${changeVal.toFixed(1)}) jednocześnie zakotwiczając się w bezpieczeństwie (${secVal.toFixed(1)}).`
-      : `You seek change (${changeVal.toFixed(1)}) while also anchoring to security (${secVal.toFixed(1)}).`;
+      ? changeVal > 1
+        ? 'Szukasz zmiany, jednocześnie szukając stabilnego gruntu. Obie te potrzeby są obecne w twoich odpowiedziach.'
+        : 'Twój profil jest zakorzeniony w bezpieczeństwie, ale sporadyczne sygnały zmiany pojawiają się na krawędziach.'
+      : changeVal > 1
+        ? 'You seek change while also looking for solid ground. Both needs are present in your answers.'
+        : 'Your profile is grounded in security, but occasional change signals appear at the edges.';
   }
 
   const line3 = isPl
@@ -368,48 +379,63 @@ function hiddenParametersInsight(vec: ProfileVector, b: BehavioralSummary | null
   const cur = v['curiosity'] ?? 0;
 
   const hidden = emo > ind ? 'emotionally_driven' : 'independence_framed';
-  const hiddenLabel = isPl
-    ? hidden === 'emotionally_driven'
-      ? 'przetwarzanie emocjonalne (emocja filtruje decyzje zanim logika je dosięgnie)'
-      : 'niezależne kadrowanie (filtrujesz przez autonomię zanim uwzględnisz innych)'
-    : hidden === 'emotionally_driven'
-      ? 'emotional processing (emotion filters decisions before logic reaches them)'
-      : 'independent framing (you filter through autonomy before factoring in others)';
 
   const line1 = isPl
-    ? `Kluczowy ukryty parametr: ${hiddenLabel}.`
-    : `Key hidden parameter: ${hiddenLabel}.`;
+    ? hidden === 'emotionally_driven'
+      ? 'Twoje odpowiedzi pokazują, że emocja działa jako filtr pierwszego stopnia — kształtuje kierunek zanim logika zdąży się włączyć.'
+      : 'Twoje odpowiedzi pokazują, że autonomia to twój pierwszorzędny filtr — zanim uwzględnisz wpływ innych, sprawdzasz co mówi twoja niezależność.'
+    : hidden === 'emotionally_driven'
+      ? 'Your answers show that emotion acts as a first-order filter — shaping direction before logic has a chance to engage.'
+      : 'Your answers show that autonomy is your first-order filter — before factoring in others, you check what your independence says.';
 
   let line2: string;
   if (b) {
-    const hesMs = b.avgHesitationMs;
-    const hesDesc = hesMs !== null
-      ? hesMs > 5000
-        ? (isPl ? `wysoka długość wahania (średnio ${(hesMs / 1000).toFixed(1)}s po pierwszym dotknięciu)` : `high hesitation window (avg ${(hesMs / 1000).toFixed(1)}s after first touch)`)
-        : hesMs > 2000
-        ? (isPl ? `umiarkowane wahanie (średnio ${(hesMs / 1000).toFixed(1)}s)` : `moderate hesitation (avg ${(hesMs / 1000).toFixed(1)}s)`)
-        : (isPl ? `niskie wahanie (średnio ${(hesMs / 1000).toFixed(1)}s)` : `low hesitation (avg ${(hesMs / 1000).toFixed(1)}s)`)
-      : (isPl ? 'brak danych o wahaniu' : 'hesitation data not available');
-    line2 = isPl
-      ? `Zaangażowanie: ${DECISIVE_PL[b.decisivenessLabel] ?? b.decisivenessLabel} — ${hesDesc}.`
-      : `Engagement: ${DECISIVE_EN[b.decisivenessLabel] ?? b.decisivenessLabel} — ${hesDesc}.`;
+    if (b.totalAnswerChanges > 3) {
+      line2 = isPl
+        ? `Zmieniłeś odpowiedź ${b.totalAnswerChanges} razy. Każda zmiana to moment, w którym dwie wartości ścierały się ze sobą.`
+        : `You reconsidered your answer ${b.totalAnswerChanges} times. Each change marks a moment where two competing values surfaced.`;
+    } else if (b.decisivenessLabel === 'impulsive') {
+      line2 = isPl
+        ? 'Twoje pierwsze odczucie zazwyczaj wygrywa. Przestrzeń między pytaniem a wyborem jest wąska.'
+        : 'Your first feeling usually wins. The space between reading a question and choosing is narrow.';
+    } else if (b.decisivenessLabel === 'deliberate') {
+      line2 = isPl
+        ? 'Zanim się zdecydujesz, dajesz sobie czas. Ta pauza nie jest wahaniem — to część twojego procesu.'
+        : 'Before committing, you take time. That pause is not hesitation — it is part of your process.';
+    } else if (b.decisivenessLabel === 'hesitant') {
+      line2 = isPl
+        ? 'Przy ważnych wyborach zatrzymujesz się dłużej niż inni. System odczytuje, czego szuka to filtrowanie.'
+        : 'You tend to pause longer before important choices. The system is reading what that filtering is looking for.';
+    } else {
+      line2 = isPl
+        ? 'Twoje tempo decyzji jest spójne i wyraźne — bez oznak wewnętrznych negocjacji.'
+        : 'Your decision pace is consistent and clear — without signs of internal negotiation.';
+    }
   } else {
-    line2 = isPl
-      ? `Indeks ciekawości: ${cur.toFixed(1)} — napędza Twoje wybory na brzegach wzorca.`
-      : `Curiosity index: ${cur.toFixed(1)} — this drives your choices at the edges of the pattern.`;
+    line2 = cur > 3
+      ? (isPl
+        ? 'Twoja ciekawość wyraźnie ciągnie cię ku nieznanym krawędziom — to kształtuje, które pytania angażują cię najbardziej.'
+        : 'Your curiosity pulls clearly toward unfamiliar edges — it shapes which questions draw you in the most.')
+      : cur > 1
+      ? (isPl
+        ? 'Angażujesz się selektywnie — z wyraźnymi preferencjami tematycznymi i wyraźnymi granicami.'
+        : 'You engage selectively — with clear topic preferences and clear limits.')
+      : (isPl
+        ? 'Twoja ciekawość jest powściągliwa w tym zestawie odpowiedzi. Angażujesz się tam, gdzie czujesz grunt pod nogami.'
+        : 'Your curiosity is quiet in this answer set. You engage where you feel grounded.');
   }
 
   const line3 = isPl
-    ? 'W decyzjach: ten filtr kształtuje, które informacje nieświadomie traktujesz priorytetowo.'
-    : 'In decisions: this filter shapes what information you weight more heavily without noticing.';
+    ? 'W decyzjach: ten filtr działa poniżej progu świadomości — kształtuje priorytety zanim je nazwiesz.'
+    : 'In decisions: this filter operates below conscious awareness — shaping priorities before you name them.';
 
   const line4 = isPl
-    ? 'W relacjach: ten parametr wpływa na to, jak czytasz innych i jakim sygnałom przyznajesz priorytet.'
-    : 'In relationships: this parameter influences how you read others and what signals you prioritize.';
+    ? 'W relacjach: ten wzorzec wpływa na to, co odczytujesz u innych i którym sygnałom ufasz.'
+    : 'In relationships: this pattern shapes what you read in others and which signals you trust.';
 
   const line5 = isPl
-    ? 'Więcej odpowiedzi ujawni, czy parametr jest stabilny, czy się przesuwa.'
-    : 'More answers will reveal whether this parameter is stable or in motion.';
+    ? 'Więcej odpowiedzi ujawni, czy ten filtr jest stały, czy przesuwa się pod presją.'
+    : 'More answers will reveal whether this filter is stable or shifts under pressure.';
 
   return [line1, line2, line3, line4, line5];
 }
@@ -458,6 +484,227 @@ function profileEvolutionInsight(vec: ProfileVector, b: BehavioralSummary | null
 
 type InsightGenerator = (vec: ProfileVector, b: BehavioralSummary | null | undefined, lang: Lang) => string[];
 
+const INSIGHTS_LEGACY: Record<string, InsightGenerator> = {
+  shadowProfile: (vec, b) => {
+    const dominant = top(vec, ['control', 'independence', 'security']);
+    const shadow =
+      dominant === 'control' ? 'dependency' :
+      dominant === 'independence' ? 'need for validation' :
+      'impulse toward risk';
+
+    if (b) {
+      const avoidDesc =
+        b.avoidanceLabel === 'avoidant' ? 'high evasion on sensitive questions' :
+        b.avoidanceLabel === 'selective' ? 'selective disclosure under pressure' :
+        'direct engagement even on sensitive content';
+      const undoNote = b.totalUndos > 1 ? ` You reversed ${b.totalUndos} answers — a tell that surfaces under threat.` : '';
+      return [
+        `Your dominant signal is ${dominant}.`,
+        `Your shadow pattern suggests a suppressed tendency toward ${shadow}.`,
+        `Behavioral trace: ${avoidDesc}.${undoNote}`,
+      ];
+    }
+
+    return [
+      `Your dominant signal is ${dominant}.`,
+      `Your shadow pattern suggests a suppressed tendency toward ${shadow}.`,
+      'This tension between your expressed and suppressed tendencies shapes your choices.',
+    ];
+  },
+
+  maskVsCore: (vec, b) => {
+    const presented = top(vec, ['connection', 'security']);
+    const hidden = top(vec, ['independence', 'risk']);
+
+    if (b) {
+      const contradictDesc =
+        b.avgContradictionSignal > 50 ? 'strong contradictions between stated values and behavioral choices' :
+        b.avgContradictionSignal > 25 ? 'moderate inconsistencies between what you say and what you do' :
+        'relatively consistent alignment between stated and behavioral signals';
+      const stabilityNote =
+        b.stabilityLabel === 'volatile' ? ' Your decision pattern is volatile — the gap widens under pressure.' :
+        b.stabilityLabel === 'uncertain' ? ' The gap shows in moments of uncertainty.' :
+        '';
+      return [
+        `Presented pattern: high ${presented}.`,
+        `Core signal: underlying ${hidden} that rarely surfaces publicly.`,
+        `Behavioral read: ${contradictDesc}.${stabilityNote}`,
+      ];
+    }
+
+    return [
+      `Presented pattern: high ${presented}.`,
+      `Core signal: underlying ${hidden} that rarely surfaces publicly.`,
+      'The gap between your mask and your core creates a pattern the system can now read.',
+    ];
+  },
+
+  contradictions: (vec, b) => {
+    const v = vec as unknown as Record<string, number>;
+    const riskVal = v['risk'] ?? 0;
+    const secVal = v['security'] ?? 0;
+    const changeVal = v['change'] ?? 0;
+    const tension = Math.abs(riskVal - secVal);
+    const label = tension > 1.5 ? 'strong' : tension > 0.8 ? 'moderate' : 'mild';
+
+    if (b) {
+      const behavioralContradiction =
+        b.avgContradictionSignal > 50 ? 'Your behavior frequently contradicts your stated axis direction.' :
+        b.avgContradictionSignal > 20 ? 'Periodic behavioral contradictions detected across question types.' :
+        'Your behavioral choices are largely consistent with your profile direction.';
+      const changeNote = b.totalAnswerChanges > 3
+        ? ` You changed ${b.totalAnswerChanges} answers — each reversal marks a conflict point.`
+        : '';
+      return [
+        `Contradiction strength: ${label}.`,
+        `${behavioralContradiction}${changeNote}`,
+        `You seek change (${changeVal.toFixed(1)}) while also anchoring to security (${secVal.toFixed(1)}).`,
+      ];
+    }
+
+    return [
+      `Contradiction strength: ${label}.`,
+      `You seek change (${changeVal.toFixed(1)}) while also anchoring to security (${secVal.toFixed(1)}).`,
+      'Your choices show an internal negotiation that most people do not notice in themselves.',
+    ];
+  },
+
+  futureSelf: (vec, b) => {
+    const future = top(vec, ['change', 'curiosity', 'risk']);
+
+    if (b) {
+      const decisionNote =
+        b.decisivenessLabel === 'impulsive' ? 'Your impulsive decision pattern suggests rapid trajectory shifts.' :
+        b.decisivenessLabel === 'decisive' ? 'Your decisive pattern indicates committed movement toward this direction.' :
+        b.decisivenessLabel === 'deliberate' ? 'Your deliberate style suggests slow but stable evolution.' :
+        'Your hesitant pattern may delay this trajectory from solidifying.';
+      return [
+        `Your profile is pulling toward: ${future}.`,
+        decisionNote,
+        'This is not a prediction — it is a direction your current behavioral signals point to.',
+      ];
+    }
+
+    return [
+      `Your profile is pulling toward: ${future}.`,
+      `This is not a prediction — it is a direction your current behavioral signals point to.`,
+      'If this trend continues, your dominant pattern will shift in the next phase.',
+    ];
+  },
+
+  relationshipMode: (vec, b) => {
+    const v = vec as unknown as Record<string, number>;
+    const conn = v['connection'] ?? 0;
+    const sec = v['security'] ?? 0;
+    const emo = v['emotion'] ?? 0;
+    const style =
+      conn > sec && conn > emo ? 'connector' :
+      sec > conn ? 'stabilizer' :
+      'emotionally open';
+
+    if (b) {
+      const avoidanceNote =
+        b.avoidanceLabel === 'avoidant' ? 'You show high resistance to emotionally exposed content.' :
+        b.avoidanceLabel === 'selective' ? 'You open up selectively — intimacy is conditional.' :
+        'You engage directly even with high-intimacy questions.';
+      const frictionNote =
+        b.avgEmotionalFrictionSignal > 50 ? ' High emotional friction signals detected across intimate questions.' :
+        b.avgEmotionalFrictionSignal > 25 ? ' Moderate friction on emotionally charged content.' :
+        '';
+      return [
+        `Your relationship mode: ${style}.`,
+        avoidanceNote + frictionNote,
+        `Connection score: ${conn.toFixed(1)}, Security: ${sec.toFixed(1)}, Emotion: ${emo.toFixed(1)}.`,
+      ];
+    }
+
+    return [
+      `Your relationship mode: ${style}.`,
+      `Connection score: ${conn.toFixed(1)}, Security: ${sec.toFixed(1)}, Emotion: ${emo.toFixed(1)}.`,
+      'This pattern determines how you bond, withdraw, and maintain closeness.',
+    ];
+  },
+
+  humanTwin: (vec, b) => {
+    const overall = score(vec, ['control', 'risk', 'curiosity', 'connection']);
+    const tier = overall > 4 ? 'strong' : overall > 2 ? 'moderate' : 'developing';
+
+    if (b) {
+      const decLabel = b.decisivenessLabel;
+      const stabLabel = b.stabilityLabel;
+      const avoidLabel = b.avoidanceLabel;
+      return [
+        `Twin signal strength: ${tier}.`,
+        `Behavioral fingerprint: ${decLabel} / ${stabLabel} / ${avoidLabel}.`,
+        'These three axes narrow the behavioral twin search to a rare cluster.',
+      ];
+    }
+
+    return [
+      `Twin signal strength: ${tier}.`,
+      `Your behavioral fingerprint is complex enough to detect matching patterns.`,
+      'The system is narrowing the search for your closest behavioral twin.',
+    ];
+  },
+
+  hiddenParameters: (vec, b) => {
+    const v = vec as unknown as Record<string, number>;
+    const emo = v['emotion'] ?? 0;
+    const ind = v['independence'] ?? 0;
+    const cur = v['curiosity'] ?? 0;
+    const hidden = emo > ind ? 'emotionally driven processing' : 'independent decision framing';
+
+    if (b) {
+      const hesMs = b.avgHesitationMs;
+      const hesDesc = hesMs !== null
+        ? hesMs > 5000 ? `high hesitation (avg ${(hesMs / 1000).toFixed(1)}s after first touch)`
+        : hesMs > 2000 ? `moderate hesitation (avg ${(hesMs / 1000).toFixed(1)}s)`
+        : `low hesitation (avg ${(hesMs / 1000).toFixed(1)}s)`
+        : 'hesitation data not available';
+      const frictionLabel =
+        b.avgEmotionalFrictionSignal > 60 ? 'high emotional friction' :
+        b.avgEmotionalFrictionSignal > 30 ? 'moderate emotional friction' :
+        'low emotional friction';
+      return [
+        `Hidden parameter: ${hidden}.`,
+        `Decisiveness: ${b.decisivenessLabel} — ${hesDesc}.`,
+        `Emotional load: ${frictionLabel} (signal: ${b.avgEmotionalFrictionSignal}). Curiosity index: ${cur.toFixed(1)}.`,
+      ];
+    }
+
+    return [
+      `Hidden parameter: ${hidden}.`,
+      `Curiosity index: ${cur.toFixed(1)} — this drives your edge-case choices.`,
+      'These parameters are only visible from your pattern edges, not your main signals.',
+    ];
+  },
+
+  profileEvolution: (vec, b) => {
+    const dominant = top(vec, ['change', 'control', 'security']);
+
+    if (b) {
+      const stabilityDesc =
+        b.stabilityLabel === 'volatile' ? `volatile — your profile is in flux (instability: ${b.avgInstabilitySignal})` :
+        b.stabilityLabel === 'uncertain' ? `uncertain — partial stabilization in progress` :
+        `stable — your pattern has solidified`;
+      const undoNote = b.totalUndos > 0
+        ? ` ${b.totalUndos} undo${b.totalUndos > 1 ? 's' : ''} recorded — each marks a recalibration moment.`
+        : '';
+      return [
+        `Most evolved dimension: ${dominant}.`,
+        `Stability read: ${stabilityDesc}.${undoNote}`,
+        'Evolution tracking shows whether your patterns are stabilizing or still changing.',
+      ];
+    }
+
+    return [
+      `Most evolved dimension: ${dominant}.`,
+      'Your profile has shifted toward this signal across multiple answer sessions.',
+      'Evolution tracking shows whether your patterns are stabilizing or still changing.',
+    ];
+  },
+};
+
 const INSIGHTS: Record<string, InsightGenerator> = {
   shadowProfile:    shadowProfileInsight,
   maskVsCore:       maskVsCoreInsight,
@@ -468,6 +715,8 @@ const INSIGHTS: Record<string, InsightGenerator> = {
   hiddenParameters: hiddenParametersInsight,
   profileEvolution: profileEvolutionInsight,
 };
+
+void INSIGHTS_LEGACY; // retained for reference only
 
 export function generatePremiumInsight(
   moduleId: string,

@@ -8,12 +8,12 @@ const MODIFIER_EN: Record<ArchetypeId, string> = {
   guardian:   'Protective',
   mirror:     'Quiet',
   strategist: 'Strategic',
-  seeker:     'Searching',
+  weaver:     'Weaving',
   anchor:     'Soft',
   catalyst:   'Driven',
   observer:   'Watchful',
   alchemist:  'Creative',
-  pathfinder: 'Steady',
+  dreamer:    'Dreaming',
 };
 
 // PL modifier — precedes the PL primary name
@@ -24,12 +24,12 @@ const MODIFIER_PL: Record<ArchetypeId, string> = {
   guardian:   'Opiekuńczy',
   mirror:     'Cichy',
   strategist: 'Strategiczny',
-  seeker:     'Szukający',
+  weaver:     'Tkający',
   anchor:     'Łagodny',
   catalyst:   'Nieugaszony',
   observer:   'Uważny',
   alchemist:  'Twórczy',
-  pathfinder: 'Spokojny',
+  dreamer:    'Marzyciel',
 };
 
 const NAME_EN: Record<ArchetypeId, string> = {
@@ -39,12 +39,12 @@ const NAME_EN: Record<ArchetypeId, string> = {
   guardian:   'Guardian',
   mirror:     'Mirror',
   strategist: 'Strategist',
-  seeker:     'Seeker',
+  weaver:     'Weaver',
   anchor:     'Anchor',
   catalyst:   'Catalyst',
   observer:   'Observer',
   alchemist:  'Alchemist',
-  pathfinder: 'Pathfinder',
+  dreamer:    'Dreamer',
 };
 
 const NAME_PL: Record<ArchetypeId, string> = {
@@ -54,12 +54,12 @@ const NAME_PL: Record<ArchetypeId, string> = {
   guardian:   'Strażnik',
   mirror:     'Lustro',
   strategist: 'Strateg',
-  seeker:     'Poszukiwacz',
+  weaver:     'Tkacz',
   anchor:     'Kotwica',
-  catalyst:   'Katalizator',
+  catalyst:   'Iskra',
   observer:   'Obserwator',
   alchemist:  'Alchemik',
-  pathfinder: 'Pionier',
+  dreamer:    'Marzyciel',
 };
 
 // Returns blend name like "The Restless Guardian" (EN) or "Niespokojny Strażnik" (PL)

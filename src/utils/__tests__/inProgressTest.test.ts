@@ -22,6 +22,11 @@ describe('inProgressTest', () => {
       pendingAnswer: '',
       selectedCard: null,
       canUndoAnswer: false,
+      nextCardIds: [],
+      skipEvents: [],
+      swapEvents: [],
+      exitEvents: [],
+      returnEvents: [],
     });
     const loaded = loadInProgressTest();
     expect(loaded?.testAnswerIndex).toBe(3);

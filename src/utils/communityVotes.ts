@@ -28,9 +28,10 @@ export interface VoteStore {
 }
 
 export type DistributionLabel =
-  | 'Projected distribution'
-  | 'Early community distribution'
-  | 'Community distribution';
+  | 'Estimated distribution'
+  | 'Early community signal'
+  | 'Community distribution'
+  | 'Not enough data yet';
 
 export interface VoteResult {
   percs: { option: string; pct: number }[];
@@ -224,8 +225,9 @@ function setMyVote(contentId: string, answer: string): void {
 // ─── Distribution label ───────────────────────────────────────────────────
 
 export function getDistributionLabel(realVotes: number): DistributionLabel {
-  if (realVotes < 30) return 'Projected distribution';
-  if (realVotes < 100) return 'Early community distribution';
+  if (realVotes === 0) return 'Not enough data yet';
+  if (realVotes < 30) return 'Estimated distribution';
+  if (realVotes < 100) return 'Early community signal';
   return 'Community distribution';
 }
 

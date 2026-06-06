@@ -24,12 +24,12 @@ export type ArchetypeId =
   | 'guardian'
   | 'mirror'
   | 'strategist'
-  | 'seeker'
+  | 'weaver'
   | 'anchor'
   | 'catalyst'
   | 'observer'
   | 'alchemist'
-  | 'pathfinder';
+  | 'dreamer';
 
 export interface ArchetypeDefinition {
   id: ArchetypeId;
@@ -148,10 +148,10 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     workPattern: 'Singular when focused. Scattered when chasing too many transformations at once.',
     rarityBias: 0.3,
   },
-  pathfinder: {
-    id: 'pathfinder',
-    name: 'The Pathfinder',
-    shortName: 'Pathfinder',
+  dreamer: {
+    id: 'dreamer',
+    name: 'The Dreamer',
+    shortName: 'Dreamer',
     symbol: '▣',
     color: '#34d399',
     axisSignature: {
@@ -241,10 +241,10 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     workPattern: 'Invaluable in diagnosis. Slow at shipping. Rarely wrong in the long run.',
     rarityBias: 0.25,
   },
-  seeker: {
-    id: 'seeker',
-    name: 'The Seeker',
-    shortName: 'Seeker',
+  weaver: {
+    id: 'weaver',
+    name: 'The Weaver',
+    shortName: 'Weaver',
     symbol: '◬',
     color: '#c084fc',
     axisSignature: {
