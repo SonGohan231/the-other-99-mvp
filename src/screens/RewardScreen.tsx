@@ -9,6 +9,12 @@ import { ProfileVector } from '../utils/profileVector';
 import ProfileRadarChart from '../components/ProfileRadarChart';
 import { getComparisonMessage } from '../content/profileInsights';
 
+interface EvolutionData {
+  primaryName: string;
+  confidence: string;
+  summary: string;
+}
+
 interface Props {
   item: ContentItem;
   selectedAnswer: string;
@@ -23,6 +29,7 @@ interface Props {
   onNext: (card: NextCard | null) => void;
   onChangeAnswer?: () => void;
   canChangeAnswer?: boolean;
+  evolutionData?: EvolutionData | null;
 }
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -58,6 +65,7 @@ export default function RewardScreen({
   onNext,
   onChangeAnswer,
   canChangeAnswer,
+  evolutionData,
 }: Props) {
   const t = useT();
   const [lang] = useLang();
@@ -349,6 +357,30 @@ export default function RewardScreen({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Profile evolution card — shown every 5 answers */}
+        {evolutionData && showContinue && (
+          <div className="animate-in" style={{
+            margin: '0 0 12px',
+            padding: '14px 16px',
+            background: 'linear-gradient(135deg, rgba(124,58,237,0.1) 0%, rgba(8,145,178,0.06) 100%)',
+            border: '1px solid rgba(124,58,237,0.22)',
+            borderRadius: '12px',
+          }}>
+            <p style={{
+              fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em',
+              textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: '6px',
+            }}>
+              Profile update · {totalProfileAnswers} answers
+            </p>
+            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>
+              {evolutionData.primaryName}
+            </p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.6 }}>
+              {evolutionData.summary}
+            </p>
           </div>
         )}
 

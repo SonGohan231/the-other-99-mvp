@@ -42,6 +42,10 @@ import { canContinueTest, isPremiumUnlocked, unlockPremium } from './utils/premi
 import ProfileSnapshotScreen from './screens/ProfileSnapshotScreen';
 import FullProfileScreen from './screens/FullProfileScreen';
 import HiddenParametersScreen from './screens/HiddenParametersScreen';
+import Snapshot51Screen from './screens/Snapshot51Screen';
+import EmergingArchetypeScreen from './screens/EmergingArchetypeScreen';
+import ContradictionScreen from './screens/ContradictionScreen';
+import HumanTwinScreen from './screens/HumanTwinScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
 import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
 import { isGuestModeActive, enableGuestMode, disableGuestMode, getGuestTestsUsed, incrementGuestTestsUsed, GUEST_USER_ID } from './utils/guestSession';
@@ -304,6 +308,17 @@ export default function App() {
     const snapshot = computeSnapshot51(canonicalVector, answeredCount, archetype, contradiction, humanTwin, hiddenParams);
     return { archetype, contradiction, humanTwin, hiddenParams, snapshot };
   }, [profileState.total_profile_answers, canonicalVector, skipEvents, swapEvents, exitEvents, returnEvents, behavioralSummary]);
+
+  // Profile evolution card — shown in RewardScreen every 5 answers
+  const evolutionData = useMemo(() => {
+    const n = profileState.total_profile_answers;
+    if (n <= 0 || n % 5 !== 0) return null;
+    return {
+      primaryName: engineResults.archetype.primary.name,
+      confidence: engineResults.archetype.confidence,
+      summary: engineResults.archetype.user_facing_summary,
+    };
+  }, [profileState.total_profile_answers, engineResults.archetype]);
 
   // Apply persisted theme + reduced motion on mount
   useState(() => {
@@ -1175,6 +1190,10 @@ export default function App() {
           onPremiumDepth={() => setScreen('premium-depth')}
           onArchetypes={() => setScreen('archetypes')}
           onGalaxyMap={() => setScreen('galaxy-map')}
+          onSnapshot51={() => setScreen('snapshot-51')}
+          onEmergingArchetype={() => setScreen('emerging-archetype')}
+          onContradiction={() => setScreen('contradiction')}
+          onHumanTwin={() => setScreen('human-twin')}
         />
       )}
 
@@ -1236,6 +1255,7 @@ export default function App() {
           onNext={handleRewardNext}
           onChangeAnswer={handleUndoAnswer}
           canChangeAnswer={canUndoAnswer}
+          evolutionData={evolutionData}
         />
       )}
 
@@ -1343,6 +1363,40 @@ export default function App() {
       {screen === 'hidden-parameters' && (
         <HiddenParametersScreen
           profileVector={profileVector}
+          engineResult={engineResults.hiddenParams}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'snapshot-51' && (
+        <Snapshot51Screen
+          snapshot={engineResults.snapshot}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
+          onStartTest={handleStartTest}
+        />
+      )}
+
+      {screen === 'emerging-archetype' && (
+        <EmergingArchetypeScreen
+          archetype={engineResults.archetype}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'contradiction' && (
+        <ContradictionScreen
+          contradiction={engineResults.contradiction}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'human-twin' && (
+        <HumanTwinScreen
+          humanTwin={engineResults.humanTwin}
+          totalAnswers={profileState.total_profile_answers}
           onBack={() => setScreen('dashboard')}
         />
       )}

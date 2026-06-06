@@ -99,7 +99,7 @@ function buildAxisSignals(canonicalVector: CanonicalVector): {
 
   return {
     strongest: sorted.slice(0, 3),
-    uncertain: sorted.slice(-2).reverse(), // smallest absolute values = most uncertain
+    uncertain: sorted.slice(-3).reverse(), // smallest absolute values = most uncertain
   };
 }
 

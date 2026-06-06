@@ -33,6 +33,10 @@ interface Props {
   onPremiumDepth?: () => void;
   onArchetypes?: () => void;
   onGalaxyMap?: () => void;
+  onSnapshot51?: () => void;
+  onEmergingArchetype?: () => void;
+  onContradiction?: () => void;
+  onHumanTwin?: () => void;
 }
 
 const RARITY_LABEL_COLOR: Record<string, string> = {
@@ -72,6 +76,10 @@ export default function DashboardScreen({
   onPremiumDepth,
   onArchetypes,
   onGalaxyMap,
+  onSnapshot51,
+  onEmergingArchetype,
+  onContradiction,
+  onHumanTwin,
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
@@ -602,6 +610,48 @@ export default function DashboardScreen({
                   }}
                 >
                   ◑ {lang === 'pl' ? 'Cień' : 'Shadow'} →
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Intelligence Engines quick-access */}
+          {totalProfileAnswers >= 5 && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+              {onEmergingArchetype && (
+                <button className="tappable" onClick={onEmergingArchetype} style={{
+                  padding: '6px 12px', fontSize: '0.65rem', fontWeight: 600,
+                  background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)',
+                  borderRadius: '12px', color: 'var(--accent-light)', cursor: 'pointer',
+                }}>
+                  ◈ {lang === 'pl' ? 'Archetyp' : 'Archetype'} →
+                </button>
+              )}
+              {onContradiction && (
+                <button className="tappable" onClick={onContradiction} style={{
+                  padding: '6px 12px', fontSize: '0.65rem', fontWeight: 600,
+                  background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)',
+                  borderRadius: '12px', color: '#c084fc', cursor: 'pointer',
+                }}>
+                  ◑ {lang === 'pl' ? 'Złożoność' : 'Complexity'} →
+                </button>
+              )}
+              {onHumanTwin && (
+                <button className="tappable" onClick={onHumanTwin} style={{
+                  padding: '6px 12px', fontSize: '0.65rem', fontWeight: 600,
+                  background: 'rgba(8,145,178,0.08)', border: '1px solid rgba(8,145,178,0.22)',
+                  borderRadius: '12px', color: 'var(--teal-light)', cursor: 'pointer',
+                }}>
+                  ◎ {lang === 'pl' ? 'Bliźniak' : 'Twin'} →
+                </button>
+              )}
+              {onSnapshot51 && totalProfileAnswers >= 25 && (
+                <button className="tappable" onClick={onSnapshot51} style={{
+                  padding: '6px 12px', fontSize: '0.65rem', fontWeight: 600,
+                  background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.22)',
+                  borderRadius: '12px', color: 'var(--gold-light)', cursor: 'pointer',
+                }}>
+                  ✦ {totalProfileAnswers >= 51 ? 'Snapshot 51' : `${51 - totalProfileAnswers} to Snapshot`} →
                 </button>
               )}
             </div>

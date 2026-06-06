@@ -132,6 +132,9 @@ export default function DebugPanel({
             {isTestMode && <span style={{ color: '#22d3ee', fontSize: '0.65rem' }}>TEST MODE</span>}
           </p>
 
+          {/* ── A: RUNTIME ─────────────────────────────────── */}
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--teal-light)', textTransform: 'uppercase', padding: '6px 0 2px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>A · Runtime</div>
+
           {/* APP INFO */}
           <details open>
             <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>App Info</summary>
@@ -150,6 +153,22 @@ export default function DebugPanel({
               </div>
             </div>
           </details>
+
+          {/* SESSION */}
+          <details open>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>Session</summary>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.8 }}>
+              <div>Mode: {isTestMode ? 'LOCAL TEST' : 'Supabase'}</div>
+              <div>User: {userId ?? 'none'} | Lang: {exportLang}</div>
+              <div>Answers: {totalProfileAnswers}</div>
+              <div>Profile progress: {profileState.profile_progress.toFixed(1)}%</div>
+              <div>Rarity pts: {profileState.rarity_points.toFixed(0)}</div>
+              <div>Premium: {premiumState?.unlocked ? `✓ (${premiumState.source})` : '✗'}</div>
+            </div>
+          </details>
+
+          {/* ── B: CONTENT ─────────────────────────────────── */}
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent-light)', textTransform: 'uppercase', padding: '6px 0 2px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>B · Content</div>
 
           {/* CONTENT SOURCE */}
           <details open>
@@ -177,16 +196,8 @@ export default function DebugPanel({
             </div>
           </details>
 
-          {/* SESSION */}
-          <details open>
-            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>Session</summary>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.8 }}>
-              <div>Mode: {isTestMode ? 'LOCAL TEST' : 'Supabase'}</div>
-              <div>Answers: {totalProfileAnswers}</div>
-              <div>Profile progress: {profileState.profile_progress.toFixed(1)}%</div>
-              <div>Rarity pts: {profileState.rarity_points.toFixed(0)}</div>
-            </div>
-          </details>
+          {/* ── C: CURRENT SESSION ─────────────────────────── */}
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em', color: '#86efac', textTransform: 'uppercase', padding: '6px 0 2px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>C · Current Session</div>
 
           {/* CURRENT TEST */}
           <details>
@@ -257,6 +268,9 @@ export default function DebugPanel({
               }
             </div>
           </details>
+
+          {/* ── D: INTELLIGENCE ENGINES ────────────────────── */}
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--gold-light)', textTransform: 'uppercase', padding: '6px 0 2px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>D · Intelligence Engines</div>
 
           {/* EMERGING ARCHETYPE */}
           <details>
@@ -356,6 +370,9 @@ export default function DebugPanel({
               ) : <div>No snapshot data.</div>}
             </div>
           </details>
+
+          {/* ── E: EXPORT & LOGS ───────────────────────────── */}
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em', color: '#f87171', textTransform: 'uppercase', padding: '6px 0 2px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>E · Export & Logs</div>
 
           {/* COMMUNITY VOTES */}
           <details>

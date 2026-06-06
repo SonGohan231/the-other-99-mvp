@@ -5,10 +5,12 @@ import { summarizeBehavioralProfile } from '../utils/behavioralSignals';
 import { getInProgressEventQueues } from '../utils/inProgressTest';
 import { useLang } from '../context/LangContext';
 import { computeCanonicalHP, buildHPDisplay } from '../engine/canonicalHP';
+import type { HiddenParametersResult } from '../engine/hiddenParameters';
 
 interface Props {
   profileVector: ProfileVector;
   onBack: () => void;
+  engineResult?: HiddenParametersResult | null;
 }
 
 function levelColor(lv: ParameterLevel): string {
@@ -54,7 +56,7 @@ const DISPLAY_NAMES_PL: Record<string, string> = {
   p12: 'Jak stały jest twój wzorzec w czasie',
 };
 
-export default function HiddenParametersScreen({ profileVector, onBack }: Props) {
+export default function HiddenParametersScreen({ profileVector, onBack, engineResult }: Props) {
   const [lang] = useLang();
   const isPl = lang === 'pl';
   const { skipEvents, swapEvents, exitEvents, returnEvents } = getInProgressEventQueues();
@@ -91,6 +93,80 @@ export default function HiddenParametersScreen({ profileVector, onBack }: Props)
         </p>
 
         <div style={{ height: '1px', background: 'var(--border)', marginBottom: '24px' }} />
+
+        {/* ── Engine-powered primary display ─────────────────── */}
+        {engineResult && (
+          <div style={{ marginBottom: '28px' }}>
+            <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--gold-light)', textTransform: 'uppercase', marginBottom: '14px' }}>
+              {isPl ? 'PROFIL UKRYTY' : 'HIDDEN PROFILE'}
+            </p>
+            {!engineResult.is_sufficient && (
+              <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', marginBottom: '12px' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.55, fontStyle: 'italic' }}>
+                  {isPl
+                    ? 'Odpowiedz na więcej pytań, aby zobaczyć swój ukryty profil behawioralny.'
+                    : 'Answer more questions to reveal your behavioral hidden profile.'}
+                </p>
+              </div>
+            )}
+            {[
+              {
+                key: 'confidence',
+                dim: engineResult.confidence,
+                label: isPl ? 'Pewność ↔ Wahanie' : 'Confidence ↔ Hesitation',
+                color: engineResult.confidence.score >= 70 ? 'var(--teal-light)'
+                  : engineResult.confidence.score <= 30 ? 'rgba(255,255,255,0.3)'
+                  : 'var(--accent-light)',
+              },
+              {
+                key: 'openness',
+                dim: engineResult.openness,
+                label: isPl ? 'Otwartość ↔ Ostrożność' : 'Openness ↔ Guardedness',
+                color: engineResult.openness.score >= 70 ? 'var(--teal-light)'
+                  : engineResult.openness.score <= 30 ? 'rgba(255,255,255,0.3)'
+                  : 'var(--accent-light)',
+              },
+              {
+                key: 'consistency',
+                dim: engineResult.consistency,
+                label: isPl ? 'Spójność ↔ Sprzeczność' : 'Consistency ↔ Contradiction',
+                color: engineResult.consistency.score >= 70 ? 'var(--teal-light)'
+                  : engineResult.consistency.score <= 30 ? 'rgba(255,255,255,0.3)'
+                  : 'var(--accent-light)',
+              },
+            ].map(({ key, dim, label, color }) => (
+              <div key={key} style={{
+                padding: '16px 16px 14px',
+                background: 'rgba(255,255,255,0.025)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: '10px',
+                marginBottom: '10px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.73rem', fontWeight: 600, color: 'var(--text-muted)' }}>{label}</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color }}>{dim.user_facing_label}</span>
+                </div>
+                {/* Score bar */}
+                <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden', marginBottom: '10px' }}>
+                  <div style={{ height: '100%', width: `${dim.score}%`, background: color, borderRadius: '2px', transition: 'width 0.6s ease' }} />
+                </div>
+                <p style={{ fontSize: '0.74rem', color: 'var(--text-dim)', lineHeight: 1.6 }}>
+                  {dim.user_facing_summary}
+                </p>
+                {dim.evidence.length > 0 && (
+                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                    {dim.evidence.map((ev) => (
+                      <p key={ev} style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.22)', marginBottom: '2px' }}>
+                        · {ev}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div style={{ height: '1px', background: 'var(--border)', marginTop: '20px', marginBottom: '24px' }} />
+          </div>
+        )}
 
         {/* Canonical HP01 / HP02 / HP03 — primary section */}
         {hpDisplay ? (
