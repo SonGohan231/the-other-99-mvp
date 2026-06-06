@@ -1,8 +1,13 @@
 import { SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent } from '../types';
 
 const KEY = 'to99_in_progress_test';
-const VERSION = 3;
+const VERSION = 4;
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+export interface PremiumStateSnapshot {
+  unlocked: boolean;
+  source: 'supabase' | 'guest' | 'test' | null;
+}
 
 export interface InProgressTestState {
   version: number;
@@ -21,6 +26,11 @@ export interface InProgressTestState {
   exitEvents: ExitToMenuEvent[];
   returnEvents: ReturnToSessionEvent[];
   updatedAt: string;
+  // v4 session context fields
+  userId: string | null;
+  lang: string;
+  startedAt: string;
+  premiumState: PremiumStateSnapshot | null;
 }
 
 // ─── Internal save/load ──────────────────────────────────────────────────────
@@ -36,32 +46,45 @@ function _save(state: Omit<InProgressTestState, 'version' | 'updatedAt'>): void 
   } catch { /* ignore storage errors */ }
 }
 
+function _migrate(parsed: InProgressTestState): InProgressTestState {
+  // v2 → add event queues
+  if (parsed.version === 2) {
+    parsed.skipEvents = parsed.skipEvents ?? [];
+    parsed.swapEvents = parsed.swapEvents ?? [];
+    parsed.exitEvents = parsed.exitEvents ?? [];
+    parsed.returnEvents = parsed.returnEvents ?? [];
+  }
+  // v2/v3 → add v4 session context fields with safe defaults
+  if (parsed.version <= 3) {
+    if (parsed.userId === undefined) parsed.userId = null;
+    if (!parsed.lang) parsed.lang = 'en';
+    if (!parsed.startedAt) parsed.startedAt = parsed.updatedAt ?? new Date().toISOString();
+    if (parsed.premiumState === undefined) parsed.premiumState = null;
+  }
+  // Defensive defaults for optional fields
+  if (!parsed.nextCardIds) parsed.nextCardIds = [];
+  if (parsed.pendingSelection === undefined) parsed.pendingSelection = null;
+  if (!parsed.skipEvents) parsed.skipEvents = [];
+  if (!parsed.swapEvents) parsed.swapEvents = [];
+  if (!parsed.exitEvents) parsed.exitEvents = [];
+  if (!parsed.returnEvents) parsed.returnEvents = [];
+  return parsed;
+}
+
 function _load(): InProgressTestState | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as InProgressTestState;
-    if (parsed.version !== VERSION && parsed.version !== 2) return null;
-    // Migrate v2 saves to v3 shape
-    if (parsed.version === 2) {
-      (parsed as InProgressTestState).skipEvents = [];
-      (parsed as InProgressTestState).swapEvents = [];
-      (parsed as InProgressTestState).exitEvents = [];
-      (parsed as InProgressTestState).returnEvents = [];
-    }
+    // Accept v2, v3, v4; reject anything else
+    if (parsed.version !== 4 && parsed.version !== 3 && parsed.version !== 2) return null;
     if (!parsed.testContentIds?.length) return null;
     // Expire after MAX_AGE_MS
     if (parsed.updatedAt) {
       const age = Date.now() - new Date(parsed.updatedAt).getTime();
       if (age > MAX_AGE_MS) { localStorage.removeItem(KEY); return null; }
     }
-    if (!parsed.nextCardIds) parsed.nextCardIds = [];
-    if (parsed.pendingSelection === undefined) parsed.pendingSelection = null;
-    if (!parsed.skipEvents) parsed.skipEvents = [];
-    if (!parsed.swapEvents) parsed.swapEvents = [];
-    if (!parsed.exitEvents) parsed.exitEvents = [];
-    if (!parsed.returnEvents) parsed.returnEvents = [];
-    return parsed;
+    return _migrate(parsed);
   } catch { return null; }
 }
 
