@@ -1,6 +1,23 @@
 import { ProfileState, Interaction } from '../types';
 import { CanonicalVector } from './canonicalVector';
 
+export interface ContentDiagnostics {
+  use_v2_content: boolean;
+  active_content_source: 'legacy' | 'v2' | 'mixed' | 'fallback' | 'unknown';
+  loaded_content_count: number;
+  loaded_v2_question_count: number;
+  loaded_v2_answer_count: number;
+  loaded_legacy_count: number;
+  current_content_source: string | null;
+  current_content_version: string | null;
+  current_source_file: string | null;
+  current_question_id: string | null;
+  current_answer_ids: string[];
+  current_lang: string | null;
+  warnings: string[];
+}
+
+
 export const KEYS = {
   AGE_CONFIRMED:  'to99_age_confirmed',
   STARTED:        'to99_started',
@@ -155,6 +172,7 @@ export function exportFullSession(extras: {
   exitEvents?: unknown[];
   returnEvents?: unknown[];
   buildInfo?: Record<string, string>;
+  contentDiagnostics?: ContentDiagnostics | null;
   // v4 session context
   userId?: string | null;
   lang?: string;
@@ -181,6 +199,7 @@ export function exportFullSession(extras: {
         return: extras.returnEvents ?? [],
       },
       build_info: extras.buildInfo ?? null,
+      content_diagnostics: extras.contentDiagnostics ?? null,
     },
     null,
     2
