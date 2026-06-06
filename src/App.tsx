@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { User } from '@supabase/supabase-js';
 import {
   AppScreen, ContentItem, ProfileState, Interaction, TestAnswer, NextCard, BehavioralMetadata,
   SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent,
 } from './types';
 import { loadContent } from './utils/csvLoader';
-import { selectProfileTestContent, calcProfileProgress } from './utils/contentSelector';
+import { selectProfileTestContent, calcProfileProgress, selectNextAdaptiveQuestion } from './utils/contentSelector';
 import {
   isAgeConfirmed, confirmAge,
   getSeenIds, addSeenId, addSeenIds,
@@ -42,6 +42,10 @@ import { canContinueTest, isPremiumUnlocked, unlockPremium } from './utils/premi
 import ProfileSnapshotScreen from './screens/ProfileSnapshotScreen';
 import FullProfileScreen from './screens/FullProfileScreen';
 import HiddenParametersScreen from './screens/HiddenParametersScreen';
+import Snapshot51Screen from './screens/Snapshot51Screen';
+import EmergingArchetypeScreen from './screens/EmergingArchetypeScreen';
+import ContradictionScreen from './screens/ContradictionScreen';
+import HumanTwinScreen from './screens/HumanTwinScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
 import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
 import { isGuestModeActive, enableGuestMode, disableGuestMode, getGuestTestsUsed, incrementGuestTestsUsed, GUEST_USER_ID } from './utils/guestSession';
@@ -57,6 +61,17 @@ import LegalScreen from './screens/LegalScreen';
 import SubscriptionScreen from './screens/SubscriptionScreen';
 import PremiumDepthScreen from './screens/PremiumDepthScreen';
 import PremiumUnlockedModal, { hasPremiumUnlockedBeenSeen, resetPremiumUnlockedSeen } from './components/PremiumUnlockedModal';
+import { USE_V2_CONTENT } from './config/features';
+import { computeEmergingArchetype } from './engine/emergingArchetype';
+import { computeContradiction } from './engine/contradictionEngine';
+import { computeHumanTwin } from './engine/humanTwin';
+import { computeSnapshot51 } from './engine/snapshot51';
+import { computeHiddenParameters } from './engine/hiddenParameters';
+import { recordActivity, getStreak } from './utils/streak';
+import {
+  getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
+  type RevealResult,
+} from './utils/revealPacing';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -113,27 +128,95 @@ function buildNextCard(item: ContentItem): NextCard {
   };
 }
 
-// ─── Helper: pick 3 candidate items with rarity variety ──────────────────────────────────────
-function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
-  const available = pool.slice(fromIndex);
-  if (available.length === 0) return [];
 
-  const standard = available.filter((i) => i.rarity_tier === 'standard');
-  const rare = available.filter((i) => i.rarity_tier === 'rare');
-  const epicLegendary = available.filter((i) => i.rarity_tier === 'epic' || i.rarity_tier === 'legendary');
+// ─── Stage 2 helpers: per-answer deltas + content diagnostics ─────────────────
 
-  const picks: ContentItem[] = [];
-
-  if (standard.length > 0) picks.push(standard[0]);
-  if (rare.length > 0) picks.push(rare[0]);
-  if (epicLegendary.length > 0) picks.push(epicLegendary[0]);
-
-  for (const item of available) {
-    if (picks.length >= 3) break;
-    if (!picks.includes(item)) picks.push(item);
+function parseJsonRecord(raw: string | undefined | null): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
   }
+}
 
-  return picks.slice(0, 3).map(buildNextCard);
+function parseStringArray(raw: string | undefined | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function numericDeltas(raw: unknown): Record<string, number> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (Number.isFinite(n) && n !== 0) out[key] = n;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function getSelectedAnswerDeltas(item: ContentItem, answer: string): Record<string, number> | null {
+  const answerMap = parseJsonRecord((item as unknown as Record<string, string>).answer_axis_deltas_json);
+  const direct = numericDeltas(answerMap[answer]);
+  if (direct) return direct;
+  const normalizedAnswer = answer.trim().toLowerCase();
+  for (const [label, rawDeltas] of Object.entries(answerMap)) {
+    if (label.trim().toLowerCase() === normalizedAnswer) {
+      const deltas = numericDeltas(rawDeltas);
+      if (deltas) return deltas;
+    }
+  }
+  // Legacy fallback: question-level deltas
+  return numericDeltas(parseJsonRecord(item.axis_delta_json));
+}
+
+function getContentDiagnostics(
+  content: ContentItem[],
+  currentItem: ContentItem | null,
+  lang: string | null,
+) {
+  const v2Count = content.filter((item) => item.content_source === 'v2').length;
+  const legacyCount = content.filter((item) => item.content_source !== 'v2').length;
+  const answerIds = parseStringArray((currentItem as unknown as Record<string, string>)?.answer_ids_json);
+  const activeSource = v2Count > 0 && legacyCount === 0
+    ? 'v2'
+    : v2Count > 0 && legacyCount > 0
+      ? 'mixed'
+      : legacyCount > 0
+        ? 'legacy'
+        : 'unknown';
+  const warnings: string[] = [];
+  if (USE_V2_CONTENT && v2Count === 0) warnings.push('USE_V2_CONTENT=true but no v2 items were loaded.');
+  if (USE_V2_CONTENT && legacyCount > 0) warnings.push('Legacy items are present while v2 content is enabled.');
+  if (currentItem && !currentItem.content_source) warnings.push('Current item has no content_source metadata.');
+
+  const v2AnswerCount = v2Count > 0 ? 5300 : 0;
+
+  return {
+    use_v2_content: USE_V2_CONTENT,
+    active_content_source: activeSource as 'legacy' | 'v2' | 'mixed' | 'fallback' | 'unknown',
+    questions_loaded: content.length,
+    answers_loaded: v2AnswerCount,
+    loaded_content_count: content.length,
+    loaded_v2_question_count: v2Count,
+    loaded_v2_answer_count: v2AnswerCount,
+    loaded_legacy_count: legacyCount,
+    current_content_source: currentItem?.content_source ?? null,
+    current_content_version: currentItem?.content_version ?? currentItem?.version ?? null,
+    current_source_file: currentItem?.source_file ?? null,
+    current_question_id: currentItem?.question_id ?? currentItem?.id ?? null,
+    current_answer_ids: answerIds,
+    current_lang: lang,
+    warnings,
+  };
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────────────────
@@ -180,6 +263,13 @@ export default function App() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>(getTimeline);
   const [newFragment, setNewFragment] = useState<ProfileFragment | null>(null);
 
+  // Adaptive next-question reason (for DebugPanel)
+  const [nextQuestionReason, setNextQuestionReason] = useState<string | null>(null);
+
+  // Preloaded next question (computed at end of handleAnswer for instant transition)
+  const [nextPreparedQuestion, setNextPreparedQuestion] = useState<ContentItem | null>(null);
+  const [nextPreparedReason, setNextPreparedReason] = useState<string | null>(null);
+
   // Undo state
   const [canUndoAnswer, setCanUndoAnswer] = useState(false);
 
@@ -215,6 +305,49 @@ export default function App() {
   });
   // Last answer's behavioral metadata (for debug display)
   const [lastBehavioralMetadata, setLastBehavioralMetadata] = useState<BehavioralMetadata | null>(null);
+
+  // Profile intelligence — recomputed whenever answers, vectors, or events change
+  const engineResults = useMemo(() => {
+    const interactions = getInteractions();
+    const answeredCount = profileState.total_profile_answers;
+    const archetype = computeEmergingArchetype(canonicalVector, answeredCount);
+    const contradiction = computeContradiction(interactions, skipEvents, swapEvents, exitEvents, canonicalVector);
+    const humanTwin = computeHumanTwin(canonicalVector, answeredCount, archetype, null);
+    const hiddenParams = computeHiddenParameters(behavioralSummary, interactions, returnEvents, contradiction);
+    const snapshot = computeSnapshot51(canonicalVector, answeredCount, archetype, contradiction, humanTwin, hiddenParams);
+    return { archetype, contradiction, humanTwin, hiddenParams, snapshot };
+  }, [profileState.total_profile_answers, canonicalVector, skipEvents, swapEvents, exitEvents, returnEvents, behavioralSummary]);
+
+  // Profile evolution card — shown in RewardScreen every 5 answers
+  const evolutionData = useMemo(() => {
+    const n = profileState.total_profile_answers;
+    if (n <= 0 || n % 5 !== 0) return null;
+    return {
+      primaryName: engineResults.archetype.primary.name,
+      confidence: engineResults.archetype.confidence,
+      summary: engineResults.archetype.user_facing_summary,
+    };
+  }, [profileState.total_profile_answers, engineResults.archetype]);
+
+  // Curiosity loop — computed per answer
+  const revealResult: RevealResult = useMemo(
+    () => getRevealResult(
+      profileState.total_profile_answers,
+      engineResults.archetype,
+      engineResults.contradiction,
+      canonicalVector,
+      nextPreparedQuestion,
+    ),
+    [profileState.total_profile_answers, engineResults, canonicalVector, nextPreparedQuestion],
+  );
+  const microFeedback = useMemo(
+    () => getMicroFeedback(profileState.total_profile_answers),
+    [profileState.total_profile_answers],
+  );
+  const nextTease = useMemo(
+    () => getNextTease(nextPreparedQuestion, profileState.total_profile_answers),
+    [nextPreparedQuestion, profileState.total_profile_answers],
+  );
 
   // Apply persisted theme + reduced motion on mount
   useState(() => {
@@ -459,12 +592,7 @@ export default function App() {
     if (!currentItem) return;
     setPendingSelection(null); // confirmed — clear pre-confirm selection
 
-    let axisDeltas: Record<string, number> | null = null;
-    try {
-      if (currentItem.axis_delta_json) {
-        axisDeltas = JSON.parse(currentItem.axis_delta_json) as Record<string, number>;
-      }
-    } catch { /* ignore */ }
+    const axisDeltas = getSelectedAnswerDeltas(currentItem, answer);
 
     const contentProfile = getContentBehavioralProfile(currentItem);
     const behavioralMeta = computeBehavioralMetadata({
@@ -533,6 +661,7 @@ export default function App() {
 
     let updatedVec = profileVector;
     const newChangedAxes: string[] = [];
+    let canonForPreload = canonicalVector;
 
     if (axisDeltas) {
       const isHidden = currentItem.profile_reveal_type?.toLowerCase().includes('hidden') ?? false;
@@ -560,6 +689,7 @@ export default function App() {
       const { next: newCanonical } = applyCanonicalDeltas(canonicalVector, axisDeltas);
       saveCanonicalVector(newCanonical);
       setCanonicalVector(newCanonical);
+      canonForPreload = newCanonical;
     }
 
     setChangedAxes(newChangedAxes);
@@ -633,48 +763,65 @@ export default function App() {
     setPendingAnswer(answer);
     setTestAnswerIndex(testAnswerIndex + 1);
 
-    const cards = pickNextCards(testContent, testAnswerIndex + 1);
-    setNextCards(cards);
+    setNextCards([]);
 
     debugLog('answer_submitted', { contentId: currentItem?.id, answer, testAnswerIndex });
-    // Pass fresh cards + index directly since setState is async
-    persistInProgress({ nextCards: cards, testAnswerIndex: testAnswerIndex + 1 });
+    persistInProgress({ nextCards: [], testAnswerIndex: testAnswerIndex + 1 });
+
+    // Record streak activity
+    recordActivity();
+
+    // Preload next question immediately using the updated canonical vector
+    const nextPreloadIdx = testAnswerIndex + 1;
+    if (nextPreloadIdx < TEST_TOTAL && nextPreloadIdx < testContent.length) {
+      const prep = selectNextAdaptiveQuestion(content, getSeenIds(), canonForPreload, testContent, nextPreloadIdx);
+      setNextPreparedQuestion(prep?.item ?? null);
+      setNextPreparedReason(prep?.reason ?? null);
+    } else {
+      setNextPreparedQuestion(null);
+      setNextPreparedReason(null);
+    }
+
     setScreen('reward');
   }
 
-  async function handleRewardNext(card: NextCard | null) {
+  async function handleRewardNext(_card: NextCard | null) {
     setNewFragment(null);
+    setSelectedCard(null);
     const nextIndex = testAnswerIndex;
 
-    if (card !== null) {
-      setSelectedCard(card.title);
-      addFeedEvent({ type: 'card_pick', label: card.title });
-      setFeedEvents(getFeedEvents());
-    } else {
-      setSelectedCard(null);
-    }
-
-    if (nextIndex < TEST_TOTAL && nextIndex < testContent.length) {
-      let items = testContent;
-
-      if (card !== null) {
-        const matchIdx = items.findIndex((item, idx) => {
-          return idx > nextIndex && item.id === card.linkedContentId;
-        });
-
-        if (matchIdx > nextIndex) {
-          const newItems = [...items];
-          [newItems[nextIndex], newItems[matchIdx]] = [newItems[matchIdx], newItems[nextIndex]];
-          setTestContent(newItems);
-          items = newItems;
-        }
-      }
-
-      setCurrentItem(items[nextIndex]);
-      setScreen('profile-test');
-    } else {
+    if (nextIndex >= TEST_TOTAL || nextIndex >= testContent.length) {
       await finishTest();
+      return;
     }
+
+    // Use preloaded question if available, otherwise compute on demand
+    let selection: { item: ContentItem; reason: string } | null = null;
+    if (nextPreparedQuestion) {
+      selection = { item: nextPreparedQuestion, reason: nextPreparedReason ?? 'preloaded' };
+      setNextPreparedQuestion(null);
+      setNextPreparedReason(null);
+    } else {
+      const sel = selectNextAdaptiveQuestion(content, getSeenIds(), canonicalVector, testContent, nextIndex);
+      selection = sel ?? null;
+    }
+    if (!selection) { await finishTest(); return; }
+
+    let items = [...testContent];
+    if (items[nextIndex]?.id !== selection.item.id) {
+      const existingIdx = items.findIndex((item, idx) => idx >= nextIndex && item.id === selection.item.id);
+      if (existingIdx > nextIndex) {
+        [items[nextIndex], items[existingIdx]] = [items[existingIdx], items[nextIndex]];
+      } else if (existingIdx === -1) {
+        items[nextIndex] = selection.item;
+      }
+      setTestContent(items);
+    }
+
+    setNextQuestionReason(selection.reason);
+    setCurrentItem(items[nextIndex]);
+    persistInProgress({ testContent: items, currentItem: items[nextIndex] });
+    setScreen('profile-test');
   }
 
   function handleUndoAnswer() {
@@ -777,6 +924,8 @@ export default function App() {
     const ai = getAppInfo();
     const premiumSrc =
       isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null;
+    const streakData = getStreak();
+    const nextLayer = getNextLayerInfo(profileState.total_profile_answers);
     const json = exportFullSession({
       profileVector: profileVector as Record<string, number>,
       canonicalVector,
@@ -788,6 +937,12 @@ export default function App() {
       lang,
       startedAt: testStartedAt,
       premiumState: { unlocked: isPremium, source: premiumSrc },
+      contentDiagnostics: getContentDiagnostics(content, currentItem, lang),
+      emergingArchetype: engineResults.archetype,
+      contradictionProfile: engineResults.contradiction,
+      humanTwin: engineResults.humanTwin,
+      snapshot51: engineResults.snapshot,
+      hiddenParameters: engineResults.hiddenParams,
       buildInfo: {
         version: ai.version,
         commit: ai.commit,
@@ -795,6 +950,22 @@ export default function App() {
         deploySource: ai.deploySource,
         platform: ai.platform,
         environment: ai.environment,
+      },
+      dopamineLoop: {
+        streak_current: streakData.current,
+        streak_longest: streakData.longest,
+        streak_last_date: streakData.lastDate,
+      },
+      curiosityLoop: {
+        last_reveal_type: revealResult.reveal_type,
+        last_reveal_intensity: revealResult.intensity,
+        last_micro_feedback: microFeedback,
+        last_next_tease: nextTease,
+        next_prepared_question_id: nextPreparedQuestion?.id ?? null,
+        next_selection_reason: nextPreparedReason ?? null,
+        next_layer_threshold: nextLayer?.threshold ?? null,
+        next_layer_label: nextLayer?.label ?? null,
+        auto_advance_enabled: isAutoAdvanceEnabled(),
       },
     });
     const blob = new Blob([json], { type: 'application/json' });
@@ -1091,6 +1262,10 @@ export default function App() {
           onPremiumDepth={() => setScreen('premium-depth')}
           onArchetypes={() => setScreen('archetypes')}
           onGalaxyMap={() => setScreen('galaxy-map')}
+          onSnapshot51={() => setScreen('snapshot-51')}
+          onEmergingArchetype={() => setScreen('emerging-archetype')}
+          onContradiction={() => setScreen('contradiction')}
+          onHumanTwin={() => setScreen('human-twin')}
         />
       )}
 
@@ -1152,6 +1327,11 @@ export default function App() {
           onNext={handleRewardNext}
           onChangeAnswer={handleUndoAnswer}
           canChangeAnswer={canUndoAnswer}
+          evolutionData={evolutionData}
+          revealResult={revealResult}
+          microFeedback={microFeedback}
+          nextTease={nextTease}
+          autoAdvanceEnabled={isAutoAdvanceEnabled()}
         />
       )}
 
@@ -1259,6 +1439,40 @@ export default function App() {
       {screen === 'hidden-parameters' && (
         <HiddenParametersScreen
           profileVector={profileVector}
+          engineResult={engineResults.hiddenParams}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'snapshot-51' && (
+        <Snapshot51Screen
+          snapshot={engineResults.snapshot}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
+          onStartTest={handleStartTest}
+        />
+      )}
+
+      {screen === 'emerging-archetype' && (
+        <EmergingArchetypeScreen
+          archetype={engineResults.archetype}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'contradiction' && (
+        <ContradictionScreen
+          contradiction={engineResults.contradiction}
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
+      {screen === 'human-twin' && (
+        <HumanTwinScreen
+          humanTwin={engineResults.humanTwin}
+          totalAnswers={profileState.total_profile_answers}
           onBack={() => setScreen('dashboard')}
         />
       )}
@@ -1334,6 +1548,24 @@ export default function App() {
           swapEvents={swapEvents}
           exitEvents={exitEvents}
           returnEvents={returnEvents}
+          profileVector={profileVector as Record<string, number>}
+          canonicalVector={canonicalVector}
+          userId={user?.id ?? null}
+          lang={lang}
+          startedAt={testStartedAt}
+          premiumState={{ unlocked: isPremium, source: isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null }}
+          contentDiagnostics={getContentDiagnostics(content, currentItem, lang)}
+          emergingArchetype={engineResults.archetype}
+          contradictionResult={engineResults.contradiction}
+          humanTwinResult={engineResults.humanTwin}
+          hiddenParameters={engineResults.hiddenParams}
+          snapshot51={engineResults.snapshot}
+          nextQuestionReason={nextQuestionReason}
+          revealResult={revealResult}
+          microFeedback={microFeedback}
+          nextTease={nextTease}
+          nextPreparedQuestionId={nextPreparedQuestion?.id ?? null}
+          nextSelectionReason={nextPreparedReason}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

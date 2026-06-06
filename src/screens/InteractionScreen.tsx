@@ -274,7 +274,7 @@ export default function InteractionScreen({
           <span className="content-type-label">{typeLabel}</span>
         </div>
 
-        <div className="prompt-block animate-in" style={{ animationDelay: '0.05s' }}>
+        <div className="prompt-block animate-blur-in" style={{ animationDelay: '0.05s' }}>
           <p className="prompt-text">{promptText}</p>
         </div>
 

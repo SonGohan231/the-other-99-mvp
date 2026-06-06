@@ -5,8 +5,7 @@ export const LANG_KEY = 'to99_lang';
 export const LANG_KEY_NEW = 'to99_language';
 
 export function getLang(): Lang {
-  const v = localStorage.getItem(LANG_KEY_NEW) || localStorage.getItem(LANG_KEY);
-  return (v as Lang) || 'en';
+  return 'en';
 }
 
 export function setLangStorage(lang: Lang): void {

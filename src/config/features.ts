@@ -3,4 +3,4 @@
 
 /** Use v2 comma-delimited content database (2650 questions, 5300 answers).
  *  When false, falls back to legacy semicolon-delimited CSVs in public/. */
-export const USE_V2_CONTENT = false;
+export const USE_V2_CONTENT = true;

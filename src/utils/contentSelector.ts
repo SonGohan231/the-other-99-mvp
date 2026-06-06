@@ -163,3 +163,88 @@ export function calcProfileProgress(totalProfileAnswers: number): number {
   if (totalProfileAnswers >= 51) return 100;
   return Math.min(85, (totalProfileAnswers / 51) * 85);
 }
+
+// Category-first selection: pick an unseen question from the given category.
+// Falls back to any unseen question if the category has no remaining items.
+export function selectContentByCategory(
+  allContent: ContentItem[],
+  seenIds: string[],
+  categoryEn: string,
+): ContentItem | null {
+  const available = allContent.filter((item) => !seenIds.includes(item.id));
+  if (available.length === 0) return null;
+
+  const inCategory = available.filter(
+    (item) => (item.theme_category || item.category) === categoryEn,
+  );
+
+  const pool = inCategory.length > 0 ? inCategory : available;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ─── Adaptive next-question selector ─────────────────────────────────────────
+
+const CANONICAL_AXES = ['AX01','AX02','AX03','AX04','AX05','AX06','AX07','AX08','AX09','AX10'];
+
+export interface NextQuestionSelection {
+  item: ContentItem;
+  axis: string | null;
+  reason: string;
+}
+
+export function selectNextAdaptiveQuestion(
+  allContent: ContentItem[],
+  seenIds: string[],
+  canonicalVector: Record<string, number>,
+  currentQueue: ContentItem[],
+  nextIndex: number,
+): NextQuestionSelection | null {
+  // Compute axis uncertainty: higher = less data on that axis = more useful to target
+  const uncertainty: Record<string, number> = {};
+  for (const ax of CANONICAL_AXES) {
+    uncertainty[ax] = 1 / (1 + Math.abs(canonicalVector[ax] ?? 0));
+  }
+
+  const seenSet = new Set(seenIds);
+
+  // Score a content item by how well it covers uncertain axes
+  function scoreItem(item: ContentItem): number {
+    const target = item.axis_target;
+    if (target && uncertainty[target] !== undefined) return uncertainty[target];
+    return 0.5; // neutral score when axis_target is missing
+  }
+
+  // 1. Prefer items already in the queue at nextIndex+
+  const queueCandidates: ContentItem[] = [];
+  for (let i = nextIndex; i < currentQueue.length; i++) {
+    const item = currentQueue[i];
+    if (!seenSet.has(item.id)) queueCandidates.push(item);
+  }
+
+  if (queueCandidates.length > 0) {
+    // Pick the best from queue (top-3 with slight randomness)
+    const sorted = queueCandidates.slice().sort((a, b) => scoreItem(b) - scoreItem(a));
+    const topN = sorted.slice(0, Math.min(3, sorted.length));
+    const picked = topN[Math.floor(Math.random() * topN.length)];
+    const axis = picked.axis_target || null;
+    const unc = axis ? Math.round(uncertainty[axis] * 100) : null;
+    const reason = axis
+      ? `queue – axis ${axis} uncertainty ${unc}%`
+      : 'queue – no axis target';
+    return { item: picked, axis, reason };
+  }
+
+  // 2. Fall back to full unseen pool
+  const available = allContent.filter((item) => !seenSet.has(item.id));
+  if (available.length === 0) return null;
+
+  const sorted = available.slice().sort((a, b) => scoreItem(b) - scoreItem(a));
+  const topN = sorted.slice(0, Math.min(3, sorted.length));
+  const picked = topN[Math.floor(Math.random() * topN.length)];
+  const axis = picked.axis_target || null;
+  const unc = axis ? Math.round(uncertainty[axis] * 100) : null;
+  const reason = axis
+    ? `adaptive – axis ${axis} uncertainty ${unc}%`
+    : 'adaptive – no axis target';
+  return { item: picked, axis, reason };
+}

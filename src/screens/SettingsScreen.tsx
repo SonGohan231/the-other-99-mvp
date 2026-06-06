@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useT, useLang } from '../context/LangContext';
-import { Lang } from '../i18n';
+import { useT } from '../context/LangContext';
 import { getAppInfo } from '../utils/appVersion';
 
 const THEME_KEY = 'to99_theme';
@@ -67,7 +66,6 @@ interface Props {
 
 export default function SettingsScreen({ onBack, onExport, onReset }: Props) {
   const t = useT();
-  const [lang, setLang] = useLang();
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const [reducedMotion, setReducedMotionState] = useState<boolean>(getReducedMotion);
   const [debugEnabled, setDebugEnabled] = useState(() => {
@@ -92,10 +90,6 @@ export default function SettingsScreen({ onBack, onExport, onReset }: Props) {
     try { localStorage.setItem(REDUCED_MOTION_KEY, String(on)); } catch { /* ignore */ }
     applyReducedMotion(on);
     setReducedMotionState(on);
-  }
-
-  function handleLang(l: Lang) {
-    setLang(l);
   }
 
   const sectionStyle: React.CSSProperties = {
@@ -130,22 +124,6 @@ export default function SettingsScreen({ onBack, onExport, onReset }: Props) {
     );
   }
 
-  function LangBtn({ value, label }: { value: Lang; label: string }) {
-    return (
-      <button
-        style={{
-          flex: 1, padding: '7px 4px', fontSize: '0.78rem', fontWeight: lang === value ? 600 : 400,
-          background: lang === value ? 'var(--accent)' : 'transparent',
-          color: lang === value ? '#fff' : 'var(--text-muted)',
-          border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', transition: 'all 0.15s',
-        }}
-        onClick={() => handleLang(value)}
-      >
-        {label}
-      </button>
-    );
-  }
-
   return (
     <div className="screen-centered" style={{ background: 'var(--bg)', alignItems: 'stretch' }}>
       <div style={{ maxWidth: 480, width: '100%', margin: '0 auto', padding: '24px 20px' }}>
@@ -166,17 +144,6 @@ export default function SettingsScreen({ onBack, onExport, onReset }: Props) {
               <ThemeBtn value="dark" label={t.settings.themeDark} />
               <ThemeBtn value="light" label={t.settings.themeLight} />
               <ThemeBtn value="system" label={t.settings.themeSystem} />
-            </div>
-          </div>
-        </div>
-
-        <p style={sectionLabel}>{t.settings.languageTitle}</p>
-        <div style={sectionStyle}>
-          <div style={lastRowStyle}>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{t.settings.languageTitle}</span>
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '3px' }}>
-              <LangBtn value="en" label={t.settings.languageEnglish} />
-              <LangBtn value="pl" label={t.settings.languagePolish} />
             </div>
           </div>
         </div>

@@ -71,6 +71,16 @@ export interface ContentItem {
   sensitivity_level?: string;
   controversy_level?: string;
   content_contract_status?: ContentContractStatus;
+  // Runtime content diagnostics / v2 adapter metadata
+  content_source?: 'legacy' | 'v2' | 'special_mode' | 'fallback';
+  content_version?: string;
+  source_file?: string;
+  question_id?: string;
+  answer_ids_json?: string;
+  answer_axis_deltas_json?: string;
+  answer_reveal_shorts_json?: string;
+  source_mode?: string;
+  source_tier?: string;
 }
 
 export interface ProfileState {
@@ -197,6 +207,10 @@ export type AppScreen =
   | 'full-profile'
   | 'hidden-parameters'
   | 'archetypes'
+  | 'snapshot-51'
+  | 'emerging-archetype'
+  | 'contradiction'
+  | 'human-twin'
   | 'account'
   | 'settings'
   | 'legal'
