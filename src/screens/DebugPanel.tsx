@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ContentItem, ProfileState, BehavioralMetadata } from '../types';
-import { exportSession, resetSession } from '../utils/storage';
+import { ContentItem, ProfileState, BehavioralMetadata, SkipEvent, SwapEvent, ExitToMenuEvent, ReturnToSessionEvent } from '../types';
+import { exportFullSession, resetSession } from '../utils/storage';
 import { isPremiumUnlocked, unlockPremium, disablePremiumUnlock, enablePremiumPreview, disablePremiumPreview, isPremiumPreviewEnabled } from '../utils/premiumProgression';
 import { debugLog, getLogs, getErrors, clearLogs } from '../utils/debugStore';
 import { enableTestSession, disableTestSession } from '../utils/testSession';
@@ -26,6 +26,10 @@ interface Props {
   onRefreshProfile: () => void;
   onLogout: () => void;
   onReset: () => void;
+  skipEvents?: SkipEvent[];
+  swapEvents?: SwapEvent[];
+  exitEvents?: ExitToMenuEvent[];
+  returnEvents?: ReturnToSessionEvent[];
   onSkipQuestion?: () => void;
   onSkipToQuestion?: (n: number) => void;
   onCompleteTest?: () => void;
@@ -44,6 +48,10 @@ export default function DebugPanel({
   isTestMode,
   lastBehavioralMetadata,
   behavioralSummary,
+  skipEvents = [],
+  swapEvents = [],
+  exitEvents = [],
+  returnEvents = [],
   onStartTest,
   onUndo,
   canUndo,
@@ -162,6 +170,32 @@ export default function DebugPanel({
             ) : (
               <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Need ≥3 answers with metadata.</div>
             )}
+          </details>
+
+          {/* BEHAVIORAL EVENTS */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Behavioral Events (skip:{skipEvents.length} swap:{swapEvents.length} exit:{exitEvents.length} return:{returnEvents.length})
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              {skipEvents.length === 0 && swapEvents.length === 0 && exitEvents.length === 0 && returnEvents.length === 0
+                ? <div>No behavioral events recorded.</div>
+                : <>
+                  {skipEvents.slice(-3).map((e, i) => (
+                    <div key={i}>skip: {e.question_id} | t={e.time_to_skip_ms}ms | had_sel={String(e.had_selection_before_skip)}</div>
+                  ))}
+                  {swapEvents.slice(-3).map((e, i) => (
+                    <div key={i}>swap: {e.old_question_id}→{e.new_question_id} | t={e.time_to_swap_ms}ms</div>
+                  ))}
+                  {exitEvents.slice(-3).map((e, i) => (
+                    <div key={i}>exit: q={e.question_id} | depth={e.session_depth} | ans={e.answer_count_before_exit}</div>
+                  ))}
+                  {returnEvents.slice(-3).map((e, i) => (
+                    <div key={i}>return: depth={e.session_depth_at_return} | same_q={String(e.same_question_restored)}</div>
+                  ))}
+                </>
+              }
+            </div>
           </details>
 
           {/* COMMUNITY VOTES */}
@@ -324,15 +358,30 @@ export default function DebugPanel({
               <button
                 className="debug-btn"
                 onClick={() => {
-                  const j = exportSession();
+                  const j = exportFullSession({
+                    skipEvents, swapEvents, exitEvents, returnEvents,
+                    buildInfo: { version: appInfo.version, commit: appInfo.commit, buildDate: appInfo.buildDate },
+                  });
                   const b = new Blob([j], { type: 'application/json' });
                   const u = URL.createObjectURL(b);
                   const a = document.createElement('a');
-                  a.href = u; a.download = `to99-${Date.now()}.json`; a.click();
+                  a.href = u; a.download = `to99-full-${Date.now()}.json`; a.click();
                   URL.revokeObjectURL(u);
                 }}
               >
-                Export JSON
+                Export Full JSON (with events)
+              </button>
+              <button
+                className="debug-btn"
+                onClick={() => {
+                  const j = exportFullSession({
+                    skipEvents, swapEvents, exitEvents, returnEvents,
+                    buildInfo: { version: appInfo.version, commit: appInfo.commit, buildDate: appInfo.buildDate },
+                  });
+                  navigator.clipboard.writeText(j).then(() => alert('Copied to clipboard')).catch(() => alert('Copy failed'));
+                }}
+              >
+                Copy session to clipboard
               </button>
 
               <button

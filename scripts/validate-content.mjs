@@ -278,6 +278,7 @@ let totalErrors = 0;
 let totalWarnings = 0;
 const allIds = new Set();
 const report = [];
+const allRows = [];  // collected for axis coverage matrix
 
 for (const { path, label, opts } of FILES) {
   let result;
@@ -312,6 +313,7 @@ for (const { path, label, opts } of FILES) {
   totalErrors += fileErrors;
   totalWarnings += warnings.length;
   report.push({ label, rows: rows.length, errors: fileErrors, warnings: warnings.length });
+  allRows.push(...rows);
 }
 
 // ─── Canon metadata check ────────────────────────────────────────────────────
@@ -349,6 +351,60 @@ try {
     }
   }
 } catch {}
+
+// ─── MVP-03: Axis coverage matrix ────────────────────────────────────────────
+// Groups by PRIMARY axis (first segment when axis_target contains semicolons).
+// Warns when any primary axis has fewer than MIN_AXIS_COVERAGE questions.
+const MIN_AXIS_COVERAGE = 10;
+
+try {
+  const axisCounts = {};
+  const axisDeltaSums = {};
+  const axisDeltaCount = {};
+
+  for (const row of allRows) {
+    const rawAxis = (row.axis_target || '').trim().replace(/^"/, '').replace(/"$/, '');
+    if (!rawAxis) continue;
+    // Use only the primary axis (first segment before any semicolon), normalized to lowercase
+    const axis = rawAxis.split(';')[0].trim().toLowerCase();
+    if (!axis) continue;
+    axisCounts[axis] = (axisCounts[axis] || 0) + 1;
+
+    const rawDelta = row.axis_delta_json || '';
+    if (rawDelta.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(rawDelta.trim());
+        const vals = Object.values(parsed).map(Number).filter(v => !isNaN(v));
+        if (vals.length > 0) {
+          const avgAbs = vals.reduce((s, v) => s + Math.abs(v), 0) / vals.length;
+          axisDeltaSums[axis] = (axisDeltaSums[axis] || 0) + avgAbs;
+          axisDeltaCount[axis] = (axisDeltaCount[axis] || 0) + 1;
+        }
+      } catch {}
+    }
+  }
+
+  const axes = Object.keys(axisCounts).sort((a, b) => axisCounts[b] - axisCounts[a]);
+  console.log('\nAxis coverage matrix (by primary axis):');
+  console.log(`  ${'Axis'.padEnd(24)} ${'Qs'.padStart(4)} ${'Avg|Δ|'.padStart(7)}`);
+  console.log(`  ${'─'.repeat(38)}`);
+  for (const ax of axes) {
+    const count = axisCounts[ax];
+    const avgDelta = axisDeltaCount[ax]
+      ? (axisDeltaSums[ax] / axisDeltaCount[ax]).toFixed(2)
+      : ' —';
+    const flag = count < MIN_AXIS_COVERAGE ? ' ⚠ LOW' : '';
+    console.log(`  ${ax.padEnd(24)} ${String(count).padStart(4)} ${String(avgDelta).padStart(7)}${flag}`);
+    if (count < MIN_AXIS_COVERAGE) {
+      console.log(`  WARN:  Primary axis "${ax}" has only ${count} questions (min: ${MIN_AXIS_COVERAGE})`);
+      totalWarnings++;
+    }
+  }
+  console.log(`  Total primary axes: ${axes.length}`);
+} catch (e) {
+  console.log(`\n  WARN:  Axis coverage matrix failed: ${e.message}`);
+  totalWarnings++;
+}
 
 // Premium distribution summary
 try {

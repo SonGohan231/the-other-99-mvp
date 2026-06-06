@@ -31,7 +31,7 @@ export default function LegalScreen({ page, onBack }: Props) {
     );
   }
 
-  function PlaceholderNote() {
+  function DraftNote() {
     return (
       <div style={{
         padding: '10px 14px', background: 'rgba(245,158,11,0.06)',
@@ -44,23 +44,23 @@ export default function LegalScreen({ page, onBack }: Props) {
     );
   }
 
+  const bodyStyle: React.CSSProperties = { fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.65 };
+
   function renderContent() {
     if (page === 'disclaimer') {
       return (
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-          {t.legal.disclaimerBody}
-        </p>
+        <p style={bodyStyle}>{t.legal.disclaimerBody}</p>
       );
     }
 
     if (page === 'privacy') {
+      const bodies = (t.legal as Record<string, unknown>).privacyBodies as Record<string, string> | undefined;
       return (
         <>
-          <PlaceholderNote />
           {Object.entries(t.legal.privacySections).map(([key, label]) => (
             <Section key={key} label={label}>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                {t.legal.placeholder}
+              <p style={bodyStyle}>
+                {bodies?.[key] ?? t.legal.placeholder}
               </p>
             </Section>
           ))}
@@ -69,13 +69,14 @@ export default function LegalScreen({ page, onBack }: Props) {
     }
 
     if (page === 'subscription-terms') {
+      const bodies = (t.legal as Record<string, unknown>).subscriptionBodies as Record<string, string> | undefined;
       return (
         <>
-          <PlaceholderNote />
+          <DraftNote />
           {Object.entries(t.legal.subscriptionSections).map(([key, label]) => (
             <Section key={key} label={label}>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                {t.legal.placeholder}
+              <p style={bodyStyle}>
+                {bodies?.[key] ?? t.legal.placeholder}
               </p>
             </Section>
           ))}
@@ -83,12 +84,29 @@ export default function LegalScreen({ page, onBack }: Props) {
       );
     }
 
+    if (page === 'terms') {
+      const termsBody = (t.legal as Record<string, unknown>).termsBody as string | undefined;
+      return (
+        <>
+          <DraftNote />
+          <p style={{ ...bodyStyle, whiteSpace: 'pre-line' }}>
+            {termsBody ?? t.legal.placeholder}
+          </p>
+        </>
+      );
+    }
+
+    if (page === 'help') {
+      const helpBody = (t.legal as Record<string, unknown>).helpBody as string | undefined;
+      return (
+        <p style={bodyStyle}>{helpBody ?? t.legal.placeholder}</p>
+      );
+    }
+
     return (
       <>
-        <PlaceholderNote />
-        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-          {t.legal.placeholder}
-        </p>
+        <DraftNote />
+        <p style={bodyStyle}>{t.legal.placeholder}</p>
       </>
     );
   }

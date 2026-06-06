@@ -132,13 +132,41 @@ export function resetSession(): void {
 export function exportSession(): string {
   return JSON.stringify(
     {
+      export_version: 2,
+      exported_at: new Date().toISOString(),
       age_confirmed: isAgeConfirmed(),
       started: isStarted(),
       seen_content_ids: getSeenIds(),
       interactions: getInteractions(),
       profile_state: getProfileState(),
       paywall_shown: isPaywallShown(),
-      exported_at: new Date().toISOString(),
+    },
+    null,
+    2
+  );
+}
+
+export function exportFullSession(extras: {
+  profileVector?: Record<string, number>;
+  skipEvents?: unknown[];
+  swapEvents?: unknown[];
+  exitEvents?: unknown[];
+  returnEvents?: unknown[];
+  buildInfo?: Record<string, string>;
+} = {}): string {
+  const base = JSON.parse(exportSession());
+  return JSON.stringify(
+    {
+      ...base,
+      export_version: 3,
+      profile_vector: extras.profileVector ?? null,
+      behavioral_events: {
+        skip: extras.skipEvents ?? [],
+        swap: extras.swapEvents ?? [],
+        exit: extras.exitEvents ?? [],
+        return: extras.returnEvents ?? [],
+      },
+      build_info: extras.buildInfo ?? null,
     },
     null,
     2
