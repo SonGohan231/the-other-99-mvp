@@ -405,6 +405,53 @@ body {
   gap: 28px;
 }
 
+/* ─── Background image active state ──────────── */
+
+.interaction-screen--with-bg .status-bar {
+  background: rgba(10, 10, 15, 0.60);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 1;
+}
+
+.interaction-screen--with-bg .interaction-content {
+  position: relative;
+  z-index: 1;
+}
+
+.interaction-screen--with-bg .answer-btn {
+  background: rgba(10, 10, 15, 0.76);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  color: var(--text);
+}
+
+.interaction-screen--with-bg .answer-btn:hover,
+.interaction-screen--with-bg .answer-btn:active {
+  background: rgba(26, 26, 36, 0.88);
+  border-color: rgba(124, 58, 237, 0.45);
+}
+
+.interaction-screen--with-bg .answer-btn.selected {
+  background: rgba(124, 58, 237, 0.32);
+  border-color: rgba(124, 58, 237, 0.65);
+  color: var(--accent-light);
+}
+
+.interaction-screen--with-bg .answer-btn:disabled {
+  background: rgba(10, 10, 15, 0.50);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.interaction-screen--with-bg .prompt-text {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.60);
+  color: #f0ece4;
+}
+
 .content-type-row {
   display: flex;
   align-items: center;
