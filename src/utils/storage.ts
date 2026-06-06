@@ -153,12 +153,23 @@ export function exportFullSession(extras: {
   exitEvents?: unknown[];
   returnEvents?: unknown[];
   buildInfo?: Record<string, string>;
+  // v4 session context
+  userId?: string | null;
+  lang?: string;
+  startedAt?: string | null;
+  premiumState?: { unlocked: boolean; source: string | null } | null;
 } = {}): string {
   const base = JSON.parse(exportSession());
   return JSON.stringify(
     {
       ...base,
-      export_version: 3,
+      export_version: 4,
+      session_context: {
+        user_id: extras.userId ?? null,
+        lang: extras.lang ?? null,
+        started_at: extras.startedAt ?? null,
+        premium_state: extras.premiumState ?? null,
+      },
       profile_vector: extras.profileVector ?? null,
       behavioral_events: {
         skip: extras.skipEvents ?? [],

@@ -32,7 +32,7 @@ import {
   upsertProfileState, incrementFreeTestsUsed,
   signOut,
 } from './lib/supabase';
-import { useT } from './context/LangContext';
+import { useT, useLang } from './context/LangContext';
 import { deriveCardPath, deriveThemeCategory, CARD_PATH_DEFINITIONS } from './utils/contentTaxonomy';
 import { canContinueTest, isPremiumUnlocked, unlockPremium } from './utils/premiumProgression';
 import ProfileSnapshotScreen from './screens/ProfileSnapshotScreen';
@@ -133,6 +133,7 @@ function pickNextCards(pool: ContentItem[], fromIndex: number): NextCard[] {
 // ─── App ──────────────────────────────────────────────────────────────────────────────
 export default function App() {
   const t = useT();
+  const [lang, setLang] = useLang();
   const [screen, setScreen] = useState<AppScreen>('age-gate');
   const [content, setContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,6 +154,7 @@ export default function App() {
   const [testAnswers, setTestAnswers] = useState<TestAnswer[]>([]);
   const [testSessionId, setTestSessionId] = useState<string | null>(null);
   const [testNumber, setTestNumber] = useState(1);
+  const [testStartedAt, setTestStartedAt] = useState<string | null>(null);
 
   // Per-question state
   const [currentItem, setCurrentItem] = useState<ContentItem | null>(null);
@@ -228,6 +230,8 @@ export default function App() {
     const ci = overrides?.currentItem !== undefined ? overrides.currentItem : currentItem;
     const nc = overrides?.nextCards ?? nextCards;
     const ps = overrides?.pendingSelection !== undefined ? overrides.pendingSelection : pendingSelection;
+    const premiumSrc =
+      isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null;
     saveQuizSnapshot({
       testNumber,
       testSessionId,
@@ -243,6 +247,10 @@ export default function App() {
       swapEvents,
       exitEvents,
       returnEvents,
+      userId: user?.id ?? null,
+      lang,
+      startedAt: testStartedAt ?? new Date().toISOString(),
+      premiumState: { unlocked: isPremium, source: premiumSrc },
     });
   }
 
@@ -284,6 +292,10 @@ export default function App() {
                 if (itemToRestore) {
                   restoredInProgressRef.current = true;
                   setCurrentItem(itemToRestore);
+                  // Restore v4 session context
+                  if (saved.startedAt) setTestStartedAt(saved.startedAt);
+                  // Restore language if it was recorded and differs from current
+                  if (saved.lang && saved.lang !== lang) setLang(saved.lang as 'en' | 'pl');
                   // Restore pre-confirmation selection
                   if (saved.pendingSelection) setPendingSelection(saved.pendingSelection);
                   // Restore persisted event queues
@@ -401,6 +413,8 @@ export default function App() {
     }
 
     clearUndoStack();
+    const startedAt = new Date().toISOString();
+    setTestStartedAt(startedAt);
     setTestContent(items);
     setTestAnswerIndex(0);
     setTestAnswers([]);
@@ -728,12 +742,18 @@ export default function App() {
 
   function handleExportJson() {
     const ai = getAppInfo();
+    const premiumSrc =
+      isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null;
     const json = exportFullSession({
       profileVector: profileVector as Record<string, number>,
       skipEvents,
       swapEvents,
       exitEvents,
       returnEvents,
+      userId: user?.id ?? null,
+      lang,
+      startedAt: testStartedAt,
+      premiumState: { unlocked: isPremium, source: premiumSrc },
       buildInfo: {
         version: ai.version,
         commit: ai.commit,
