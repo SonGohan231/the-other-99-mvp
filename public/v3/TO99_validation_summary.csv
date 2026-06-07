@@ -1,0 +1,11 @@
+check,result,value,expected
+question_count,PASS,2400,2400
+answer_count,PASS,9600,9600
+answers_per_question,PASS,exactly_4,exactly_4
+unique_question_pl,PASS,2400,2400
+unique_question_en,PASS,2400,2400
+archetype_sum_per_answer,PASS,100,100
+positive_share_each_archetype,PASS,A01-A12 > 0 for every answer,all positive
+hidden_categories,PASS,user_visible_category=false,false
+qa_score_min,PASS,8.3,>=7.0
+qa_score_avg,PASS,8.98,>=8.0

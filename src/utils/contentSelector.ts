@@ -105,7 +105,7 @@ export function selectProfileTestContent(
   for (const [type, count] of PROFILE_TEST_TYPE_SLOTS) {
     let added = 0;
 
-    // Prefer rarest-first to respect rarity budget
+    // Prefer rarest-first to respect rarity budget.
     for (const rarity of ['legendary', 'epic', 'rare', 'standard'] as RarityTier[]) {
       if (added >= count || rarityBudget[rarity] <= 0) continue;
       const pool = available.filter(
@@ -122,7 +122,7 @@ export function selectProfileTestContent(
       }
     }
 
-    // Fill remaining with any available of this type
+    // Fill remaining with any available of this type.
     if (added < count) {
       const fallback = available.filter((i) => i.content_type === type && !usedIds.has(i.id));
       while (added < count && fallback.length > 0) {
@@ -134,7 +134,7 @@ export function selectProfileTestContent(
       }
     }
 
-    // Last resort: ignore seenIds to never crash
+    // Last resort: ignore seenIds for this content type.
     if (added < count) {
       const lastResort = allContent.filter((i) =>
         i.content_type === type && !usedIds.has(i.id) && (isPremium || i.access_tier !== 'premium')
@@ -149,7 +149,21 @@ export function selectProfileTestContent(
     }
   }
 
-  // Shuffle
+  // Final global fill. The current v2 runtime maps the corpus as content_type='question'.
+  // Without this, the fixed 17-step test can silently become 13 items when
+  // secret/game/riddle slots cannot be filled.
+  const targetCount = PROFILE_TEST_TYPE_SLOTS.reduce((sum, [, count]) => sum + count, 0);
+  if (selected.length < targetCount) {
+    const globalFallback = available.filter((i) => !usedIds.has(i.id));
+    while (selected.length < targetCount && globalFallback.length > 0) {
+      const idx = Math.floor(Math.random() * globalFallback.length);
+      const item = globalFallback.splice(idx, 1)[0];
+      selected.push(item);
+      usedIds.add(item.id);
+    }
+  }
+
+  // Shuffle.
   for (let i = selected.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [selected[i], selected[j]] = [selected[j], selected[i]];
@@ -199,7 +213,7 @@ export function selectNextAdaptiveQuestion(
   currentQueue: ContentItem[],
   nextIndex: number,
 ): NextQuestionSelection | null {
-  // Compute axis uncertainty: higher = less data on that axis = more useful to target
+  // Compute axis uncertainty: higher = less data on that axis = more useful to target.
   const uncertainty: Record<string, number> = {};
   for (const ax of CANONICAL_AXES) {
     uncertainty[ax] = 1 / (1 + Math.abs(canonicalVector[ax] ?? 0));
@@ -207,14 +221,12 @@ export function selectNextAdaptiveQuestion(
 
   const seenSet = new Set(seenIds);
 
-  // Score a content item by how well it covers uncertain axes
   function scoreItem(item: ContentItem): number {
     const target = item.axis_target;
     if (target && uncertainty[target] !== undefined) return uncertainty[target];
-    return 0.5; // neutral score when axis_target is missing
+    return 0.5;
   }
 
-  // 1. Prefer items already in the queue at nextIndex+
   const queueCandidates: ContentItem[] = [];
   for (let i = nextIndex; i < currentQueue.length; i++) {
     const item = currentQueue[i];
@@ -222,7 +234,6 @@ export function selectNextAdaptiveQuestion(
   }
 
   if (queueCandidates.length > 0) {
-    // Pick the best from queue (top-3 with slight randomness)
     const sorted = queueCandidates.slice().sort((a, b) => scoreItem(b) - scoreItem(a));
     const topN = sorted.slice(0, Math.min(3, sorted.length));
     const picked = topN[Math.floor(Math.random() * topN.length)];
@@ -234,11 +245,10 @@ export function selectNextAdaptiveQuestion(
     return { item: picked, axis, reason };
   }
 
-  // 2. Fall back to full unseen pool
-  const available = allContent.filter((item) => !seenSet.has(item.id));
-  if (available.length === 0) return null;
+  const availablePool = allContent.filter((item) => !seenSet.has(item.id));
+  if (availablePool.length === 0) return null;
 
-  const sorted = available.slice().sort((a, b) => scoreItem(b) - scoreItem(a));
+  const sorted = availablePool.slice().sort((a, b) => scoreItem(b) - scoreItem(a));
   const topN = sorted.slice(0, Math.min(3, sorted.length));
   const picked = topN[Math.floor(Math.random() * topN.length)];
   const axis = picked.axis_target || null;

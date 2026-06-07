@@ -1,0 +1,13 @@
+table,field,type,required,description
+TO99_main_content,question_id,string,yes,Unique question/content item ID.
+TO99_main_content,content_type,enum,yes,Internal content format; hidden from user.
+TO99_main_content,internal_category,string,yes,Internal category for queue balancing; not user-visible.
+TO99_main_content,user_visible_category,boolean,yes,Always false for current release.
+TO99_main_content,question_pl/question_en,text,yes,Bilingual content prompt.
+TO99_main_content,answer_1_pl...answer_4_en,text,yes,Exactly four bilingual answer options.
+TO99_main_content,answer_N_A01_pct...answer_N_A12_pct,integer,yes,"Archetype percentage split per answer; sums to 100, all archetypes positive."
+TO99_main_content,axis_primary/axis_secondary,enum,yes,Canonical 10-axis mapping.
+TO99_main_content,hidden_parameter_primary,enum,yes,H01/H02/H03 hidden signal mapping.
+TO99_main_content,social_label_default,enum,yes,estimated/simulated/current_sample/real. This file uses estimated or simulated unless real backend data exists.
+TO99_main_content,source_license_status,enum,yes,candidate_ready/audit_required/research_only/inspiration_only.
+QA_Internal,overall_qa_score,decimal,yes,Internal quality score 0-10; not user-visible.
