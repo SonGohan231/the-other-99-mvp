@@ -6,6 +6,8 @@ import { ProfileFragment } from '../utils/profileFragments';
 import { ProfileVector } from '../utils/profileVector';
 import { getAxisDisplayName } from '../utils/microReveals';
 import { getNextLayerInfo, type RevealResult } from '../utils/revealPacing';
+import type { SocialComparisonInsight, PostAnswerPatternInsight } from '../engine/socialComparison';
+import type { CompanionDef } from '../utils/companionStickers';
 
 interface EvolutionData {
   primaryName: string;
@@ -32,6 +34,10 @@ interface Props {
   microFeedback?: string;
   nextTease?: string;
   autoAdvanceEnabled?: boolean;
+  socialInsight?: SocialComparisonInsight | null;
+  patternInsight?: PostAnswerPatternInsight | null;
+  companionReward?: CompanionDef | null;
+  onCompanionCollect?: (id: string) => void;
 }
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -69,11 +75,16 @@ export default function RewardScreen({
   microFeedback = 'Signal captured.',
   nextTease,
   autoAdvanceEnabled = false,
+  socialInsight,
+  patternInsight,
+  companionReward,
+  onCompanionCollect,
 }: Props) {
   const t = useT();
   const [lang] = useLang();
   const [pickedCard, setPickedCard] = useState<number | null>(null);
   const [cardsDismissed, setCardsDismissed] = useState(false);
+  const [companionCollected, setCompanionCollected] = useState(false);
   const [analyzing, setAnalyzing] = useState(true);
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const delay = prefersReducedMotion ? 80 : (item.rarity_tier === 'legendary' ? 900 : item.rarity_tier === 'epic' ? 650 : 280);
@@ -189,6 +200,103 @@ export default function RewardScreen({
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ── Social comparison block ── */}
+        {socialInsight && socialInsight.distribution.length > 0 && (
+          <div className="reward-block animate-in" style={{ animationDelay: '0.06s' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <p style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>
+                How others answered
+              </p>
+              <p style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.22)', fontStyle: 'italic' }}>
+                {lang === 'pl' ? socialInsight.sourceLabelPl : socialInsight.sourceLabelEn}
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {socialInsight.distribution.map((d) => {
+                const isSelected = d.answerId === socialInsight.selectedAnswerId;
+                return (
+                  <div key={d.answerId}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                      <span style={{
+                        fontSize: '0.68rem',
+                        color: isSelected ? 'var(--teal-light)' : 'var(--text-dim)',
+                        fontWeight: isSelected ? 600 : 400,
+                        maxWidth: '75%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {d.label}{isSelected ? ' ←' : ''}
+                      </span>
+                      <span style={{ fontSize: '0.65rem', color: isSelected ? 'var(--teal-light)' : 'rgba(255,255,255,0.35)', fontWeight: isSelected ? 700 : 400 }}>
+                        {d.percent}%
+                      </span>
+                    </div>
+                    <div style={{ height: '3px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${d.percent}%`,
+                        background: isSelected ? 'rgba(20,184,166,0.55)' : 'rgba(255,255,255,0.12)',
+                        borderRadius: '2px',
+                        transition: 'width 0.6s ease',
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {patternInsight && (
+              <p style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.38)', lineHeight: 1.55, marginTop: '8px', fontStyle: 'italic' }}>
+                {lang === 'pl' ? patternInsight.textPl : patternInsight.textEn}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── Companion reward ── */}
+        {companionReward && !companionCollected && (
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.1s',
+              padding: '14px 16px',
+              background: 'rgba(20,184,166,0.06)',
+              border: '1px solid rgba(20,184,166,0.2)',
+              borderRadius: '12px',
+              display: 'flex', alignItems: 'center', gap: '14px',
+            }}
+          >
+            <span style={{ fontSize: '2.2rem', lineHeight: 1 }}>{companionReward.emoji}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal-light)', marginBottom: '2px' }}>
+                Companion arrived
+              </p>
+              <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', textTransform: 'capitalize', marginBottom: '2px' }}>
+                {companionReward.animal}
+              </p>
+              <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                {lang === 'pl' ? companionReward.supportiveCopyPl : companionReward.supportiveCopyEn}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (onCompanionCollect) onCompanionCollect(companionReward.id);
+                setCompanionCollected(true);
+              }}
+              style={{
+                background: 'rgba(20,184,166,0.15)',
+                border: '1px solid rgba(20,184,166,0.35)',
+                borderRadius: '8px',
+                color: 'var(--teal-light)',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                padding: '6px 12px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {lang === 'pl' ? 'Zbierz' : 'Collect'}
+            </button>
           </div>
         )}
 

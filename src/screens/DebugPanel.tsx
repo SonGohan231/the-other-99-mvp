@@ -18,6 +18,9 @@ import type { HiddenParametersResult } from '../engine/hiddenParameters';
 import type { Snapshot51Result } from '../engine/snapshot51';
 import { getStreak } from '../utils/streak';
 import { getNextLayerInfo, isAutoAdvanceEnabled, setAutoAdvanceEnabled, type RevealResult } from '../utils/revealPacing';
+import type { SocialComparisonInsight, PostAnswerPatternInsight } from '../engine/socialComparison';
+import type { CompanionDef } from '../utils/companionStickers';
+import { getUnlockedCompanions, getNextCompanion } from '../utils/companionStickers';
 
 interface Props {
   profileState: ProfileState;
@@ -63,6 +66,9 @@ interface Props {
   nextTease?: string;
   nextPreparedQuestionId?: string | null;
   nextSelectionReason?: string | null;
+  socialInsight?: SocialComparisonInsight | null;
+  patternInsight?: PostAnswerPatternInsight | null;
+  companionReward?: CompanionDef | null;
 }
 
 export default function DebugPanel({
@@ -109,6 +115,9 @@ export default function DebugPanel({
   nextTease,
   nextPreparedQuestionId,
   nextSelectionReason,
+  socialInsight,
+  patternInsight,
+  companionReward,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(() => isAutoAdvanceEnabled());
@@ -439,6 +448,55 @@ export default function DebugPanel({
                   {autoAdvance ? 'Disable' : 'Enable'}
                 </button>
               </div>
+            </div>
+          </details>
+
+          {/* ── G: SOCIAL COMPARISON ─────────────────────── */}
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em', color: '#34d399', textTransform: 'uppercase', padding: '6px 0 2px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>G · Social Comparison</div>
+
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Comparison {socialInsight ? `(${socialInsight.source} · ${socialInsight.selectedAnswerPercent}%)` : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.8 }}>
+              {socialInsight ? (
+                <>
+                  <div>Source: <span style={{ color: 'var(--text-dim)' }}>{socialInsight.source}</span> / {socialInsight.sourceLabelEn}</div>
+                  <div>Selected %: <span style={{ color: '#34d399' }}>{socialInsight.selectedAnswerPercent}%</span></div>
+                  <div style={{ marginTop: '4px' }}>Distribution:</div>
+                  {socialInsight.distribution.map((d) => (
+                    <div key={d.answerId} style={{ paddingLeft: '8px' }}>
+                      {d.label.slice(0, 28)}{d.label.length > 28 ? '…' : ''}: {d.percent}%
+                      {d.answerId === socialInsight.selectedAnswerId ? ' ←' : ''}
+                    </div>
+                  ))}
+                </>
+              ) : <div>No social data — answer a question first.</div>}
+              {patternInsight ? (
+                <>
+                  <div style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div>Pattern insight source: {patternInsight.source}</div>
+                    <div>Confidence: <span style={{ color: '#34d399' }}>{patternInsight.confidence}</span></div>
+                    <div style={{ fontStyle: 'italic', color: 'var(--text-dim)', marginTop: '2px' }}>{patternInsight.textEn}</div>
+                  </div>
+                </>
+              ) : <div style={{ marginTop: '4px' }}>No pattern insight.</div>}
+            </div>
+          </details>
+
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Companion Album ({(() => { const u = getUnlockedCompanions(); return `${u.length} / 6`; })()})
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.8 }}>
+              <div>Unlocked: {getUnlockedCompanions().join(', ') || 'none'}</div>
+              <div>Pending reward: <span style={{ color: companionReward ? '#34d399' : 'var(--text-dim)' }}>{companionReward?.id ?? 'none'}</span></div>
+              {(() => {
+                const next = getNextCompanion(totalProfileAnswers);
+                return next
+                  ? <div>Next at: {next.unlockAtAnswerCount} answers — {next.animal} {next.emoji}</div>
+                  : <div>All companions collected</div>;
+              })()}
             </div>
           </details>
 

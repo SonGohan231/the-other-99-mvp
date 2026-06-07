@@ -72,6 +72,10 @@ import {
   getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
   type RevealResult,
 } from './utils/revealPacing';
+import { computeSocialComparison, computePatternInsight, type SocialComparisonInsight, type PostAnswerPatternInsight } from './engine/socialComparison';
+import { getCompanionForAnswerCount, unlockCompanion, getUnlockedCompanions, getNextCompanion, type CompanionDef } from './utils/companionStickers';
+import { localizedCsvField } from './i18n';
+import StickerAlbumScreen from './screens/StickerAlbumScreen';
 
 import AgeGate from './screens/AgeGate';
 import AuthScreen from './screens/AuthScreen';
@@ -348,6 +352,36 @@ export default function App() {
     () => getNextTease(nextPreparedQuestion, profileState.total_profile_answers),
     [nextPreparedQuestion, profileState.total_profile_answers],
   );
+
+  // Social comparison + pattern insight (computed for the answered question)
+  const socialInsight: SocialComparisonInsight | null = useMemo(() => {
+    if (!currentItem || !pendingAnswer) return null;
+    const fields = currentItem as unknown as Record<string, string>;
+    const raw = localizedCsvField(fields, 'answer_options', lang);
+    const options = raw.split('|').map((a) => a.trim()).filter(Boolean);
+    if (options.length === 0) return null;
+    return computeSocialComparison(currentItem.id, pendingAnswer, options);
+  }, [currentItem, pendingAnswer, lang]);
+
+  const patternInsight: PostAnswerPatternInsight | null = useMemo(() => {
+    if (!currentItem) return null;
+    const axisDeltas = getSelectedAnswerDeltas(currentItem, pendingAnswer);
+    const axes = axisDeltas
+      ? Object.entries(axisDeltas).map(([name, delta]) => ({ name, delta }))
+      : (currentItem.axis_target
+          ? currentItem.axis_target.split(';').map((a) => a.trim()).filter(Boolean).map((name) => ({ name, delta: 1 }))
+          : []);
+    return computePatternInsight(axes, currentItem.rarity_tier, profileState.total_profile_answers);
+  }, [currentItem, pendingAnswer, profileState.total_profile_answers]);
+
+  const companionReward: CompanionDef | null = useMemo(
+    () => getCompanionForAnswerCount(profileState.total_profile_answers),
+    [profileState.total_profile_answers],
+  );
+
+  function handleCompanionCollect(id: string) {
+    unlockCompanion(id);
+  }
 
   // Apply persisted theme + reduced motion on mount
   useState(() => {
@@ -967,6 +1001,21 @@ export default function App() {
         next_layer_label: nextLayer?.label ?? null,
         auto_advance_enabled: isAutoAdvanceEnabled(),
       },
+      companionRewards: {
+        unlocked: getUnlockedCompanions(),
+        total: 6,
+        last_companion_reward: companionReward?.id ?? null,
+        next_companion: getNextCompanion(profileState.total_profile_answers)?.id ?? null,
+      },
+      socialComparisonPreview: socialInsight
+        ? {
+            source: socialInsight.source,
+            source_label: socialInsight.sourceLabelEn,
+            selected_pct: socialInsight.selectedAnswerPercent,
+            pattern_insight: patternInsight?.textEn ?? null,
+            pattern_confidence: patternInsight?.confidence ?? null,
+          }
+        : null,
     });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1266,6 +1315,7 @@ export default function App() {
           onEmergingArchetype={() => setScreen('emerging-archetype')}
           onContradiction={() => setScreen('contradiction')}
           onHumanTwin={() => setScreen('human-twin')}
+          onStickerAlbum={() => setScreen('sticker-album')}
         />
       )}
 
@@ -1332,6 +1382,10 @@ export default function App() {
           microFeedback={microFeedback}
           nextTease={nextTease}
           autoAdvanceEnabled={isAutoAdvanceEnabled()}
+          socialInsight={socialInsight}
+          patternInsight={patternInsight}
+          companionReward={companionReward}
+          onCompanionCollect={handleCompanionCollect}
         />
       )}
 
@@ -1514,6 +1568,13 @@ export default function App() {
         />
       )}
 
+      {screen === 'sticker-album' && (
+        <StickerAlbumScreen
+          totalAnswers={profileState.total_profile_answers}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
+
       {screen === 'premium-depth' && (
         <PremiumDepthScreen
           isPremium={isPremium}
@@ -1566,6 +1627,9 @@ export default function App() {
           nextTease={nextTease}
           nextPreparedQuestionId={nextPreparedQuestion?.id ?? null}
           nextSelectionReason={nextPreparedReason}
+          socialInsight={socialInsight}
+          patternInsight={patternInsight}
+          companionReward={companionReward}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

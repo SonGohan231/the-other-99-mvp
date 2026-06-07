@@ -216,7 +216,8 @@ export type AppScreen =
   | 'legal'
   | 'subscription'
   | 'premium-depth'
-  | 'galaxy-map';
+  | 'galaxy-map'
+  | 'sticker-album';
 
 export type LegalPage = 'terms' | 'privacy' | 'cookie' | 'subscription-terms' | 'disclaimer' | 'help';
 

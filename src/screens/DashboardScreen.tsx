@@ -41,6 +41,7 @@ interface Props {
   onEmergingArchetype?: () => void;
   onContradiction?: () => void;
   onHumanTwin?: () => void;
+  onStickerAlbum?: () => void;
 }
 
 const RARITY_LABEL_COLOR: Record<string, string> = {
@@ -84,6 +85,7 @@ export default function DashboardScreen({
   onEmergingArchetype,
   onContradiction,
   onHumanTwin,
+  onStickerAlbum,
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
@@ -766,6 +768,17 @@ export default function DashboardScreen({
                   ✦ {totalProfileAnswers >= 51 ? 'Snapshot 51' : `${51 - totalProfileAnswers} to Snapshot`} →
                 </button>
               )}
+            </div>
+          )}
+          {onStickerAlbum && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+              <button className="tappable" onClick={onStickerAlbum} style={{
+                padding: '6px 12px', fontSize: '0.65rem', fontWeight: 600,
+                background: 'rgba(20,184,166,0.08)', border: '1px solid rgba(20,184,166,0.2)',
+                borderRadius: '12px', color: 'var(--teal-light)', cursor: 'pointer',
+              }}>
+                ◈ {lang === 'pl' ? 'Album sygnałów' : 'Signal Album'} →
+              </button>
             </div>
           )}
         </section>

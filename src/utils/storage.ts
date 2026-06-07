@@ -188,6 +188,10 @@ export function exportFullSession(extras: {
   // Engagement loop data
   dopamineLoop?: unknown;
   curiosityLoop?: unknown;
+  // Companion rewards
+  companionRewards?: unknown;
+  // Social comparison preview
+  socialComparisonPreview?: unknown;
 } = {}): string {
   const base = JSON.parse(exportSession());
   return JSON.stringify(
@@ -217,6 +221,8 @@ export function exportFullSession(extras: {
       hidden_parameters: extras.hiddenParameters ?? null,
       dopamine_loop: extras.dopamineLoop ?? null,
       curiosity_loop: extras.curiosityLoop ?? null,
+      companion_rewards: extras.companionRewards ?? null,
+      social_comparison_preview: extras.socialComparisonPreview ?? null,
     },
     null,
     2
