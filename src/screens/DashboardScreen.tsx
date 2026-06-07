@@ -13,6 +13,7 @@ import { getProfileConfidence, TIER_COLOR } from '../utils/profileConfidence';
 import { getStreak } from '../utils/streak';
 import { getDailyMysteryCard } from '../utils/dailyMysteryCard';
 import { getUnlockMilestoneText } from '../utils/microReveals';
+import { getUnlockedCompanions, getNextCompanion } from '../utils/companionStickers';
 
 interface Props {
   userProfile: UserProfile;
@@ -90,12 +91,14 @@ export default function DashboardScreen({
   const t = useT();
   const [lang, setLang] = useLang();
 
-  const conf          = getProfileConfidence(totalProfileAnswers);
-  const signalPct     = Math.min(100, Math.round((totalProfileAnswers / 100) * 100));
-  const unlockCount   = Math.min(totalProfileAnswers, 99);
-  const streak        = getStreak();
-  const dailyMystery  = getDailyMysteryCard();
-  const milestoneText = getUnlockMilestoneText(totalProfileAnswers);
+  const conf              = getProfileConfidence(totalProfileAnswers);
+  const signalPct         = Math.min(100, Math.round((totalProfileAnswers / 100) * 100));
+  const unlockCount       = Math.min(totalProfileAnswers, 99);
+  const streak            = getStreak();
+  const dailyMystery      = getDailyMysteryCard();
+  const milestoneText     = getUnlockMilestoneText(totalProfileAnswers);
+  const unlockedCompanions = getUnlockedCompanions();
+  const nextCompanion     = getNextCompanion(totalProfileAnswers);
 
   void feedEvents;
   void twinFeedEvents;
@@ -524,30 +527,55 @@ export default function DashboardScreen({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
             {[
-              { label: lang === 'pl' ? 'Archetyp'         : 'Archetype',        threshold: 10,  color: 'var(--accent-light)' },
-              { label: lang === 'pl' ? 'Ukryty profil'    : 'Hidden Profile',   threshold: 51,  color: 'var(--teal-light)'   },
-              { label: lang === 'pl' ? 'Ludzki Bliźniak'  : 'Human Twin',       threshold: 25,  color: 'var(--teal-light)'   },
-              { label: 'Snapshot 51',                                             threshold: 51,  color: 'var(--gold-light)'   },
-              { label: lang === 'pl' ? 'Mapa sprzeczności': 'Contradiction Map', threshold: 10,  color: '#c084fc'             },
+              { label: lang === 'pl' ? 'Archetyp sygnału'  : 'Signal Archetype',  threshold: 5,   color: 'var(--accent-light)' },
+              { label: lang === 'pl' ? 'Mapa sprzeczności' : 'Contradiction Map',  threshold: 10,  color: '#c084fc'             },
+              { label: lang === 'pl' ? 'Ludzki Bliźniak'   : 'Human Twin',         threshold: 25,  color: 'var(--teal-light)'   },
+              { label: lang === 'pl' ? 'Ukryty profil'     : 'Hidden Profile',     threshold: 51,  color: 'var(--teal-light)'   },
+              { label: 'Snapshot 51',                                                threshold: 51,  color: 'var(--gold-light)'   },
             ].map(({ label, threshold, color }) => {
               const pct      = Math.min(100, Math.round((totalProfileAnswers / threshold) * 100));
-              const unlocked = totalProfileAnswers >= threshold;
+              const isReached = totalProfileAnswers >= threshold;
               return (
                 <div key={label}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                    <span style={{ fontSize: '0.62rem', color: unlocked ? color : 'var(--text-dim)' }}>{label}</span>
-                    <span style={{ fontSize: '0.58rem', fontWeight: 600, color: unlocked ? color : 'var(--text-dim)' }}>
-                      {unlocked
-                        ? (lang === 'pl' ? 'Odblokowany' : 'Unlocked')
+                    <span style={{ fontSize: '0.62rem', color: isReached ? color : 'var(--text-dim)' }}>{label}</span>
+                    <span style={{ fontSize: '0.58rem', fontWeight: 600, color: isReached ? color : 'var(--text-dim)' }}>
+                      {isReached
+                        ? (lang === 'pl' ? 'Dostępny' : 'Available')
                         : `${totalProfileAnswers} / ${threshold}`}
                     </span>
                   </div>
                   <div style={{ height: '2px', background: 'rgba(255,255,255,0.05)', borderRadius: '1px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: unlocked ? color : 'rgba(255,255,255,0.12)', borderRadius: '1px', transition: 'width 0.6s ease' }} />
+                    <div style={{ height: '100%', width: `${pct}%`, background: isReached ? color : 'rgba(255,255,255,0.12)', borderRadius: '1px', transition: 'width 0.6s ease' }} />
                   </div>
                 </div>
               );
             })}
+            {/* Companion progress */}
+            {(() => {
+              const total = 6;
+              const done  = unlockedCompanions.length;
+              if (done >= total) return null;
+              const pct   = Math.round((done / total) * 100);
+              const label = nextCompanion
+                ? `${nextCompanion.emoji} ${lang === 'pl' ? 'Następny towarzysz' : 'Next companion'} · ${nextCompanion.unlockAtAnswerCount - totalProfileAnswers} ${lang === 'pl' ? 'odpowiedzi' : 'answers'}`
+                : (lang === 'pl' ? 'Towarzysze sygnałów' : 'Signal Companions');
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)' }}>
+                      {label}
+                    </span>
+                    <span style={{ fontSize: '0.58rem', fontWeight: 600, color: 'var(--teal-light)' }}>
+                      {done} / {total}
+                    </span>
+                  </div>
+                  <div style={{ height: '2px', background: 'rgba(255,255,255,0.05)', borderRadius: '1px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: 'rgba(20,184,166,0.45)', borderRadius: '1px', transition: 'width 0.6s ease' }} />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </section>
 

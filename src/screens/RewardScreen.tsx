@@ -8,6 +8,7 @@ import { getAxisDisplayName } from '../utils/microReveals';
 import { getNextLayerInfo, type RevealResult } from '../utils/revealPacing';
 import type { SocialComparisonInsight, PostAnswerPatternInsight } from '../engine/socialComparison';
 import type { CompanionDef } from '../utils/companionStickers';
+import { getNextCompanion } from '../utils/companionStickers';
 
 interface EvolutionData {
   primaryName: string;
@@ -245,15 +246,20 @@ export default function RewardScreen({
                 );
               })}
             </div>
-            {patternInsight && (
-              <p style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.38)', lineHeight: 1.55, marginTop: '8px', fontStyle: 'italic' }}>
-                {lang === 'pl' ? patternInsight.textPl : patternInsight.textEn}
-              </p>
-            )}
           </div>
         )}
 
-        {/* ── Companion reward ── */}
+        {/* ── Pattern insight — always shown when available, independent of social block ── */}
+        {patternInsight && (
+          <div className="animate-in" style={{ animationDelay: '0.08s' }}>
+            <p style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.6, fontStyle: 'italic', paddingLeft: '2px' }}>
+              <span style={{ color: 'rgba(255,255,255,0.2)', marginRight: '4px' }}>◈</span>
+              {lang === 'pl' ? patternInsight.textPl : patternInsight.textEn}
+            </p>
+          </div>
+        )}
+
+        {/* ── Companion reward (exact milestone) ── */}
         {companionReward && !companionCollected && (
           <div
             className="animate-in"
@@ -400,13 +406,31 @@ export default function RewardScreen({
         )}
 
         {/* ── Curiosity gap meter ── */}
-        {showContinue && nextLayer && (
-          <p style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textAlign: 'center', lineHeight: 1.5 }}>
-            {nextLayer.label} in{' '}
-            <span style={{ color: 'var(--accent-light)', fontWeight: 600 }}>
-              {nextLayer.answersLeft} {nextLayer.answersLeft === 1 ? 'answer' : 'answers'}
-            </span>
-          </p>
+        {showContinue && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+            {nextLayer && (
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textAlign: 'center', lineHeight: 1.5 }}>
+                {nextLayer.label} in{' '}
+                <span style={{ color: 'var(--accent-light)', fontWeight: 600 }}>
+                  {nextLayer.answersLeft} {nextLayer.answersLeft === 1 ? 'answer' : 'answers'}
+                </span>
+              </p>
+            )}
+            {/* Companion progress — shown before unlock milestone, not at it (companion card handles that) */}
+            {!companionReward && (() => {
+              const next = getNextCompanion(totalProfileAnswers);
+              if (!next) return null;
+              const answersLeft = next.unlockAtAnswerCount - totalProfileAnswers;
+              return (
+                <p style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.28)', textAlign: 'center', lineHeight: 1.5 }}>
+                  {next.emoji} Companion in{' '}
+                  <span style={{ color: 'rgba(20,184,166,0.7)', fontWeight: 600 }}>
+                    {answersLeft} {answersLeft === 1 ? 'answer' : 'answers'}
+                  </span>
+                </p>
+              );
+            })()}
+          </div>
         )}
 
         {/* ── Next tease ── */}

@@ -494,9 +494,32 @@ export default function DebugPanel({
               {(() => {
                 const next = getNextCompanion(totalProfileAnswers);
                 return next
-                  ? <div>Next at: {next.unlockAtAnswerCount} answers — {next.animal} {next.emoji}</div>
+                  ? <div>Next at: {next.unlockAtAnswerCount} answers — {next.animal} {next.emoji} ({next.unlockAtAnswerCount - totalProfileAnswers} away)</div>
                   : <div>All companions collected</div>;
               })()}
+            </div>
+          </details>
+
+          <details open>
+            <summary style={{ fontSize: '0.72rem', color: '#34d399', cursor: 'pointer', padding: '4px 0', fontWeight: 700 }}>
+              Visibility QA
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.9, fontFamily: 'monospace' }}>
+              {[
+                { label: 'socialComparisonPreview', value: !!socialInsight },
+                { label: 'patternInsight', value: !!patternInsight },
+                { label: 'companionRewards', value: true },
+                { label: 'curiosity_loop (revealResult)', value: !!revealResult },
+                { label: 'dopamine_loop (streak)', value: (() => { const s = getStreak(); return s.current >= 0; })() },
+                { label: 'nextCompanion', value: !!getNextCompanion(totalProfileAnswers) },
+                { label: 'nextPreparedQuestion', value: !!nextPreparedQuestionId },
+                { label: 'emergingArchetype', value: true },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <span style={{ color: value ? '#4ade80' : '#f87171' }}>{value ? '✓' : '✗'}</span>
+                  {' '}{label}
+                </div>
+              ))}
             </div>
           </details>
 
