@@ -40,6 +40,12 @@ function normalizeTier(raw: string): 'free' | 'premium' {
   return String(raw || '').toLowerCase() === 'premium' ? 'premium' : 'free';
 }
 
+function cleanQuestionText(text: string): string {
+  return String(text || '')
+    .replace(/\s*\[(?:variant|wariant)\s*\d+\]\s*$/i, '')
+    .trim();
+}
+
 function normalizeSafety(raw: string): string {
   const value = String(raw || '').toLowerCase();
   if (value.includes('sensitive')) return 'sensitive';
@@ -136,8 +142,8 @@ export async function loadContentV2(): Promise<ContentItemV2[]> {
       tier:                 normalizeTier(q.tier),
       categoryPl:           q.internal_category || q.content_type,
       categoryEn:           q.content_type || q.internal_category,
-      questionPl:           q.question_pl,
-      questionEn:           q.question_en,
+      questionPl:           cleanQuestionText(q.question_pl),
+      questionEn:           cleanQuestionText(q.question_en),
       answerType:           q.answer_type || 'four_choice',
       primaryAxis:          q.axis_primary,
       sensitivityLevel:     levelToNumber(q.sensitivity_level),

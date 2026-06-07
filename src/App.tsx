@@ -49,7 +49,7 @@ import HumanTwinScreen from './screens/HumanTwinScreen';
 import { pushUndoEntry, popUndoEntry, canUndo as canUndoFn, clearUndoStack, UndoEntry } from './utils/answerUndo';
 import { isTestSessionActive, isTestModeRequested, enableTestSession, disableTestSession, TEST_PROFILE } from './utils/testSession';
 import { isGuestModeActive, enableGuestMode, disableGuestMode, getGuestTestsUsed, incrementGuestTestsUsed, GUEST_USER_ID } from './utils/guestSession';
-import { clearInProgressTest, saveQuizSnapshot, restoreQuizSnapshot, getInProgressEventQueues } from './utils/inProgressTest';
+import { saveQuizSnapshot, restoreQuizSnapshot, getInProgressEventQueues } from './utils/inProgressTest';
 import { getQuestionBg, preloadBg } from './utils/questionBackgrounds';
 import { debugLog, debugError } from './utils/debugStore';
 import { getAppInfo } from './utils/appVersion';
@@ -865,7 +865,6 @@ export default function App() {
   }
 
   async function finishTest() {
-    clearInProgressTest();
     const ps = getProfileState();
 
     if (testNumber === 1) {
@@ -981,7 +980,8 @@ export default function App() {
     if (window.confirm('Reset local session? Supabase data is not affected.')) {
       resetSession();
       clearCanonicalVector();
-      window.location.reload();
+      persistInProgress({ currentItem: null, testAnswerIndex });
+    setScreen('test-summary');
     }
   }
 
@@ -1077,7 +1077,7 @@ export default function App() {
     const updatedExits = [...exitEvents, event];
     setExitEvents(updatedExits);
     setPendingSelection(selectedAnswer);
-    persistInProgress({ pendingSelection: selectedAnswer });
+    persistInProgress({ pendingSelection: selectedAnswer, currentItem, testContent, testAnswerIndex });
     setScreen('dashboard');
   }
 
@@ -1363,7 +1363,14 @@ export default function App() {
       {screen === 'test-intro' && (
         <TestIntroScreen
           testNumber={testNumber}
-          onBegin={() => setScreen('profile-test')}
+          onBegin={() => {
+            const saved = restoreQuizSnapshot();
+            if (saved?.currentItemId && saved.testAnswerIndex > 0) {
+              setScreen(saved.pendingAnswer ? 'reward' : 'profile-test');
+            } else {
+              setScreen('profile-test');
+            }
+          }}
         />
       )}
 
