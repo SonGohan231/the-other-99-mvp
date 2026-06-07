@@ -1,78 +1,66 @@
-// Raw row shape parsed from v2 questions CSV (comma-delimited)
+// Raw row shape parsed from v3 questions CSV (comma-delimited)
 export interface QuestionRowV2 {
   question_id: string;
-  language_pair_id: string;
-  source_series: string;
   tier: string;
-  mode: string;
-  category_pl: string;
-  category_en: string;
+  content_type: string;
+  internal_category: string;
+  user_visible_category: string;
   question_pl: string;
   question_en: string;
   answer_type: string;
-  primary_axis: string;
-  secondary_axes: string;
-  archetype_targets: string;
-  archetype_oppositions: string;
-  hidden_signal_targets: string;
+  source_id: string;
+  source_name: string;
+  source_url: string;
+  source_usage_mode: string;
+  source_license_status: string;
+  source_construct: string;
+  axis_primary: string;
+  axis_primary_name_en: string;
+  axis_primary_name_pl: string;
+  axis_secondary: string;
+  axis_secondary_name_en: string;
+  axis_secondary_name_pl: string;
+  hidden_parameter_primary: string;
+  hidden_parameter_name: string;
   sensitivity_level: string;
-  controversy_level: string;
-  social_desirability_risk: string;
   rarity_weight: string;
-  contradiction_pair_id: string;
+  social_label_default: string;
+  import_status: string;
   safety_label: string;
-  statistic_source_label: string;
-  reveal_template_ids: string;
-  system_actions: string;
-  hidden_events_policy: string;
-  production_status: string;
-  pattern_tags: string;
-  pattern_signal_id: string;
-  pattern_axis_direction: string;
-  pattern_hidden_signal: string;
-  pattern_confidence_weight: string;
-  pattern_min_occurrences: string;
-  reveal_dosing_policy: string;
-  pattern_engine_status: string;
+  language_status: string;
+  dedupe_status: string;
+  created_at: string;
+  notes: string;
 }
 
-// Raw row shape parsed from v2 answers CSV (comma-delimited)
+// Raw row shape parsed from v3 answers CSV (comma-delimited)
 export interface AnswerRowV2 {
   answer_id: string;
   question_id: string;
-  source_series: string;
-  answer_order: string;
-  label_pl: string;
-  label_en: string;
-  short_label_pl: string;
-  short_label_en: string;
-  axis_deltas_json: string;          // e.g. {"AX01": -3, "AX04": -1}
-  archetype_deltas_json: string;
-  hidden_signal_deltas_json: string;
-  rarity_impact: string;
-  social_desirability_flag: string;
-  reveal_pl: string;
-  reveal_en: string;
-  statistic_source_label: string;
-  wow_refinement_status: string;
-  answer_reveal_short_pl: string;    // TIER_1 per-answer reveal (PL)
-  answer_reveal_short_en: string;    // TIER_1 per-answer reveal (EN)
-  pattern_reveal_pl: string;         // TIER_2
-  pattern_reveal_en: string;
-  snapshot_reveal_pl: string;        // TIER_3
-  snapshot_reveal_en: string;
-  premium_reveal_pl: string;         // TIER_5
-  premium_reveal_en: string;
-  reveal_tier: string;
-  reveal_depth: string;
-  pattern_tags: string;
-  pattern_signal_id: string;
-  pattern_axis_direction: string;
-  pattern_hidden_signal: string;
-  pattern_confidence_weight: string;
-  pattern_min_occurrences: string;
-  original_long_reveal_pl: string;
-  original_long_reveal_en: string;
+  answer_index: string;
+  answer_pl: string;
+  answer_en: string;
+  answer_style: string;
+  axis_primary_delta: string;
+  axis_secondary_delta: string;
+  hidden_parameter_delta: string;
+  rarity_weight: string;
+  comparison_insight_pl: string;
+  comparison_insight_en: string;
+  top_archetype: string;
+  archetype_sum_check: string;
+  A01: string;
+  A02: string;
+  A03: string;
+  A04: string;
+  A05: string;
+  A06: string;
+  A07: string;
+  A08: string;
+  A09: string;
+  A10: string;
+  A11: string;
+  A12: string;
 }
 
 // Parsed answer option — attached to ContentItemV2
@@ -85,7 +73,6 @@ export interface AnswerOptionV2 {
   shortLabelEn: string;
   axisDeltas: Record<string, number>;  // AX01–AX10 keys
   rarityImpact: number;
-  // Reveal copy per tier
   answerRevealShortPl: string;         // TIER_1 — shown after every answer
   answerRevealShortEn: string;
   patternRevealPl: string;             // TIER_2 — shown after pattern detected
@@ -119,24 +106,24 @@ export interface ContentItemV2 {
 // ─── Data contract registry ────────────────────────────────────────────────────
 
 export const DATA_CONTRACT_V2 = {
-  version: '2.0.0',
-  questionsFile: 'questions_all_2650.csv',
-  answersFile: 'answers_all_5300.csv',
-  expectedQuestionCount: 2650,
-  expectedAnswerCount: 5300,
+  version: '3.0.0',
+  questionsFile: 'TO99_questions_master.csv',
+  answersFile: 'TO99_answers_long.csv',
+  expectedQuestionCount: 2400,
+  expectedAnswerCount: 9600,
+  expectedAnswersPerQuestion: 4,
   canonicalAxes: ['AX01','AX02','AX03','AX04','AX05','AX06','AX07','AX08','AX09','AX10'] as const,
-  hiddenParams: ['HP01','HP02','HP03'] as const,
-  validRevealTiers: ['TIER_1','TIER_2','TIER_3','TIER_5'] as const,
-  tier1RevealMaxChars: 200,
-  patternEngineStatus: 'pattern_ready_v2',
+  hiddenParams: ['H01','H02','H03'] as const,
+  socialLabelPolicy: 'estimated_only_until_real_backend_votes_exist',
+  sourceFolder: 'public/v3',
 } as const;
 
 // ─── Supplemental dataset shapes (files expected in future drops) ──────────────
 
 export interface HiddenEvent {
   event_id: string;
-  trigger_condition: string;        // e.g. "HP01 >= 0.7 AND AX03 >= 2"
-  event_type: string;               // e.g. "reveal" | "unlock" | "nudge"
+  trigger_condition: string;
+  event_type: string;
   payload_pl: string;
   payload_en: string;
   cooldown_answers: number;
@@ -146,7 +133,7 @@ export interface HiddenEvent {
 export interface PatternRule {
   rule_id: string;
   pattern_signal_id: string;
-  axis_direction: string;           // e.g. "AX03:positive"
+  axis_direction: string;
   min_occurrences: number;
   confidence_weight: number;
   reveal_template_id: string;
@@ -158,7 +145,7 @@ export interface ContradictionRule {
   rule_id: string;
   question_id_a: string;
   question_id_b: string;
-  contradiction_type: string;       // e.g. "axis_flip" | "value_conflict"
+  contradiction_type: string;
   reveal_pl: string;
   reveal_en: string;
   confidence_threshold: number;
@@ -167,7 +154,7 @@ export interface ContradictionRule {
 export interface EmergingArchetypeState {
   template_id: string;
   archetype_id: string;
-  axis_thresholds_json: string;     // JSON: Record<string, number>
+  axis_thresholds_json: string;
   unlock_answer_count: number;
   reveal_title_pl: string;
   reveal_title_en: string;
@@ -177,15 +164,12 @@ export interface EmergingArchetypeState {
 
 export interface RevealDosingTemplate {
   template_id: string;
-  dosing_policy: string;            // e.g. "immediate" | "delayed_3" | "pattern_gated"
+  dosing_policy: string;
   min_answers_before_reveal: number;
   max_reveals_per_session: number;
   cooldown_answers: number;
-  applies_to_tiers: string;         // comma-separated: "TIER_1,TIER_2"
+  applies_to_tiers: string;
 }
 
-// ─── Convenience aliases ───────────────────────────────────────────────────────
-
-/** Alias for ergonomic imports in runtime code */
 export type QuestionItem = ContentItemV2;
 export type AnswerOption = AnswerOptionV2;
