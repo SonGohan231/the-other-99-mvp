@@ -130,11 +130,11 @@ function validateTargets() {
     const rows = answersByQuestion.get(qid) ?? [];
     assert(rows.length === 4, `Question ${qid} has ${rows.length} answers instead of 4.`);
 
-    const answerIndexes = rows.map((row) => String(row.answer_index)).sort().join(',');
-    assert(answerIndexes === '1,2,3,4', `Question ${qid} answer indexes are ${answerIndexes}, expected 1,2,3,4.`);
+    const answerIndexes = rows.map((row) => String(row.option_key)).sort().join(',');
+    assert(answerIndexes === 'A,B,C,D', `Question ${qid} answer option_keys are ${answerIndexes}, expected A,B,C,D.`);
 
-    const distributionSum = rows.reduce((sum, row) => sum + Number(row.projected_choice_pct || 0), 0);
-    assert(distributionSum === 100, `Question ${qid} projected_choice_pct sum is ${distributionSum}, expected 100.`);
+    const distributionSum = rows.reduce((sum, row) => sum + Number(row.projected_distribution_percent || 0), 0);
+    assert(distributionSum === 100, `Question ${qid} projected_distribution_percent sum is ${distributionSum}, expected 100.`);
   }
 
   const revealIds = new Set();
