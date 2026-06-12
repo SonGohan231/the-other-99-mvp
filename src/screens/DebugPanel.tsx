@@ -390,8 +390,13 @@ export default function DebugPanel({
             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
               {snapshot51 ? (
                 <>
+                  <div>Version: <span style={{ color: 'var(--accent-light)' }}>{snapshot51.version}</span></div>
+                  <div>Level: <span style={{ color: 'var(--accent-light)' }}>{snapshot51.snapshot_level}</span> · Progress: {snapshot51.progress_to_snapshot}%</div>
                   <div>Available: <span style={{ color: snapshot51.is_available ? '#4ade80' : '#f87171' }}>{String(snapshot51.is_available)}</span>{snapshot51.debug_forced ? ' (debug forced)' : ''}</div>
                   <div>Confidence: {snapshot51.profile_confidence} — {snapshot51.profile_confidence_label}</div>
+                  {snapshot51.safe_text_en && (
+                    <div style={{ color: 'rgba(167,139,250,0.7)', fontStyle: 'italic', marginTop: '2px' }}>safe_text: "{snapshot51.safe_text_en}"</div>
+                  )}
                   {snapshot51.is_available && (
                     <>
                       <div>Strongest: {snapshot51.strongest_axes.map((a) => `${a.axis}(${a.label}, ${a.normalized_value.toFixed(2)})`).join(', ')}</div>
