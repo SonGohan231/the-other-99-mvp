@@ -331,18 +331,21 @@ export default function DebugPanel({
           {/* HUMAN TWIN */}
           <details>
             <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
-              Human Twin {humanTwinResult ? `(${humanTwinResult.tier}, ${humanTwinResult.similarity_percent}%)` : '(no data)'}
+              Human Twin {humanTwinResult ? `(${humanTwinResult.tier}, ${humanTwinResult.similarity_percent}%, displayable=${String(humanTwinResult.is_displayable)})` : '(no data)'}
             </summary>
             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
               {humanTwinResult ? (
                 <>
+                  <div>Version: <span style={{ color: 'var(--accent-light)' }}>{humanTwinResult.version}</span></div>
                   <div>Source: <span style={{ color: '#fbbf24' }}>{humanTwinResult.source_label}</span></div>
-                  <div>Tier: {humanTwinResult.tier} | Unlocked: {String(humanTwinResult.is_unlocked)}</div>
+                  <div>Tier: {humanTwinResult.tier} | Unlocked: <span style={{ color: humanTwinResult.is_unlocked ? '#4ade80' : '#f87171' }}>{String(humanTwinResult.is_unlocked)}</span> | Displayable: <span style={{ color: humanTwinResult.is_displayable ? '#4ade80' : '#f87171' }}>{String(humanTwinResult.is_displayable)}</span></div>
+                  <div>Answers: {humanTwinResult.current_answer_count} | HP reliability: {humanTwinResult.hp_reliability !== null ? humanTwinResult.hp_reliability.toFixed(2) : 'n/a'}</div>
                   {humanTwinResult.is_unlocked && (
                     <>
                       <div>Match: <span style={{ color: 'var(--accent-light)' }}>{humanTwinResult.closest_reference_name}</span> ({humanTwinResult.closest_reference_id})</div>
                       <div>Similarity: {humanTwinResult.similarity_percent}% | Distance: {humanTwinResult.distance}</div>
                       {humanTwinResult.shared_patterns.length > 0 && <div>Shared: {humanTwinResult.shared_patterns.join(', ')}</div>}
+                      {humanTwinResult.safe_text_en && <div style={{ color: 'rgba(251,191,36,0.7)', fontStyle: 'italic' }}>safe_text: "{humanTwinResult.safe_text_en}"</div>}
                     </>
                   )}
                 </>
