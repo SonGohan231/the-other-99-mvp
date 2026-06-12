@@ -378,13 +378,14 @@ export default function App() {
   }, [screen, testAnswerIndex, testContent]);
 
   // ─── Persist in-progress test ─────────────────────────────────────────────
-  function persistInProgress(overrides?: { nextCards?: NextCard[]; testAnswerIndex?: number; testContent?: ContentItem[]; currentItem?: ContentItem | null; pendingSelection?: string | null }) {
+  function persistInProgress(overrides?: { nextCards?: NextCard[]; testAnswerIndex?: number; testContent?: ContentItem[]; currentItem?: ContentItem | null; pendingSelection?: string | null; pendingAnswer?: string }) {
     const tc = overrides?.testContent ?? testContent;
     if (!tc.length) return;
     const tai = overrides?.testAnswerIndex ?? testAnswerIndex;
     const ci = overrides?.currentItem !== undefined ? overrides.currentItem : currentItem;
     const nc = overrides?.nextCards ?? nextCards;
     const ps = overrides?.pendingSelection !== undefined ? overrides.pendingSelection : pendingSelection;
+    const pa = overrides?.pendingAnswer !== undefined ? overrides.pendingAnswer : pendingAnswer;
     const premiumSrc =
       isTestMode ? 'test' : isGuestMode ? 'guest' : user ? 'supabase' : null;
     saveQuizSnapshot({
@@ -393,7 +394,7 @@ export default function App() {
       testAnswerIndex: tai,
       testContentIds: tc.map((i) => i.id),
       currentItemId: ci?.id ?? null,
-      pendingAnswer,
+      pendingAnswer: pa,
       pendingSelection: ps,
       selectedCard,
       canUndoAnswer,
@@ -557,6 +558,43 @@ export default function App() {
 
   async function handleStartTest() {
     if (!userProfile) return;
+
+    // Bug fix: if there's an active in-progress session with answers, resume it
+    // instead of overwriting state and showing the First Signal / Begin intro.
+    const savedSnapshot = restoreQuizSnapshot();
+    if (savedSnapshot && savedSnapshot.testAnswerIndex > 0) {
+      if (testContent.length > 0 && currentItem) {
+        // React state is still live (user navigated to dashboard via Menu without page refresh)
+        setScreen(pendingAnswer ? 'reward' : 'profile-test');
+        return;
+      }
+      // React state was cleared (edge case: page refreshed while on dashboard).
+      // Restore from snapshot the same way the initial load useEffect does.
+      const restoredContent = savedSnapshot.testContentIds
+        .map((id: string) => content.find((i) => i.id === id))
+        .filter(Boolean) as ContentItem[];
+      if (restoredContent.length > 0) {
+        const itemToRestore = savedSnapshot.currentItemId
+          ? restoredContent.find((i) => i.id === savedSnapshot.currentItemId) ?? null
+          : null;
+        if (itemToRestore) {
+          setTestContent(restoredContent);
+          setTestAnswerIndex(savedSnapshot.testAnswerIndex);
+          setTestNumber(savedSnapshot.testNumber);
+          setTestSessionId(savedSnapshot.testSessionId);
+          setPendingAnswer(savedSnapshot.pendingAnswer);
+          setSelectedCard(savedSnapshot.selectedCard);
+          setCanUndoAnswer(false);
+          setCurrentItem(itemToRestore);
+          if (savedSnapshot.canonicalVector) {
+            setCanonicalVector(savedSnapshot.canonicalVector);
+            saveCanonicalVector(savedSnapshot.canonicalVector);
+          }
+          setScreen(savedSnapshot.pendingAnswer ? 'reward' : 'profile-test');
+          return;
+        }
+      }
+    }
 
     const freeTestsUsed = userProfile.free_profile_tests_used ?? 0;
     if (!canContinueTest(freeTestsUsed, isPremium)) {
@@ -827,7 +865,8 @@ export default function App() {
 
     setNextQuestionReason(selection.reason);
     setCurrentItem(items[nextIndex]);
-    persistInProgress({ testContent: items, currentItem: items[nextIndex] });
+    setPendingAnswer('');
+    persistInProgress({ testContent: items, currentItem: items[nextIndex], pendingAnswer: '' });
     setScreen('profile-test');
   }
 
@@ -1340,8 +1379,7 @@ export default function App() {
           profileVector={profileVector}
           changedAxes={changedAxes}
           onNext={handleRewardNext}
-          onChangeAnswer={handleUndoAnswer}
-          canChangeAnswer={canUndoAnswer}
+          canChangeAnswer={false}
           evolutionData={evolutionData}
           revealResult={revealResult}
           microFeedback={microFeedback}
