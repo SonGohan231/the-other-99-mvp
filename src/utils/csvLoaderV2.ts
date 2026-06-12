@@ -54,37 +54,47 @@ function normalizeSafety(raw: string): string {
   return 'safe';
 }
 
-function mapAxisDeltas(row: AnswerRowV2, question: QuestionRowV2): Record<string, number> {
-  const deltas: Record<string, number> = {};
-  const primary = question.axis_primary;
-  const secondary = question.axis_secondary;
-
-  if (primary) deltas[primary] = (deltas[primary] ?? 0) + num(row.axis_primary_delta, 0);
-  if (secondary) deltas[secondary] = (deltas[secondary] ?? 0) + num(row.axis_secondary_delta, 0);
-
-  return Object.fromEntries(
-    Object.entries(deltas).filter(([, value]) => Number.isFinite(value) && value !== 0),
-  );
+function isLanguageComplete(languageStatus: string): boolean {
+  if (!languageStatus) return true; // no status = allow through
+  const ls = languageStatus.toLowerCase();
+  return ls.includes('pl') && ls.includes('en');
 }
 
-function parseAnswerRow(row: AnswerRowV2, question: QuestionRowV2): AnswerOptionV2 {
+const CANONICAL_AXES = ['AX01','AX02','AX03','AX04','AX05','AX06','AX07','AX08','AX09','AX10'] as const;
+
+function mapAxisDeltas(row: AnswerRowV2): Record<string, number> {
+  const deltas: Record<string, number> = {};
+  for (const ax of CANONICAL_AXES) {
+    const key = `axis_delta_${ax}` as keyof AnswerRowV2;
+    const val = num(row[key], 0);
+    if (val !== 0) deltas[ax] = val;
+  }
+  return deltas;
+}
+
+function optionKeyToOrder(key: string): number {
+  const map: Record<string, number> = { A: 1, B: 2, C: 3, D: 4 };
+  return map[String(key || '').toUpperCase()] ?? 0;
+}
+
+function parseAnswerRow(row: AnswerRowV2): AnswerOptionV2 {
   return {
     answerId:            row.answer_id,
-    order:               parseInt(row.answer_index, 10) || 0,
+    order:               optionKeyToOrder(row.option_key),
     labelPl:             row.answer_pl,
     labelEn:             row.answer_en,
-    shortLabelPl:        row.answer_style,
-    shortLabelEn:        row.answer_style,
-    axisDeltas:          mapAxisDeltas(row, question),
+    shortLabelPl:        row.answer_pl,
+    shortLabelEn:        row.answer_en,
+    axisDeltas:          mapAxisDeltas(row),
     rarityImpact:        num(row.rarity_weight, 1),
-    answerRevealShortPl: row.comparison_insight_pl,
-    answerRevealShortEn: row.comparison_insight_en,
-    patternRevealPl:     row.comparison_insight_pl,
-    patternRevealEn:     row.comparison_insight_en,
+    answerRevealShortPl: row.short_reveal_pl || row.comparison_insight_pl,
+    answerRevealShortEn: row.short_reveal_en || row.comparison_insight_en,
+    patternRevealPl:     row.pattern_signal_pl || row.comparison_insight_pl,
+    patternRevealEn:     row.pattern_signal_en || row.comparison_insight_en,
     snapshotRevealPl:    row.comparison_insight_pl,
     snapshotRevealEn:    row.comparison_insight_en,
-    premiumRevealPl:     row.comparison_insight_pl,
-    premiumRevealEn:     row.comparison_insight_en,
+    premiumRevealPl:     row.micro_reward_pl || row.comparison_insight_pl,
+    premiumRevealEn:     row.micro_reward_en || row.comparison_insight_en,
   };
 }
 
@@ -100,7 +110,7 @@ const BLOCKED_CATEGORY_KEYWORDS = [
 ];
 
 function isBlockedCategory(row: QuestionRowV2): boolean {
-  const haystack = [row.internal_category, row.content_type, row.source_construct].join(' ').toLowerCase();
+  const haystack = [row.mode, row.category, row.subcategory].join(' ').toLowerCase();
   return BLOCKED_CATEGORY_KEYWORDS.some((kw) => haystack.includes(kw));
 }
 
@@ -127,32 +137,37 @@ export async function loadContentV2(): Promise<ContentItemV2[]> {
 
   for (const q of questionRows) {
     if (!q.question_id || !q.question_pl || !q.question_en) continue;
-    if (q.language_status && q.language_status !== 'pl_en_complete') continue;
+    if (!isLanguageComplete(q.language_status)) continue;
     if (isBlockedCategory(q)) continue;
 
     const rawAnswers = answerMap.get(q.question_id) ?? [];
     if (rawAnswers.length !== 4) continue;
 
     const answers = rawAnswers
-      .map((answer) => parseAnswerRow(answer, q))
+      .map((answer) => parseAnswerRow(answer))
       .sort((a, b) => a.order - b.order);
+
+    const rarityWeight = answers.reduce((sum, a) => sum + a.rarityImpact, 0) / answers.length;
 
     items.push({
       questionId:           q.question_id,
       tier:                 normalizeTier(q.tier),
-      categoryPl:           q.internal_category || q.content_type,
-      categoryEn:           q.content_type || q.internal_category,
+      mode:                 q.mode || 'question',
+      categoryPl:           q.category || q.subcategory || 'general',
+      categoryEn:           q.category || q.subcategory || 'general',
       questionPl:           cleanQuestionText(q.question_pl),
       questionEn:           cleanQuestionText(q.question_en),
-      answerType:           q.answer_type || 'four_choice',
-      primaryAxis:          q.axis_primary,
+      answerType:           q.question_type || 'four_choice',
+      primaryAxis:          q.primary_axis || '',
       sensitivityLevel:     levelToNumber(q.sensitivity_level),
-      controversyLevel:     q.content_type === 'controversy' ? 2 : levelToNumber(q.sensitivity_level),
-      rarityWeight:         num(q.rarity_weight, 1),
+      controversyLevel:     q.controversy_level
+        ? levelToNumber(q.controversy_level)
+        : (q.mode === 'controversy' ? 2 : levelToNumber(q.sensitivity_level)),
+      rarityWeight,
       safetyLabel:          normalizeSafety(q.safety_label),
-      statisticSourceLabel: q.social_label_default || 'estimated',
+      statisticSourceLabel: 'estimated',
       revealTemplateIds:    ['reveal_standard'],
-      productionStatus:     q.import_status || 'candidate_ready',
+      productionStatus:     q.content_status || 'candidate_ready',
       answers,
     });
   }

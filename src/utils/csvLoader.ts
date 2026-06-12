@@ -24,6 +24,14 @@ function rarityFromWeight(weight: number): RarityTier {
 function mapV2ModeToCardPath(mode: string): CardPath {
   const normalized = (mode || '').toLowerCase();
 
+  // Stage 2B CSV 'mode' column values → card path
+  if (normalized === 'riddle') return 'Pattern Break';
+  if (normalized === 'controversy') return 'Moral Dilemma';
+  if (normalized === 'mystic') return 'Shadow Question';
+  if (normalized === 'social_dilemma') return 'Social Mirror';
+  if (normalized === 'question' || normalized === 'free_plus') return 'Threshold Card';
+
+  // Legacy substring mappings (kept for compatibility)
   if (normalized.includes('secret')) return 'Secret Human';
   if (normalized.includes('memory')) return 'Memory Trace';
   if (normalized.includes('contradiction')) return 'Hidden Contradiction';
@@ -36,7 +44,8 @@ function mapV2ModeToCardPath(mode: string): CardPath {
   if (normalized.includes('object')) return 'Object Choice';
   if (normalized.includes('archetype') || normalized.includes('threshold')) return 'Threshold Card';
 
-  return 'Pattern Break';
+  // Default to Threshold Card instead of Pattern Break to avoid filtering all content
+  return 'Threshold Card';
 }
 
 function safeString(value: unknown): string {
@@ -45,13 +54,7 @@ function safeString(value: unknown): string {
 }
 
 function mapV2ToContentItem(item: ContentItemV2): ContentItemWithDiagnostics {
-  // ContentItemV2 in this branch does not expose `mode`, even though the raw
-  // v2 question CSV has a mode column. Use a safe fallback for card/source
-  // diagnostics so the build does not depend on a missing type field.
-  const maybeMode = (item as ContentItemV2 & { mode?: string }).mode;
-  const v2Mode = safeString(
-    maybeMode || item.categoryEn || item.categoryPl || item.answerType || 'standard',
-  );
+  const v2Mode = safeString(item.mode || item.categoryEn || item.categoryPl || item.answerType || 'question');
 
   const answerLabelsPl = item.answers
     .map((answer) => safeString(answer.labelPl || answer.shortLabelPl))
@@ -154,7 +157,7 @@ function mapV2ToContentItem(item: ContentItemV2): ContentItemWithDiagnostics {
 
     content_source: 'v2',
     content_version: '2.0.0',
-    source_file: 'public/v2/questions_all_2650.csv+answers_all_5300.csv',
+    source_file: 'public/v3/TO99_questions_master.csv+TO99_answers_long.csv',
     question_id: item.questionId,
     answer_ids_json: JSON.stringify(answerIds),
     answer_axis_deltas_json: JSON.stringify(axisDeltasByAnswerLabel),
