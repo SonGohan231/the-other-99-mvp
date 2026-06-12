@@ -16,6 +16,7 @@ import type { ContradictionResult } from '../engine/contradictionEngine';
 import type { HumanTwinResult } from '../engine/humanTwin';
 import type { HiddenParametersResult } from '../engine/hiddenParameters';
 import type { Snapshot51Result } from '../engine/snapshot51';
+import type { PatternEngineResult } from '../engine/patternEngine';
 import { getStreak } from '../utils/streak';
 import { getNextLayerInfo, isAutoAdvanceEnabled, setAutoAdvanceEnabled, type RevealResult } from '../utils/revealPacing';
 
@@ -63,6 +64,7 @@ interface Props {
   nextTease?: string;
   nextPreparedQuestionId?: string | null;
   nextSelectionReason?: string | null;
+  patternEngineResult?: PatternEngineResult | null;
 }
 
 export default function DebugPanel({
@@ -109,6 +111,7 @@ export default function DebugPanel({
   nextTease,
   nextPreparedQuestionId,
   nextSelectionReason,
+  patternEngineResult,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(() => isAutoAdvanceEnabled());
@@ -439,6 +442,44 @@ export default function DebugPanel({
                   {autoAdvance ? 'Disable' : 'Enable'}
                 </button>
               </div>
+            </div>
+          </details>
+
+          {/* ── D: PATTERN ENGINE ──────────────────────────── */}
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(20,184,166,0.8)', textTransform: 'uppercase', padding: '6px 0 2px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>D · Pattern Engine</div>
+
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Pattern Engine v1 {patternEngineResult
+                ? `(${patternEngineResult.active_patterns.length} signals · conf=${patternEngineResult.confidence})`
+                : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.8, fontFamily: 'monospace' }}>
+              {patternEngineResult ? (
+                <>
+                  <div>Version: <span style={{ color: 'var(--accent-light)' }}>{patternEngineResult.version}</span></div>
+                  <div>Analyzed: {patternEngineResult.answers_analyzed} session answers</div>
+                  <div>Active patterns: {patternEngineResult.active_patterns.length}</div>
+                  <div>Confidence: {patternEngineResult.confidence} / 100</div>
+                  <div>Next threshold in: <span style={{ color: patternEngineResult.next_pattern_in === 0 ? '#4ade80' : 'var(--accent-light)' }}>{patternEngineResult.next_pattern_in === 0 ? 'reached' : `${patternEngineResult.next_pattern_in} answers`}</span></div>
+                  {patternEngineResult.strongest_pattern ? (
+                    <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div>Strongest: <span style={{ color: '#86efac' }}>{patternEngineResult.strongest_pattern.id}</span></div>
+                      <div>Level: {patternEngineResult.strongest_pattern.level} | Strength: {patternEngineResult.strongest_pattern.strength}</div>
+                      <div>Axis: {patternEngineResult.strongest_pattern.axis_id} | Dir: {patternEngineResult.strongest_pattern.direction}</div>
+                      <div>Evidence: {patternEngineResult.strongest_pattern.evidence_count} | Copy: {patternEngineResult.strongest_pattern.copy_key}</div>
+                      <div style={{ color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', fontFamily: 'inherit', marginTop: '2px' }}>
+                        "{patternEngineResult.strongest_pattern.safe_text_en}"
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>No pattern detected yet.</div>
+                  )}
+                  <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.2)', fontSize: '0.58rem' }}>
+                    {patternEngineResult.debug_notes.join(' · ')}
+                  </div>
+                </>
+              ) : <div>Pattern engine not yet computed.</div>}
             </div>
           </details>
 

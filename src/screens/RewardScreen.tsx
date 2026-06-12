@@ -6,8 +6,9 @@ import { ProfileFragment } from '../utils/profileFragments';
 import { ProfileVector } from '../utils/profileVector';
 import { getAxisDisplayName } from '../utils/microReveals';
 import { getNextLayerInfo, type RevealResult } from '../utils/revealPacing';
-import { computePatternInsight, computeSocialComparison } from '../engine/socialComparison';
+import { computeSocialComparison } from '../engine/socialComparison';
 import { getCompanionForAnswerCount, unlockCompanion } from '../utils/companionStickers';
+import { type PatternEngineResult } from '../engine/patternEngine';
 
 interface EvolutionData {
   primaryName: string;
@@ -34,6 +35,7 @@ interface Props {
   microFeedback?: string;
   nextTease?: string;
   autoAdvanceEnabled?: boolean;
+  patternEngineResult?: PatternEngineResult | null;
 }
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -79,6 +81,7 @@ export default function RewardScreen({
   microFeedback = 'Signal captured.',
   nextTease,
   autoAdvanceEnabled = false,
+  patternEngineResult,
 }: Props) {
   const t = useT();
   const [pickedCard, setPickedCard] = useState<number | null>(null);
@@ -99,10 +102,8 @@ export default function RewardScreen({
     () => computeSocialComparison(item.id, selectedAnswer, answerOptions),
     [item.id, selectedAnswer, answerOptions],
   );
-  const patternInsight = useMemo(
-    () => computePatternInsight(axes, item.rarity_tier, totalProfileAnswers),
-    [axes, item.rarity_tier, totalProfileAnswers],
-  );
+  const activePattern = patternEngineResult?.strongest_pattern ?? null;
+  const nextPatternIn = patternEngineResult?.next_pattern_in ?? (3 - totalProfileAnswers);
   const companion = useMemo(() => getCompanionForAnswerCount(totalProfileAnswers), [totalProfileAnswers, collectedCompanionId]);
   const nextLayer = getNextLayerInfo(totalProfileAnswers);
   const hasCards = nextCards.length > 0;
@@ -193,11 +194,15 @@ export default function RewardScreen({
             </div>
           )}
 
-          {patternInsight && (
+          {activePattern ? (
             <div className="reward-block animate-in" style={{ animationDelay: '0.08s', borderColor: 'rgba(20,184,166,0.18)' }}>
               <p className="reward-block-label" style={{ color: 'var(--teal-light)' }}>Pattern signal</p>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{patternInsight.textEn}</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{activePattern.safe_text_en}</p>
             </div>
+          ) : nextPatternIn > 0 && (
+            <p style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.22)', textAlign: 'center', fontStyle: 'italic' }}>
+              First pattern signal in <span style={{ color: 'rgba(20,184,166,0.5)' }}>{nextPatternIn}</span> {nextPatternIn === 1 ? 'answer' : 'answers'}
+            </p>
           )}
 
           {companion && !collectedCompanionId && (
