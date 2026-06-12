@@ -1,66 +1,56 @@
-// Raw row shape parsed from v3 questions CSV (comma-delimited)
+// Raw row shape parsed from v3 questions CSV (comma-delimited, Stage 2B schema)
 export interface QuestionRowV2 {
   question_id: string;
   tier: string;
-  content_type: string;
-  internal_category: string;
-  user_visible_category: string;
+  mode: string;                    // 'question' | 'riddle' | 'controversy' | 'mystic' | 'social_dilemma' | 'free_plus'
+  category: string;
+  subcategory: string;
+  language_status: string;
   question_pl: string;
   question_en: string;
-  answer_type: string;
-  source_id: string;
-  source_name: string;
-  source_url: string;
-  source_usage_mode: string;
-  source_license_status: string;
-  source_construct: string;
-  axis_primary: string;
-  axis_primary_name_en: string;
-  axis_primary_name_pl: string;
-  axis_secondary: string;
-  axis_secondary_name_en: string;
-  axis_secondary_name_pl: string;
-  hidden_parameter_primary: string;
-  hidden_parameter_name: string;
+  question_type: string;           // 'four_choice' etc.
+  primary_axis: string;            // AX01–AX10
+  secondary_axis: string;
   sensitivity_level: string;
-  rarity_weight: string;
-  social_label_default: string;
-  import_status: string;
+  controversy_level: string;
   safety_label: string;
-  language_status: string;
-  dedupe_status: string;
+  source_id: string;
+  content_status: string;
+  content_contract_status: string;
   created_at: string;
   notes: string;
 }
 
-// Raw row shape parsed from v3 answers CSV (comma-delimited)
+// Raw row shape parsed from v3 answers CSV (comma-delimited, Stage 2B schema)
 export interface AnswerRowV2 {
   answer_id: string;
   question_id: string;
-  answer_index: string;
+  option_key: string;              // A | B | C | D
   answer_pl: string;
   answer_en: string;
-  answer_style: string;
-  axis_primary_delta: string;
-  axis_secondary_delta: string;
-  hidden_parameter_delta: string;
-  rarity_weight: string;
+  axis_delta_AX01: string;
+  axis_delta_AX02: string;
+  axis_delta_AX03: string;
+  axis_delta_AX04: string;
+  axis_delta_AX05: string;
+  axis_delta_AX06: string;
+  axis_delta_AX07: string;
+  axis_delta_AX08: string;
+  axis_delta_AX09: string;
+  axis_delta_AX10: string;
+  hidden_delta_confidence: string;
+  hidden_delta_openness: string;
+  hidden_delta_consistency: string;
+  short_reveal_pl: string;
+  short_reveal_en: string;
   comparison_insight_pl: string;
   comparison_insight_en: string;
-  top_archetype: string;
-  archetype_sum_check: string;
-  A01: string;
-  A02: string;
-  A03: string;
-  A04: string;
-  A05: string;
-  A06: string;
-  A07: string;
-  A08: string;
-  A09: string;
-  A10: string;
-  A11: string;
-  A12: string;
+  pattern_signal_pl: string;
+  pattern_signal_en: string;
+  micro_reward_pl: string;
+  micro_reward_en: string;
+  projected_distribution_percent: string;
+  rarity_weight: string;
 }
 
 // Parsed answer option — attached to ContentItemV2
@@ -87,6 +77,7 @@ export interface AnswerOptionV2 {
 export interface ContentItemV2 {
   questionId: string;
   tier: 'free' | 'premium';
+  mode: string;
   categoryPl: string;
   categoryEn: string;
   questionPl: string;
