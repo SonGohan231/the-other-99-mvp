@@ -14,6 +14,7 @@ import { type EmergingArchetypeResult } from '../engine/emergingArchetype';
 import { type HiddenParametersResult } from '../engine/hiddenParameters';
 import { type HumanTwinResult } from '../engine/humanTwin';
 import { type SocialRewardLayerResult } from '../engine/socialRewardLayer';
+import { type Snapshot51Result } from '../engine/snapshot51';
 
 interface EvolutionData {
   primaryName: string;
@@ -46,6 +47,7 @@ interface Props {
   hiddenParametersResult?: HiddenParametersResult | null;
   humanTwinResult?: HumanTwinResult | null;
   socialRewardLayerResult?: SocialRewardLayerResult | null;
+  snapshotResult?: Snapshot51Result | null;
 }
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -97,6 +99,7 @@ export default function RewardScreen({
   hiddenParametersResult,
   humanTwinResult,
   socialRewardLayerResult,
+  snapshotResult,
 }: Props) {
   const t = useT();
   const [pickedCard, setPickedCard] = useState<number | null>(null);
@@ -265,6 +268,16 @@ export default function RewardScreen({
                 {socialRewardLayerResult.reward_kind === 'pattern' ? 'Discovery signal' : 'Social signal'}
               </p>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{socialRewardLayerResult.safe_text_en}</p>
+            </div>
+          )}
+
+          {snapshotResult?.snapshot_level === 'preview' &&
+            totalProfileAnswers >= 17 && (
+            <div className="reward-block animate-in" style={{ animationDelay: '0.14s', borderColor: 'rgba(167,139,250,0.10)' }}>
+              <p className="reward-block-label" style={{ color: 'rgba(167,139,250,0.6)' }}>Snapshot 51</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
+                {snapshotResult.next_best_questions_hint}
+              </p>
             </div>
           )}
 

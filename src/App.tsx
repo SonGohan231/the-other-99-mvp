@@ -1458,6 +1458,7 @@ export default function App() {
           hiddenParametersResult={engineResults.hiddenParams}
           humanTwinResult={engineResults.humanTwin}
           socialRewardLayerResult={socialRewardLayerResult}
+          snapshotResult={engineResults.snapshot}
         />
       )}
 
