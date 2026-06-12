@@ -296,10 +296,13 @@ export default function DebugPanel({
             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
               {emergingArchetype ? (
                 <>
+                  <div>Version: <span style={{ color: 'var(--accent-light)' }}>{emergingArchetype.version}</span></div>
                   <div>Primary: <span style={{ color: 'var(--accent-light)' }}>{emergingArchetype.primary.name}</span> ({emergingArchetype.primary.percentage}%)</div>
                   <div>Secondary: {emergingArchetype.secondary.name} ({emergingArchetype.secondary.percentage}%)</div>
                   <div>Blend: {emergingArchetype.blend_label} | Distance: {emergingArchetype.distance}pp</div>
                   <div>Confidence: {emergingArchetype.confidence} | Answers: {emergingArchetype.answer_count}</div>
+                  <div>Displayable: <span style={{ color: emergingArchetype.is_displayable ? '#4ade80' : '#f87171' }}>{String(emergingArchetype.is_displayable)}</span></div>
+                  {emergingArchetype.safe_text_en && <div style={{ color: 'rgba(167,139,250,0.7)', fontStyle: 'italic', fontSize: '0.6rem', marginTop: '2px' }}>"{emergingArchetype.safe_text_en}"</div>}
                   <div style={{ color: 'var(--text-dim)', fontStyle: 'italic', marginTop: '2px' }}>{emergingArchetype.user_facing_summary}</div>
                 </>
               ) : <div>No archetype data.</div>}

@@ -983,7 +983,18 @@ export default function App() {
       startedAt: testStartedAt,
       premiumState: { unlocked: isPremium, source: premiumSrc },
       contentDiagnostics: getContentDiagnostics(content, currentItem, lang),
-      emergingArchetype: engineResults.archetype,
+      emergingArchetype: {
+        version: engineResults.archetype.version,
+        primary: engineResults.archetype.primary,
+        secondary: engineResults.archetype.secondary,
+        blend_label: engineResults.archetype.blend_label,
+        confidence: engineResults.archetype.confidence,
+        distance: engineResults.archetype.distance,
+        answer_count: engineResults.archetype.answer_count,
+        is_emerging: engineResults.archetype.is_emerging,
+        is_displayable: engineResults.archetype.is_displayable,
+        user_facing_summary: engineResults.archetype.user_facing_summary,
+      },
       contradictionProfile: {
         version: engineResults.contradiction.version,
         contradiction_score: engineResults.contradiction.contradiction_score,
@@ -1397,6 +1408,7 @@ export default function App() {
           autoAdvanceEnabled={isAutoAdvanceEnabled()}
           patternEngineResult={patternEngineResult}
           contradictionEngineResult={engineResults.contradiction}
+          emergingArchetypeResult={engineResults.archetype}
         />
       )}
 

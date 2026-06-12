@@ -10,6 +10,7 @@ import { computeSocialComparison } from '../engine/socialComparison';
 import { getCompanionForAnswerCount, unlockCompanion } from '../utils/companionStickers';
 import { type PatternEngineResult } from '../engine/patternEngine';
 import { type ContradictionResult } from '../engine/contradictionEngine';
+import { type EmergingArchetypeResult } from '../engine/emergingArchetype';
 
 interface EvolutionData {
   primaryName: string;
@@ -38,6 +39,7 @@ interface Props {
   autoAdvanceEnabled?: boolean;
   patternEngineResult?: PatternEngineResult | null;
   contradictionEngineResult?: ContradictionResult | null;
+  emergingArchetypeResult?: EmergingArchetypeResult | null;
 }
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -85,6 +87,7 @@ export default function RewardScreen({
   autoAdvanceEnabled = false,
   patternEngineResult,
   contradictionEngineResult,
+  emergingArchetypeResult,
 }: Props) {
   const t = useT();
   const [pickedCard, setPickedCard] = useState<number | null>(null);
@@ -215,6 +218,15 @@ export default function RewardScreen({
             <div className="reward-block animate-in" style={{ animationDelay: '0.09s', borderColor: 'rgba(251,191,36,0.18)' }}>
               <p className="reward-block-label" style={{ color: 'rgba(251,191,36,0.75)' }}>Tension signal</p>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{contradictionEngineResult.safe_text_en}</p>
+            </div>
+          )}
+
+          {emergingArchetypeResult?.is_displayable &&
+            totalProfileAnswers >= 12 &&
+            emergingArchetypeResult.safe_text_en && (
+            <div className="reward-block animate-in" style={{ animationDelay: '0.10s', borderColor: 'rgba(124,58,237,0.18)' }}>
+              <p className="reward-block-label" style={{ color: 'rgba(167,139,250,0.85)' }}>Archetype signal</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{emergingArchetypeResult.safe_text_en}</p>
             </div>
           )}
 
