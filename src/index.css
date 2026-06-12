@@ -1714,3 +1714,32 @@ body {
   transform-origin: left center;
   animation: barFill 0.75s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
+
+/* ─── Android / Capacitor WebView ──────────── */
+
+/* Smooth momentum scrolling on touch */
+html, body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+
+/* Disable double-tap zoom (Android WebView) */
+* {
+  touch-action: manipulation;
+}
+
+/* Prevent tap highlight bleed on interactive elements */
+a, button, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Full safe-area awareness for bottom nav bars */
+body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Prevent horizontal page scroll inside WebView */
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
