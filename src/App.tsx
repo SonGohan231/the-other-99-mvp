@@ -68,6 +68,7 @@ import { computeHumanTwin } from './engine/humanTwin';
 import { computeSnapshot51 } from './engine/snapshot51';
 import { computeHiddenParameters } from './engine/hiddenParameters';
 import { computePatternEngine, type PatternEngineResult } from './engine/patternEngine';
+import { computeSocialRewardLayer } from './engine/socialRewardLayer';
 import { recordActivity, getStreak } from './utils/streak';
 import {
   getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
@@ -323,6 +324,17 @@ export default function App() {
   const patternEngineResult: PatternEngineResult = useMemo(
     () => computePatternEngine(testAnswers, profileState.total_profile_answers, behavioralSummary, canonicalVector),
     [testAnswers, profileState.total_profile_answers, behavioralSummary, canonicalVector],
+  );
+
+  // Social Reward Layer v1 — recomputed after each answer
+  const socialRewardLayerResult = useMemo(
+    () => computeSocialRewardLayer(
+      profileState.total_profile_answers,
+      patternEngineResult,
+      canonicalVector,
+      profileState.rarity_points,
+    ),
+    [profileState.total_profile_answers, patternEngineResult, canonicalVector, profileState.rarity_points],
   );
 
   // Profile evolution card — shown in RewardScreen every 5 answers
@@ -1064,6 +1076,17 @@ export default function App() {
         confidence: patternEngineResult.confidence,
         next_pattern_in: patternEngineResult.next_pattern_in,
       },
+      social_reward_layer: {
+        version: socialRewardLayerResult.version,
+        answers_analyzed: socialRewardLayerResult.answers_analyzed,
+        is_sufficient: socialRewardLayerResult.is_sufficient,
+        is_displayable: socialRewardLayerResult.is_displayable,
+        reward_level: socialRewardLayerResult.reward_level,
+        reward_kind: socialRewardLayerResult.reward_kind,
+        progress_label: socialRewardLayerResult.progress_label,
+        rarity_label: socialRewardLayerResult.rarity_label,
+        anonymous_comparison_label: socialRewardLayerResult.anonymous_comparison_label,
+      },
     });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1434,6 +1457,7 @@ export default function App() {
           emergingArchetypeResult={engineResults.archetype}
           hiddenParametersResult={engineResults.hiddenParams}
           humanTwinResult={engineResults.humanTwin}
+          socialRewardLayerResult={socialRewardLayerResult}
         />
       )}
 
@@ -1676,6 +1700,7 @@ export default function App() {
           nextPreparedQuestionId={nextPreparedQuestion?.id ?? null}
           nextSelectionReason={nextPreparedReason}
           patternEngineResult={patternEngineResult}
+          socialRewardLayerResult={socialRewardLayerResult}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

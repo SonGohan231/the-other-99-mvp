@@ -17,6 +17,7 @@ import type { HumanTwinResult } from '../engine/humanTwin';
 import type { HiddenParametersResult } from '../engine/hiddenParameters';
 import type { Snapshot51Result } from '../engine/snapshot51';
 import type { PatternEngineResult } from '../engine/patternEngine';
+import type { SocialRewardLayerResult } from '../engine/socialRewardLayer';
 import { getStreak } from '../utils/streak';
 import { getNextLayerInfo, isAutoAdvanceEnabled, setAutoAdvanceEnabled, type RevealResult } from '../utils/revealPacing';
 
@@ -65,6 +66,7 @@ interface Props {
   nextPreparedQuestionId?: string | null;
   nextSelectionReason?: string | null;
   patternEngineResult?: PatternEngineResult | null;
+  socialRewardLayerResult?: SocialRewardLayerResult | null;
 }
 
 export default function DebugPanel({
@@ -112,6 +114,7 @@ export default function DebugPanel({
   nextPreparedQuestionId,
   nextSelectionReason,
   patternEngineResult,
+  socialRewardLayerResult,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(() => isAutoAdvanceEnabled());
@@ -494,6 +497,33 @@ export default function DebugPanel({
                   </div>
                 </>
               ) : <div>Pattern engine not yet computed.</div>}
+            </div>
+          </details>
+
+          {/* SOCIAL REWARD LAYER */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Social Reward Layer {socialRewardLayerResult
+                ? `(${socialRewardLayerResult.reward_level} · ${socialRewardLayerResult.reward_kind})`
+                : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.8, fontFamily: 'monospace' }}>
+              {socialRewardLayerResult ? (
+                <>
+                  <div>Version: <span style={{ color: 'var(--accent-light)' }}>{socialRewardLayerResult.version}</span></div>
+                  <div>Answers: {socialRewardLayerResult.answers_analyzed} · Sufficient: <span style={{ color: socialRewardLayerResult.is_sufficient ? '#4ade80' : '#f87171' }}>{String(socialRewardLayerResult.is_sufficient)}</span> · Displayable: <span style={{ color: socialRewardLayerResult.is_displayable ? '#4ade80' : '#f87171' }}>{String(socialRewardLayerResult.is_displayable)}</span></div>
+                  <div>Level: <span style={{ color: 'var(--accent-light)' }}>{socialRewardLayerResult.reward_level}</span> · Kind: <span style={{ color: 'var(--accent-light)' }}>{socialRewardLayerResult.reward_kind}</span></div>
+                  <div>Progress label: {socialRewardLayerResult.progress_label}</div>
+                  <div>Rarity label: {socialRewardLayerResult.rarity_label}</div>
+                  <div>Comparison: {socialRewardLayerResult.anonymous_comparison_label}</div>
+                  {socialRewardLayerResult.safe_text_en && (
+                    <div style={{ color: 'rgba(129,140,248,0.7)', fontStyle: 'italic', marginTop: '2px' }}>safe_text: "{socialRewardLayerResult.safe_text_en}"</div>
+                  )}
+                  <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.2)', fontSize: '0.58rem' }}>
+                    {socialRewardLayerResult.debug_notes.join(' · ')}
+                  </div>
+                </>
+              ) : <div>Social reward layer not yet computed.</div>}
             </div>
           </details>
 
