@@ -67,6 +67,7 @@ import { computeContradiction } from './engine/contradictionEngine';
 import { computeHumanTwin } from './engine/humanTwin';
 import { computeSnapshot51 } from './engine/snapshot51';
 import { computeHiddenParameters } from './engine/hiddenParameters';
+import { computePatternEngine, type PatternEngineResult } from './engine/patternEngine';
 import { recordActivity, getStreak } from './utils/streak';
 import {
   getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
@@ -317,6 +318,12 @@ export default function App() {
     const snapshot = computeSnapshot51(canonicalVector, answeredCount, archetype, contradiction, humanTwin, hiddenParams);
     return { archetype, contradiction, humanTwin, hiddenParams, snapshot };
   }, [profileState.total_profile_answers, canonicalVector, skipEvents, swapEvents, exitEvents, returnEvents, behavioralSummary]);
+
+  // Pattern Engine v1 — recomputed after each answer
+  const patternEngineResult: PatternEngineResult = useMemo(
+    () => computePatternEngine(testAnswers, profileState.total_profile_answers, behavioralSummary, canonicalVector),
+    [testAnswers, profileState.total_profile_answers, behavioralSummary, canonicalVector],
+  );
 
   // Profile evolution card — shown in RewardScreen every 5 answers
   const evolutionData = useMemo(() => {
@@ -966,6 +973,14 @@ export default function App() {
         next_layer_label: nextLayer?.label ?? null,
         auto_advance_enabled: isAutoAdvanceEnabled(),
       },
+      patternEngine: {
+        version: patternEngineResult.version,
+        answers_analyzed: patternEngineResult.answers_analyzed,
+        active_patterns: patternEngineResult.active_patterns,
+        strongest_pattern: patternEngineResult.strongest_pattern,
+        confidence: patternEngineResult.confidence,
+        next_pattern_in: patternEngineResult.next_pattern_in,
+      },
     });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1332,6 +1347,7 @@ export default function App() {
           microFeedback={microFeedback}
           nextTease={nextTease}
           autoAdvanceEnabled={isAutoAdvanceEnabled()}
+          patternEngineResult={patternEngineResult}
         />
       )}
 
@@ -1573,6 +1589,7 @@ export default function App() {
           nextTease={nextTease}
           nextPreparedQuestionId={nextPreparedQuestion?.id ?? null}
           nextSelectionReason={nextPreparedReason}
+          patternEngineResult={patternEngineResult}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}

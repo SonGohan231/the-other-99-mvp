@@ -89,6 +89,7 @@ export function exportFullSession(extras: {
   curiosityLoop?: unknown;
   companionRewards?: unknown;
   socialComparisonPreview?: unknown;
+  patternEngine?: unknown;
 } = {}): string {
   const base = JSON.parse(exportSession());
   return JSON.stringify({
@@ -109,5 +110,6 @@ export function exportFullSession(extras: {
     curiosity_loop: extras.curiosityLoop ?? null,
     companion_rewards: extras.companionRewards ?? null,
     social_comparison_preview: extras.socialComparisonPreview ?? null,
+    pattern_engine: extras.patternEngine ?? null,
   }, null, 2);
 }
