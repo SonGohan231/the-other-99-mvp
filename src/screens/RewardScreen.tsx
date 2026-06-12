@@ -9,6 +9,7 @@ import { getNextLayerInfo, type RevealResult } from '../utils/revealPacing';
 import { computeSocialComparison } from '../engine/socialComparison';
 import { getCompanionForAnswerCount, unlockCompanion } from '../utils/companionStickers';
 import { type PatternEngineResult } from '../engine/patternEngine';
+import { type ContradictionResult } from '../engine/contradictionEngine';
 
 interface EvolutionData {
   primaryName: string;
@@ -36,6 +37,7 @@ interface Props {
   nextTease?: string;
   autoAdvanceEnabled?: boolean;
   patternEngineResult?: PatternEngineResult | null;
+  contradictionEngineResult?: ContradictionResult | null;
 }
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -82,6 +84,7 @@ export default function RewardScreen({
   nextTease,
   autoAdvanceEnabled = false,
   patternEngineResult,
+  contradictionEngineResult,
 }: Props) {
   const t = useT();
   const [pickedCard, setPickedCard] = useState<number | null>(null);
@@ -203,6 +206,16 @@ export default function RewardScreen({
             <p style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.22)', textAlign: 'center', fontStyle: 'italic' }}>
               First pattern signal in <span style={{ color: 'rgba(20,184,166,0.5)' }}>{nextPatternIn}</span> {nextPatternIn === 1 ? 'answer' : 'answers'}
             </p>
+          )}
+
+          {contradictionEngineResult &&
+            (contradictionEngineResult.level === 'medium' || contradictionEngineResult.level === 'high') &&
+            totalProfileAnswers >= 8 &&
+            contradictionEngineResult.safe_text_en && (
+            <div className="reward-block animate-in" style={{ animationDelay: '0.09s', borderColor: 'rgba(251,191,36,0.18)' }}>
+              <p className="reward-block-label" style={{ color: 'rgba(251,191,36,0.75)' }}>Tension signal</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{contradictionEngineResult.safe_text_en}</p>
+            </div>
           )}
 
           {companion && !collectedCompanionId && (

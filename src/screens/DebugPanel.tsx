@@ -314,6 +314,7 @@ export default function DebugPanel({
             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
               {contradictionResult ? (
                 <>
+                  <div>Version: <span style={{ color: 'var(--accent-light)' }}>{contradictionResult.version}</span></div>
                   <div>Score: {contradictionResult.contradiction_score} | Consistency: {contradictionResult.consistency_score}</div>
                   <div>Level: <span style={{ color: contradictionResult.level === 'high' ? '#f87171' : contradictionResult.level === 'medium' ? '#fbbf24' : 'var(--accent-light)' }}>{contradictionResult.level}</span></div>
                   {contradictionResult.primary_axis && <div>Primary axis: {contradictionResult.primary_axis}</div>}

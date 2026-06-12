@@ -312,7 +312,7 @@ export default function App() {
     const interactions = getInteractions();
     const answeredCount = profileState.total_profile_answers;
     const archetype = computeEmergingArchetype(canonicalVector, answeredCount);
-    const contradiction = computeContradiction(interactions, skipEvents, swapEvents, exitEvents, canonicalVector);
+    const contradiction = computeContradiction(interactions, skipEvents, swapEvents, exitEvents, canonicalVector, testAnswers);
     const humanTwin = computeHumanTwin(canonicalVector, answeredCount, archetype, null);
     const hiddenParams = computeHiddenParameters(behavioralSummary, interactions, returnEvents, contradiction);
     const snapshot = computeSnapshot51(canonicalVector, answeredCount, archetype, contradiction, humanTwin, hiddenParams);
@@ -984,7 +984,17 @@ export default function App() {
       premiumState: { unlocked: isPremium, source: premiumSrc },
       contentDiagnostics: getContentDiagnostics(content, currentItem, lang),
       emergingArchetype: engineResults.archetype,
-      contradictionProfile: engineResults.contradiction,
+      contradictionProfile: {
+        version: engineResults.contradiction.version,
+        contradiction_score: engineResults.contradiction.contradiction_score,
+        consistency_score: engineResults.contradiction.consistency_score,
+        level: engineResults.contradiction.level,
+        primary_axis: engineResults.contradiction.primary_axis,
+        signals: engineResults.contradiction.signals,
+        signal_counts: engineResults.contradiction.signal_counts,
+        user_facing_summary: engineResults.contradiction.user_facing_summary,
+        debug_evidence: engineResults.contradiction.debug_evidence,
+      },
       humanTwin: engineResults.humanTwin,
       snapshot51: engineResults.snapshot,
       hiddenParameters: engineResults.hiddenParams,
@@ -1386,6 +1396,7 @@ export default function App() {
           nextTease={nextTease}
           autoAdvanceEnabled={isAutoAdvanceEnabled()}
           patternEngineResult={patternEngineResult}
+          contradictionEngineResult={engineResults.contradiction}
         />
       )}
 
