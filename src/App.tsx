@@ -313,8 +313,8 @@ export default function App() {
     const answeredCount = profileState.total_profile_answers;
     const archetype = computeEmergingArchetype(canonicalVector, answeredCount);
     const contradiction = computeContradiction(interactions, skipEvents, swapEvents, exitEvents, canonicalVector, testAnswers);
-    const humanTwin = computeHumanTwin(canonicalVector, answeredCount, archetype, null);
     const hiddenParams = computeHiddenParameters(behavioralSummary, interactions, returnEvents, contradiction);
+    const humanTwin = computeHumanTwin(canonicalVector, answeredCount, archetype, hiddenParams.raw_hp);
     const snapshot = computeSnapshot51(canonicalVector, answeredCount, archetype, contradiction, humanTwin, hiddenParams);
     return { archetype, contradiction, humanTwin, hiddenParams, snapshot };
   }, [profileState.total_profile_answers, canonicalVector, skipEvents, swapEvents, exitEvents, returnEvents, behavioralSummary]);
@@ -1006,7 +1006,19 @@ export default function App() {
         user_facing_summary: engineResults.contradiction.user_facing_summary,
         debug_evidence: engineResults.contradiction.debug_evidence,
       },
-      humanTwin: engineResults.humanTwin,
+      humanTwin: {
+        version: engineResults.humanTwin.version,
+        source_label: engineResults.humanTwin.source_label,
+        tier: engineResults.humanTwin.tier,
+        is_unlocked: engineResults.humanTwin.is_unlocked,
+        is_displayable: engineResults.humanTwin.is_displayable,
+        similarity_percent: engineResults.humanTwin.similarity_percent,
+        distance: engineResults.humanTwin.distance,
+        closest_reference_id: engineResults.humanTwin.closest_reference_id,
+        current_answer_count: engineResults.humanTwin.current_answer_count,
+        hp_reliability: engineResults.humanTwin.hp_reliability,
+        shared_patterns: engineResults.humanTwin.shared_patterns,
+      },
       snapshot51: engineResults.snapshot,
       hiddenParameters: {
         version: engineResults.hiddenParams.version,
@@ -1421,6 +1433,7 @@ export default function App() {
           contradictionEngineResult={engineResults.contradiction}
           emergingArchetypeResult={engineResults.archetype}
           hiddenParametersResult={engineResults.hiddenParams}
+          humanTwinResult={engineResults.humanTwin}
         />
       )}
 

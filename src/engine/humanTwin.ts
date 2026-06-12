@@ -5,6 +5,7 @@ import { CanonicalHP } from './canonicalHP';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface HumanTwinResult {
+  version: 'stage7_human_twin_similarity_v1';
   enabled: boolean;
   source_label: 'simulated_local_reference' | 'estimated_until_population_exists';
   similarity_percent: number;    // 0–100
@@ -13,19 +14,22 @@ export interface HumanTwinResult {
   closest_reference_name: string;
   shared_patterns: string[];
   differences: string[];
-  unlock_threshold: number;      // answers needed for this tier
+  unlock_threshold: number;      // answers needed for debug/export visibility
   current_answer_count: number;
-  is_unlocked: boolean;
+  is_unlocked: boolean;          // true when >= COMPUTE_THRESHOLD (debug/export visible)
+  is_displayable: boolean;       // true when >= DISPLAY_THRESHOLD (RewardScreen visible)
   tier: 'locked' | 'preview' | 'meaningful' | 'strong';
-  user_facing_summary: string;
+  safe_text_en: string;          // for RewardScreen — hedged, no names, no "real person"
+  safe_text_pl: string;
+  user_facing_summary: string;   // debug/detail screens only — may contain reference names
+  hp_reliability: number | null; // 0–1 derived from HP01 + HP05 signals; null if no HP data
 }
 
-// ─── Reference population (12 archetypal reference points) ────────────────────
-// Each reference pattern is a canonical vector representing a "pure archetype" profile.
-// These are estimated reference points — not derived from real user data.
+// ─── Reference anchors (12 archetypal synthetic patterns) ─────────────────────
+// Each is a canonical vector representing a "pure archetype" profile.
+// These are estimated reference anchors — not derived from real user data.
 
 type AxisKey = keyof CanonicalVector;
-
 type RefVector = Partial<Record<AxisKey, number>>;
 
 const REFERENCE_PATTERNS: Array<{ id: string; name: string; vector: RefVector }> = [
@@ -43,14 +47,18 @@ const REFERENCE_PATTERNS: Array<{ id: string; name: string; vector: RefVector }>
   { id: 'A12', name: 'The Weaver',     vector: { AX03: -10, AX10:  7,  AX04:  4, AX07: -4 } },
 ];
 
-const PREVIEW_THRESHOLD = 25;
-const MEANINGFUL_THRESHOLD = 51;
-const STRONG_THRESHOLD = 100;
+// ─── Display thresholds ───────────────────────────────────────────────────────
+
+const COMPUTE_THRESHOLD = 12;    // data computed; visible in debug/export
+const DISPLAY_THRESHOLD = 17;    // RewardScreen "Similarity signal" appears
+const MEANINGFUL_THRESHOLD = 31; // stronger signal
+const STRONG_THRESHOLD = 51;     // stable signal
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function softNorm(v: number, scale = 15): number {
-  return Math.tanh(v / scale);
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.tanh(n / scale) : 0;
 }
 
 function euclideanDistance(a: Record<string, number>, b: Record<string, number>): number {
@@ -75,10 +83,19 @@ function normalizeRef(ref: RefVector): Record<string, number> {
   return out;
 }
 
-// Convert distance in normalized space (0–√10 ≈ 3.16) to similarity percent (0–100)
+// Max Euclidean distance in [-1, 1]^10 space
+const MAX_DIST = Math.sqrt(10) * 2;
+
 function distanceToSimilarity(dist: number): number {
-  const maxDist = Math.sqrt(10) * 2; // max possible distance in [-1,1]^10 space
-  return Math.round(Math.max(0, Math.min(100, (1 - dist / maxDist) * 100)));
+  return Math.round(Math.max(0, Math.min(100, (1 - dist / MAX_DIST) * 100)));
+}
+
+// HP01 (Confidence) + HP05 (Stability) → reliability factor 0–1
+function computeHPReliability(hp: CanonicalHP | null): number | null {
+  if (!hp) return null;
+  const confidenceFactor = (hp.HP01 + 100) / 200; // 0..1
+  const stabilityFactor  = (hp.HP05 + 100) / 200; // 0..1
+  return Math.round(((confidenceFactor + stabilityFactor) / 2) * 100) / 100;
 }
 
 function buildSharedPatterns(
@@ -102,10 +119,8 @@ function buildSharedPatterns(
   for (const [ax, labels] of Object.entries(AXIS_LABELS)) {
     const cv = cvNorm[ax] ?? 0;
     const ref = refNorm[ax] ?? 0;
-    // Same direction and both moderately loaded
     if (Math.sign(cv) === Math.sign(ref) && Math.abs(cv) > 0.25 && Math.abs(ref) > 0.25) {
-      const label = cv > 0 ? labels.pos : labels.neg;
-      patterns.push(label);
+      patterns.push(cv > 0 ? labels.pos : labels.neg);
     }
     if (patterns.length >= 3) break;
   }
@@ -117,7 +132,6 @@ function buildDifferences(
   cvNorm: Record<string, number>,
   refNorm: Record<string, number>,
 ): string[] {
-  const diffs: string[] = [];
   const AXIS_LABELS: Record<string, string> = {
     AX01: 'curiosity vs. security balance',
     AX02: 'logic vs. emotion balance',
@@ -131,29 +145,61 @@ function buildDifferences(
     AX10: 'idea creation vs. execution preference',
   };
 
-  const axes = Object.keys(AXIS_LABELS);
-  const dists = axes.map((ax) => ({
+  const dists = Object.keys(AXIS_LABELS).map((ax) => ({
     ax,
     diff: Math.abs((cvNorm[ax] ?? 0) - (refNorm[ax] ?? 0)),
   }));
   dists.sort((a, b) => b.diff - a.diff);
 
-  for (const { ax, diff } of dists.slice(0, 2)) {
-    if (diff > 0.3) diffs.push(AXIS_LABELS[ax]);
-  }
-
-  return diffs;
+  return dists
+    .slice(0, 2)
+    .filter(({ diff }) => diff > 0.3)
+    .map(({ ax }) => AXIS_LABELS[ax]);
 }
 
-function buildSummary(tier: string, closestName: string, similarity: number, shared: string[]): string {
+// ─── Copy builders ────────────────────────────────────────────────────────────
+
+// safe_text_en — for RewardScreen only. No reference/archetype names. No "real person" claim.
+function buildSafeText(answerCount: number, is_displayable: boolean): { en: string; pl: string } {
+  if (!is_displayable) return { en: '', pl: '' };
+
+  if (answerCount < MEANINGFUL_THRESHOLD) {
+    return {
+      en: 'A similar decision shape is starting to appear.',
+      pl: 'Zaczyna pojawiać się podobny kształt decyzji.',
+    };
+  }
+  if (answerCount < STRONG_THRESHOLD) {
+    return {
+      en: 'Your profile is close to one anonymous reference pattern.',
+      pl: 'Twój profil jest bliski jednemu anonimowemu wzorcowi referencyjnemu.',
+    };
+  }
+  return {
+    en: 'A nearby profile pattern has become more consistent across your answers.',
+    pl: 'Pobliski wzorzec profilu stał się bardziej spójny na przestrzeni Twoich odpowiedzi.',
+  };
+}
+
+// user_facing_summary — for debug/detail screens. May contain reference names.
+function buildDebugSummary(
+  tier: string,
+  closestName: string,
+  similarity: number,
+  shared: string[],
+  answerCount: number,
+): string {
   if (tier === 'locked') {
-    return `Answer ${PREVIEW_THRESHOLD} questions to unlock your first Human Twin preview.`;
+    return `Answer ${COMPUTE_THRESHOLD} questions to see similarity data in debug.`;
   }
-  if (tier === 'preview') {
-    return `An early estimated match is forming. Your profile most resembles ${closestName} patterns. This is an estimate — real population data does not yet exist.`;
+  if (answerCount < DISPLAY_THRESHOLD) {
+    return `Early reference pattern computing. Similarity data visible in debug/export at ${answerCount} answers.`;
   }
-  const sharedNote = shared.length > 0 ? ` You overlap most in being ${shared.slice(0,2).join(' and ')}.` : '';
-  return `Your closest estimated match is the ${closestName} pattern at ~${similarity}% similarity.${sharedNote} This is simulated until real population data exists.`;
+  if (similarity < 40) {
+    return `Weak reference match so far. Closest pattern: ${closestName}. More answers needed for signal clarity.`;
+  }
+  const sharedNote = shared.length > 0 ? ` Shared: ${shared.slice(0,2).join(' and ')}.` : '';
+  return `Closest reference pattern: ${closestName} (~${similarity}% similarity).${sharedNote} Source: synthetic reference anchors only.`;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -162,17 +208,22 @@ export function computeHumanTwin(
   canonicalVector: CanonicalVector,
   answerCount: number,
   archetype: EmergingArchetypeResult | null,
-  _hp: CanonicalHP | null,
+  hp: CanonicalHP | null,
 ): HumanTwinResult {
-  const tier =
-    answerCount >= STRONG_THRESHOLD ? 'strong' :
-    answerCount >= MEANINGFUL_THRESHOLD ? 'meaningful' :
-    answerCount >= PREVIEW_THRESHOLD ? 'preview' : 'locked';
+  const safeCount = Math.max(0, Math.floor(Number.isFinite(answerCount) ? answerCount : 0));
 
-  const is_unlocked = tier !== 'locked';
+  const tier: HumanTwinResult['tier'] =
+    safeCount >= STRONG_THRESHOLD     ? 'strong' :
+    safeCount >= MEANINGFUL_THRESHOLD ? 'meaningful' :
+    safeCount >= COMPUTE_THRESHOLD    ? 'preview' : 'locked';
+
+  const is_unlocked    = safeCount >= COMPUTE_THRESHOLD;
+  const is_displayable = safeCount >= DISPLAY_THRESHOLD;
+  const hp_reliability = computeHPReliability(hp);
 
   if (!is_unlocked) {
     return {
+      version: 'stage7_human_twin_similarity_v1',
       enabled: true,
       source_label: 'estimated_until_population_exists',
       similarity_percent: 0,
@@ -181,17 +232,21 @@ export function computeHumanTwin(
       closest_reference_name: '',
       shared_patterns: [],
       differences: [],
-      unlock_threshold: PREVIEW_THRESHOLD,
-      current_answer_count: answerCount,
+      unlock_threshold: COMPUTE_THRESHOLD,
+      current_answer_count: safeCount,
       is_unlocked: false,
+      is_displayable: false,
       tier: 'locked',
-      user_facing_summary: buildSummary('locked', '', 0, []),
+      safe_text_en: '',
+      safe_text_pl: '',
+      user_facing_summary: buildDebugSummary('locked', '', 0, [], safeCount),
+      hp_reliability,
     };
   }
 
   const cvNorm = normalizeCV(canonicalVector);
 
-  // Find closest reference pattern
+  // Find closest reference pattern by Euclidean distance in normalized space
   let closestRef = REFERENCE_PATTERNS[0];
   let minDist = Infinity;
 
@@ -204,13 +259,12 @@ export function computeHumanTwin(
     }
   }
 
-  // Prefer the archetype engine's primary if it strongly agrees
+  // If the archetype engine's primary pick is within 20% of the geometric closest,
+  // prefer it (consistent signal across engines).
   if (archetype && archetype.confidence !== 'very_low') {
     const primaryRef = REFERENCE_PATTERNS.find((r) => r.id === archetype.primary.id);
     if (primaryRef) {
-      const primaryRefNorm = normalizeRef(primaryRef.vector);
-      const primaryDist = euclideanDistance(cvNorm, primaryRefNorm);
-      // Use archetype engine's pick if it's within 20% of the closest geometric match
+      const primaryDist = euclideanDistance(cvNorm, normalizeRef(primaryRef.vector));
       if (primaryDist <= minDist * 1.2) {
         closestRef = primaryRef;
         minDist = primaryDist;
@@ -222,8 +276,10 @@ export function computeHumanTwin(
   const similarity_percent = distanceToSimilarity(minDist);
   const shared = buildSharedPatterns(cvNorm, closestRefNorm);
   const differences = buildDifferences(cvNorm, closestRefNorm);
+  const { en: safe_text_en, pl: safe_text_pl } = buildSafeText(safeCount, is_displayable);
 
   return {
+    version: 'stage7_human_twin_similarity_v1',
     enabled: true,
     source_label: 'estimated_until_population_exists',
     similarity_percent,
@@ -232,10 +288,14 @@ export function computeHumanTwin(
     closest_reference_name: closestRef.name,
     shared_patterns: shared,
     differences,
-    unlock_threshold: MEANINGFUL_THRESHOLD,
-    current_answer_count: answerCount,
+    unlock_threshold: COMPUTE_THRESHOLD,
+    current_answer_count: safeCount,
     is_unlocked: true,
+    is_displayable,
     tier,
-    user_facing_summary: buildSummary(tier, closestRef.name, similarity_percent, shared),
+    safe_text_en,
+    safe_text_pl,
+    user_facing_summary: buildDebugSummary(tier, closestRef.name, similarity_percent, shared, safeCount),
+    hp_reliability,
   };
 }

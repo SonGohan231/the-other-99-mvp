@@ -12,6 +12,7 @@ import { type PatternEngineResult } from '../engine/patternEngine';
 import { type ContradictionResult } from '../engine/contradictionEngine';
 import { type EmergingArchetypeResult } from '../engine/emergingArchetype';
 import { type HiddenParametersResult } from '../engine/hiddenParameters';
+import { type HumanTwinResult } from '../engine/humanTwin';
 
 interface EvolutionData {
   primaryName: string;
@@ -42,6 +43,7 @@ interface Props {
   contradictionEngineResult?: ContradictionResult | null;
   emergingArchetypeResult?: EmergingArchetypeResult | null;
   hiddenParametersResult?: HiddenParametersResult | null;
+  humanTwinResult?: HumanTwinResult | null;
 }
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -91,6 +93,7 @@ export default function RewardScreen({
   contradictionEngineResult,
   emergingArchetypeResult,
   hiddenParametersResult,
+  humanTwinResult,
 }: Props) {
   const t = useT();
   const [pickedCard, setPickedCard] = useState<number | null>(null);
@@ -239,6 +242,15 @@ export default function RewardScreen({
             <div className="reward-block animate-in" style={{ animationDelay: '0.11s', borderColor: 'rgba(20,184,166,0.12)' }}>
               <p className="reward-block-label" style={{ color: 'rgba(94,234,212,0.75)' }}>Hidden signal</p>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{hiddenParametersResult.safe_text_en}</p>
+            </div>
+          )}
+
+          {humanTwinResult?.is_displayable &&
+            totalProfileAnswers >= 17 &&
+            humanTwinResult.safe_text_en && (
+            <div className="reward-block animate-in" style={{ animationDelay: '0.12s', borderColor: 'rgba(251,191,36,0.12)' }}>
+              <p className="reward-block-label" style={{ color: 'rgba(251,191,36,0.65)' }}>Similarity signal</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{humanTwinResult.safe_text_en}</p>
             </div>
           )}
 
