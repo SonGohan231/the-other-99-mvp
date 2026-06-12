@@ -13,6 +13,7 @@ import { type ContradictionResult } from '../engine/contradictionEngine';
 import { type EmergingArchetypeResult } from '../engine/emergingArchetype';
 import { type HiddenParametersResult } from '../engine/hiddenParameters';
 import { type HumanTwinResult } from '../engine/humanTwin';
+import { type SocialRewardLayerResult } from '../engine/socialRewardLayer';
 
 interface EvolutionData {
   primaryName: string;
@@ -44,6 +45,7 @@ interface Props {
   emergingArchetypeResult?: EmergingArchetypeResult | null;
   hiddenParametersResult?: HiddenParametersResult | null;
   humanTwinResult?: HumanTwinResult | null;
+  socialRewardLayerResult?: SocialRewardLayerResult | null;
 }
 
 const RARITY_COLORS: Record<RarityTier, string> = {
@@ -94,6 +96,7 @@ export default function RewardScreen({
   emergingArchetypeResult,
   hiddenParametersResult,
   humanTwinResult,
+  socialRewardLayerResult,
 }: Props) {
   const t = useT();
   const [pickedCard, setPickedCard] = useState<number | null>(null);
@@ -251,6 +254,17 @@ export default function RewardScreen({
             <div className="reward-block animate-in" style={{ animationDelay: '0.12s', borderColor: 'rgba(251,191,36,0.12)' }}>
               <p className="reward-block-label" style={{ color: 'rgba(251,191,36,0.65)' }}>Similarity signal</p>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{humanTwinResult.safe_text_en}</p>
+            </div>
+          )}
+
+          {socialRewardLayerResult?.is_displayable &&
+            totalProfileAnswers >= 8 &&
+            socialRewardLayerResult.safe_text_en && (
+            <div className="reward-block animate-in" style={{ animationDelay: '0.13s', borderColor: 'rgba(99,102,241,0.14)' }}>
+              <p className="reward-block-label" style={{ color: 'rgba(129,140,248,0.75)' }}>
+                {socialRewardLayerResult.reward_kind === 'pattern' ? 'Discovery signal' : 'Social signal'}
+              </p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{socialRewardLayerResult.safe_text_en}</p>
             </div>
           )}
 
