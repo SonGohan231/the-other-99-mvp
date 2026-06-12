@@ -1008,7 +1008,18 @@ export default function App() {
       },
       humanTwin: engineResults.humanTwin,
       snapshot51: engineResults.snapshot,
-      hiddenParameters: engineResults.hiddenParams,
+      hiddenParameters: {
+        version: engineResults.hiddenParams.version,
+        answer_count: engineResults.hiddenParams.answer_count,
+        is_sufficient: engineResults.hiddenParams.is_sufficient,
+        is_displayable: engineResults.hiddenParams.is_displayable,
+        confidence: engineResults.hiddenParams.confidence,
+        openness: engineResults.hiddenParams.openness,
+        consistency: engineResults.hiddenParams.consistency,
+        directness: engineResults.hiddenParams.directness,
+        stability: engineResults.hiddenParams.stability,
+        raw_hp: engineResults.hiddenParams.raw_hp,
+      },
       buildInfo: {
         version: ai.version,
         commit: ai.commit,
@@ -1409,6 +1420,7 @@ export default function App() {
           patternEngineResult={patternEngineResult}
           contradictionEngineResult={engineResults.contradiction}
           emergingArchetypeResult={engineResults.archetype}
+          hiddenParametersResult={engineResults.hiddenParams}
         />
       )}
 
