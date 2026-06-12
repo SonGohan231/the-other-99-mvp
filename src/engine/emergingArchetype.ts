@@ -61,6 +61,7 @@ export interface ArchetypeScore {
 }
 
 export interface EmergingArchetypeResult {
+  version: 'stage5_emerging_archetype_v1';
   primary: ArchetypeScore;
   secondary: ArchetypeScore;
   blend_label: string;
@@ -69,16 +70,27 @@ export interface EmergingArchetypeResult {
   distance: number;        // gap between primary and secondary percentage (0–100)
   answer_count: number;
   is_emerging: boolean;    // true when enough signal to show direction but not stable
+  is_displayable: boolean; // true when safe to surface a signal on RewardScreen
+  safe_text_en: string;    // for RewardScreen — no archetype name, hedged language
+  safe_text_pl: string;
   user_facing_summary: string;
   all_scores: ArchetypeScore[];
 }
+
+// ─── Display threshold ────────────────────────────────────────────────────────
+
+// Minimum conditions before any archetype signal is surfaced on the reward screen.
+// Both conditions must hold simultaneously.
+const MIN_ANSWERS_FOR_DISPLAY = 12;
+const MIN_DISTANCE_FOR_DISPLAY = 5; // primary must be ≥5pp ahead of secondary
 
 // ─── Normalization ────────────────────────────────────────────────────────────
 
 // Soft-clip canonical axis values to [-1, 1] range.
 // Scale factor 15 gives gentle compression across typical 50-answer ranges.
 function softNorm(v: number, scale = 15): number {
-  return Math.tanh(v / scale);
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.tanh(n / scale) : 0;
 }
 
 // ─── Core calculation ─────────────────────────────────────────────────────────
@@ -92,19 +104,20 @@ function scoreArchetype(cv: CanonicalVector, weights: ArchetypeWeights): number 
 }
 
 function confidenceLevel(answerCount: number): { level: ArchetypeConfidence; reason: string } {
-  if (answerCount <= 10) return {
+  const n = Math.max(0, Math.floor(answerCount));
+  if (n <= 10) return {
     level: 'very_low',
     reason: 'Too early to read a clear direction. A few more answers will reveal a pattern.',
   };
-  if (answerCount <= 30) return {
+  if (n <= 30) return {
     level: 'low',
     reason: 'A direction is beginning to form. Your answers are starting to suggest something.',
   };
-  if (answerCount <= 50) return {
+  if (n <= 50) return {
     level: 'forming',
     reason: 'A pattern is becoming visible. This is still early, but one direction is clearer now.',
   };
-  if (answerCount <= 100) return {
+  if (n <= 100) return {
     level: 'stable',
     reason: 'Your current answers lean clearly in this direction.',
   };
@@ -117,6 +130,36 @@ function confidenceLevel(answerCount: number): { level: ArchetypeConfidence; rea
 function blendLabel(primary: string, secondary: string): string {
   const short = (name: string) => name.replace('The ', '');
   return `${short(primary)} / ${short(secondary)}`;
+}
+
+// ─── Safe copy — no archetype names, no clinical labels ───────────────────────
+
+function buildSafeText(
+  confidence: ArchetypeConfidence,
+  distance: number,
+  answerCount: number,
+): { en: string; pl: string } {
+  if (answerCount < MIN_ANSWERS_FOR_DISPLAY || distance < MIN_DISTANCE_FOR_DISPLAY) {
+    return { en: '', pl: '' };
+  }
+
+  if (confidence === 'low') {
+    return {
+      en: 'A direction is starting to appear in how you decide.',
+      pl: 'W Twoich decyzjach zaczyna pojawiać się kierunek.',
+    };
+  }
+  if (confidence === 'forming') {
+    return {
+      en: 'One pattern is becoming clearer with each answer.',
+      pl: 'Z każdą odpowiedzią jeden wzorzec staje się coraz wyraźniejszy.',
+    };
+  }
+  // stable / strong
+  return {
+    en: 'Your answers are consistently pointing in one direction.',
+    pl: 'Twoje odpowiedzi konsekwentnie wskazują na jeden kierunek.',
+  };
 }
 
 function buildSummary(
@@ -148,6 +191,8 @@ export function computeEmergingArchetype(
   canonicalVector: CanonicalVector,
   answerCount: number,
 ): EmergingArchetypeResult {
+  const safeCount = Math.max(0, Math.floor(Number.isFinite(answerCount) ? answerCount : 0));
+
   // Calculate raw score for every archetype
   const rawScores = ARCHETYPES.map((arch) => ({
     id: arch.id,
@@ -174,18 +219,28 @@ export function computeEmergingArchetype(
   const secondary = allScores[1];
   const distance = primary.percentage - secondary.percentage;
 
-  const { level, reason } = confidenceLevel(answerCount);
+  const { level, reason } = confidenceLevel(safeCount);
   const is_emerging = level === 'forming' || level === 'low';
+  const is_displayable =
+    safeCount >= MIN_ANSWERS_FOR_DISPLAY &&
+    distance >= MIN_DISTANCE_FOR_DISPLAY &&
+    level !== 'very_low';
+
+  const { en: safe_text_en, pl: safe_text_pl } = buildSafeText(level, distance, safeCount);
 
   return {
+    version: 'stage5_emerging_archetype_v1',
     primary,
     secondary,
     blend_label: blendLabel(primary.name, secondary.name),
     confidence: level,
     confidence_reason: reason,
     distance,
-    answer_count: answerCount,
+    answer_count: safeCount,
     is_emerging,
+    is_displayable,
+    safe_text_en,
+    safe_text_pl,
     user_facing_summary: buildSummary(primary, secondary, level, distance),
     all_scores: allScores,
   };
