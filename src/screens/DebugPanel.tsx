@@ -18,6 +18,7 @@ import type { HiddenParametersResult } from '../engine/hiddenParameters';
 import type { Snapshot51Result } from '../engine/snapshot51';
 import type { PatternEngineResult } from '../engine/patternEngine';
 import type { SocialRewardLayerResult } from '../engine/socialRewardLayer';
+import type { PremiumExperienceResult } from '../engine/premiumExperience';
 import { getStreak } from '../utils/streak';
 import { getNextLayerInfo, isAutoAdvanceEnabled, setAutoAdvanceEnabled, type RevealResult } from '../utils/revealPacing';
 
@@ -67,6 +68,7 @@ interface Props {
   nextSelectionReason?: string | null;
   patternEngineResult?: PatternEngineResult | null;
   socialRewardLayerResult?: SocialRewardLayerResult | null;
+  premiumExperienceResult?: PremiumExperienceResult | null;
 }
 
 export default function DebugPanel({
@@ -115,6 +117,7 @@ export default function DebugPanel({
   nextSelectionReason,
   patternEngineResult,
   socialRewardLayerResult,
+  premiumExperienceResult,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(() => isAutoAdvanceEnabled());
@@ -529,6 +532,33 @@ export default function DebugPanel({
                   </div>
                 </>
               ) : <div>Social reward layer not yet computed.</div>}
+            </div>
+          </details>
+
+          {/* PREMIUM EXPERIENCE */}
+          <details>
+            <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
+              Premium Experience {premiumExperienceResult
+                ? `(${premiumExperienceResult.readiness_label} · ${premiumExperienceResult.profile_readiness}%)`
+                : '(no data)'}
+            </summary>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.8, fontFamily: 'monospace' }}>
+              {premiumExperienceResult ? (
+                <>
+                  <div>Version: <span style={{ color: 'var(--accent-light)' }}>{premiumExperienceResult.version}</span></div>
+                  <div>Readiness: <span style={{ color: 'var(--accent-light)' }}>{premiumExperienceResult.profile_readiness}%</span> · Label: {premiumExperienceResult.readiness_label}</div>
+                  <div>Modules: <span style={{ color: premiumExperienceResult.modules_available === premiumExperienceResult.modules_total ? '#4ade80' : 'var(--accent-light)' }}>{premiumExperienceResult.modules_available}/{premiumExperienceResult.modules_total}</span> accessible</div>
+                  <div>Next milestone: <span style={{ color: 'var(--accent-light)' }}>{premiumExperienceResult.next_milestone_label ?? 'all reached'}</span>{premiumExperienceResult.answers_to_next_milestone > 0 ? ` (${premiumExperienceResult.answers_to_next_milestone} answers)` : ''}</div>
+                  <div>Milestones reached: {premiumExperienceResult.milestones.filter((m) => m.is_reached).length}/{premiumExperienceResult.milestones.length}</div>
+                  <div>Discovered signals: {premiumExperienceResult.discovered_signals.length}</div>
+                  {premiumExperienceResult.safe_text_en && (
+                    <div style={{ color: 'rgba(129,140,248,0.7)', fontStyle: 'italic', marginTop: '2px' }}>"{premiumExperienceResult.safe_text_en}"</div>
+                  )}
+                  <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.2)', fontSize: '0.58rem' }}>
+                    {premiumExperienceResult.debug_notes.join(' · ')}
+                  </div>
+                </>
+              ) : <div>Premium experience not yet computed.</div>}
             </div>
           </details>
 

@@ -69,6 +69,7 @@ import { computeSnapshot51 } from './engine/snapshot51';
 import { computeHiddenParameters } from './engine/hiddenParameters';
 import { computePatternEngine, type PatternEngineResult } from './engine/patternEngine';
 import { computeSocialRewardLayer } from './engine/socialRewardLayer';
+import { computePremiumExperience, type PremiumExperienceResult } from './engine/premiumExperience';
 import { recordActivity, getStreak } from './utils/streak';
 import {
   getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
@@ -335,6 +336,12 @@ export default function App() {
       profileState.rarity_points,
     ),
     [profileState.total_profile_answers, patternEngineResult, canonicalVector, profileState.rarity_points],
+  );
+
+  // Premium Experience v1 — recomputed when cumulative answer count changes
+  const premiumExperienceResult: PremiumExperienceResult = useMemo(
+    () => computePremiumExperience(profileState.total_profile_answers),
+    [profileState.total_profile_answers],
   );
 
   // Profile evolution card — shown in RewardScreen every 5 answers
@@ -1087,6 +1094,18 @@ export default function App() {
         rarity_label: socialRewardLayerResult.rarity_label,
         anonymous_comparison_label: socialRewardLayerResult.anonymous_comparison_label,
       },
+      premium_experience: {
+        version: premiumExperienceResult.version,
+        answer_count: premiumExperienceResult.answer_count,
+        profile_readiness: premiumExperienceResult.profile_readiness,
+        readiness_label: premiumExperienceResult.readiness_label,
+        modules_available: premiumExperienceResult.modules_available,
+        modules_total: premiumExperienceResult.modules_total,
+        next_milestone_label: premiumExperienceResult.next_milestone_label,
+        answers_to_next_milestone: premiumExperienceResult.answers_to_next_milestone,
+        milestones: premiumExperienceResult.milestones,
+        discovered_signals: premiumExperienceResult.discovered_signals,
+      },
     });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1702,6 +1721,7 @@ export default function App() {
           nextSelectionReason={nextPreparedReason}
           patternEngineResult={patternEngineResult}
           socialRewardLayerResult={socialRewardLayerResult}
+          premiumExperienceResult={premiumExperienceResult}
           onStartTest={handleStartTest}
           onUndo={handleUndoAnswer}
           canUndo={canUndoAnswer}
