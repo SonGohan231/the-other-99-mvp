@@ -353,16 +353,23 @@ export default function DebugPanel({
           {/* HIDDEN PARAMETERS */}
           <details>
             <summary style={{ fontSize: '0.72rem', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px 0' }}>
-              Hidden Parameters {hiddenParameters ? `(sufficient=${String(hiddenParameters.is_sufficient)})` : '(no data)'}
+              Hidden Parameters {hiddenParameters ? `(sufficient=${String(hiddenParameters.is_sufficient)} displayable=${String(hiddenParameters.is_displayable)})` : '(no data)'}
             </summary>
             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
               {hiddenParameters ? (
                 <>
+                  <div>Version: <span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.version}</span></div>
+                  <div>Answer count: {hiddenParameters.answer_count} · Sufficient: <span style={{ color: hiddenParameters.is_sufficient ? '#4ade80' : '#f87171' }}>{String(hiddenParameters.is_sufficient)}</span> · Displayable: <span style={{ color: hiddenParameters.is_displayable ? '#4ade80' : '#f87171' }}>{String(hiddenParameters.is_displayable)}</span></div>
                   <div>HP01 Confidence: {hiddenParameters.confidence.score}/100 (<span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.confidence.label}</span>) → {hiddenParameters.confidence.user_facing_label}</div>
                   <div>HP02 Openness: {hiddenParameters.openness.score}/100 (<span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.openness.label}</span>) → {hiddenParameters.openness.user_facing_label}</div>
                   <div>HP03 Consistency: {hiddenParameters.consistency.score}/100 (<span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.consistency.label}</span>) → {hiddenParameters.consistency.user_facing_label}</div>
+                  <div>HP04 Directness: {hiddenParameters.directness.score}/100 (<span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.directness.label}</span>) → {hiddenParameters.directness.user_facing_label}</div>
+                  <div>HP05 Stability: {hiddenParameters.stability.score}/100 (<span style={{ color: 'var(--accent-light)' }}>{hiddenParameters.stability.label}</span>) → {hiddenParameters.stability.user_facing_label}</div>
                   {hiddenParameters.raw_hp && (
-                    <div style={{ color: 'var(--text-dim)', fontSize: '0.6rem' }}>Raw HP: HP01={hiddenParameters.raw_hp.HP01} HP02={hiddenParameters.raw_hp.HP02} HP03={hiddenParameters.raw_hp.HP03}</div>
+                    <div style={{ color: 'var(--text-dim)', fontSize: '0.6rem' }}>Raw: HP01={hiddenParameters.raw_hp.HP01} HP02={hiddenParameters.raw_hp.HP02} HP03={hiddenParameters.raw_hp.HP03} HP04={hiddenParameters.raw_hp.HP04} HP05={hiddenParameters.raw_hp.HP05}</div>
+                  )}
+                  {hiddenParameters.safe_text_en && (
+                    <div style={{ color: 'rgba(94,234,212,0.7)', fontStyle: 'italic' }}>safe_text_en: "{hiddenParameters.safe_text_en}"</div>
                   )}
                 </>
               ) : <div>No hidden parameters data.</div>}

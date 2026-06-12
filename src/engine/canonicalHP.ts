@@ -2,7 +2,7 @@ import { BehavioralSummary } from '../utils/behavioralSignals';
 import { ReturnToSessionEvent } from '../types';
 
 /**
- * Three canonical hidden parameters derived from behavioral events.
+ * Five canonical hidden parameters derived from behavioral events.
  * Scale: -100 (strong second pole) to +100 (strong first pole).
  * 0 = neutral / insufficient data.
  *
@@ -17,11 +17,21 @@ import { ReturnToSessionEvent } from '../types';
  * HP03: Consistency ↔ Contradiction
  *   Sources: contradiction_signal, answer_change (HE005), undo events,
  *            session_resume (HE008), stability_label
+ *
+ * HP04: Directness ↔ Reflection
+ *   Sources: impulsivity_signal, deliberation_signal, first_reaction_time_ms,
+ *            answer changes without instability (considered revision)
+ *
+ * HP05: Stability ↔ Exploration
+ *   Sources: instability_signal, stability_label, swap_question (HE002),
+ *            exit_to_menu (HE003), session_resume (HE008)
  */
 export interface CanonicalHP {
   HP01: number; // Confidence (>0) ↔ Hesitation (<0)
   HP02: number; // Openness (>0) ↔ Guardedness (<0)
   HP03: number; // Consistency (>0) ↔ Contradiction (<0)
+  HP04: number; // Directness (>0) ↔ Reflection (<0)
+  HP05: number; // Stability (>0) ↔ Exploration (<0)
 }
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -29,7 +39,7 @@ function clamp(v: number, lo: number, hi: number): number {
 }
 
 /**
- * Compute canonical HP01/HP02/HP03 from behavioral summary.
+ * Compute canonical HP01–HP05 from behavioral summary.
  * Returns null when there is insufficient behavioral data (< 3 answers).
  */
 export function computeCanonicalHP(
@@ -43,6 +53,10 @@ export function computeCanonicalHP(
     avgAvoidanceSignal,
     avgContradictionSignal,
     avgHesitationMs,
+    avgImpulsivitySignal,
+    avgDeliberationSignal,
+    avgInstabilitySignal,
+    avgFirstReactionMs,
     skipRatePercent,
     totalAnswerChanges,
     totalUndos,
@@ -52,50 +66,80 @@ export function computeCanonicalHP(
   } = behavioral;
 
   // HP01: Confidence ↔ Hesitation
-  // Base on confidence signal (0-100) shifted to -50..+50 center
   const confidenceBase = avgConfidenceSignal - 50;
   const hesitationFromTime = avgHesitationMs !== null
-    ? clamp(avgHesitationMs / 500, 0, 20)  // long hesitation → negative
+    ? clamp(avgHesitationMs / 500, 0, 20)
     : 0;
-  const hesitationFromSkips = skipRatePercent * 0.5;  // skips → hesitation (HE001)
-  const hesitationFromChanges = clamp(totalAnswerChanges * 5, 0, 20);  // changes → hesitation (HE005)
-  const hesitationFromExits = clamp(totalExits * 3, 0, 10);  // exits → hesitation (HE003)
+  const hesitationFromSkips = skipRatePercent * 0.5;
+  const hesitationFromChanges = clamp(totalAnswerChanges * 5, 0, 20);
+  const hesitationFromExits = clamp(totalExits * 3, 0, 10);
   const HP01 = clamp(
     confidenceBase - hesitationFromTime - hesitationFromSkips - hesitationFromChanges - hesitationFromExits,
     -100, 100,
   );
 
   // HP02: Openness ↔ Guardedness
-  // Base on inverse of avoidance signal
   const opennessBase = 50 - avgAvoidanceSignal;
-  const guardednessFromSkips = skipRatePercent * 0.8;   // skip_question → guardedness (HE001)
-  const guardednessFromExits = clamp(totalExits * 5, 0, 20);  // return_to_menu → avoidance (HE003)
-  const guardednessFromSwaps = clamp(totalSwaps * 5, 0, 15);  // swap_question → guardedness (HE002)
+  const guardednessFromSkips = skipRatePercent * 0.8;
+  const guardednessFromExits = clamp(totalExits * 5, 0, 20);
+  const guardednessFromSwaps = clamp(totalSwaps * 5, 0, 15);
   const HP02 = clamp(
     opennessBase - guardednessFromSkips - guardednessFromExits - guardednessFromSwaps,
     -100, 100,
   );
 
   // HP03: Consistency ↔ Contradiction
-  // Base on inverse of contradiction signal
   const consistencyBase = 50 - avgContradictionSignal;
-  const contradictionFromChanges = clamp(totalAnswerChanges * 6, 0, 25);  // answer_change → consistency_pressure (HE005)
-  const contradictionFromUndos = clamp(totalUndos * 8, 0, 15);  // undo = strong revision signal
+  const contradictionFromChanges = clamp(totalAnswerChanges * 6, 0, 25);
+  const contradictionFromUndos = clamp(totalUndos * 8, 0, 15);
   const stabilityBonus = stabilityLabel === 'stable' ? 15
     : stabilityLabel === 'volatile' ? -15
     : 0;
-  // session_resume continuity signal (HE008) — returning is a positive consistency signal
   const resumeBonus = clamp(returnEvents.length * 5, 0, 15);
   const HP03 = clamp(
     consistencyBase - contradictionFromChanges - contradictionFromUndos + stabilityBonus + resumeBonus,
     -100, 100,
   );
 
-  return { HP01: Math.round(HP01), HP02: Math.round(HP02), HP03: Math.round(HP03) };
+  // HP04: Directness ↔ Reflection
+  // Direct: high impulsivity, low deliberation, fast first reaction
+  // Reflective: high deliberation, low impulsivity, slow first reaction
+  const directnessBase = (avgImpulsivitySignal - avgDeliberationSignal) / 2; // -50..+50
+  const firstReactionAdjust = avgFirstReactionMs !== null
+    ? clamp(-(avgFirstReactionMs - 1500) / 300, -15, 10) // slow start → reflective
+    : 0;
+  // Thoughtful revisions (low instability + some changes) push toward reflection
+  const reflectiveRevisions = avgInstabilitySignal < 30 && totalAnswerChanges > 1
+    ? clamp(totalAnswerChanges * 3, 0, 12)
+    : 0;
+  const HP04 = clamp(directnessBase + firstReactionAdjust - reflectiveRevisions, -100, 100);
+
+  // HP05: Stability ↔ Exploration
+  // Stable: consistent engagement, few swaps, committed returns
+  // Exploratory: frequent swaps/exits, high instability
+  const stabilityFromLabel2 = stabilityLabel === 'stable' ? 20
+    : stabilityLabel === 'volatile' ? -20
+    : 0;
+  const exploratoryFromSwaps = -clamp(totalSwaps * 8, 0, 25);
+  const exploratoryFromInstability = -clamp(avgInstabilitySignal / 3, 0, 25);
+  const stabilityFromReturns = clamp(returnEvents.length * 8, 0, 20);
+  const exploratoryFromExits = -clamp(totalExits * 4, 0, 15);
+  const HP05 = clamp(
+    stabilityFromLabel2 + exploratoryFromSwaps + exploratoryFromInstability + stabilityFromReturns + exploratoryFromExits,
+    -100, 100,
+  );
+
+  return {
+    HP01: Math.round(HP01),
+    HP02: Math.round(HP02),
+    HP03: Math.round(HP03),
+    HP04: Math.round(HP04),
+    HP05: Math.round(HP05),
+  };
 }
 
 export interface HPDisplayItem {
-  id: 'HP01' | 'HP02' | 'HP03';
+  id: 'HP01' | 'HP02' | 'HP03' | 'HP04' | 'HP05';
   value: number;       // -100 to +100
   positiveLabel: { en: string; pl: string };
   negativeLabel: { en: string; pl: string };
@@ -184,6 +228,50 @@ export function buildHPDisplay(hp: CanonicalHP): HPDisplayItem[] {
         'Mieszany wzorzec. Spójne wątki obok widocznych sprzeczności.',
         'Zauważalne napięcie wewnętrzne. Twoje odpowiedzi ciągną w różnych kierunkach przy podobnych tematach.',
         'Wysoka gęstość sprzeczności. Twój wzorzec zawiera silne sygnały przeciwstawne.',
+      ),
+    },
+    {
+      id: 'HP04',
+      value: hp.HP04,
+      positiveLabel: { en: 'Directness', pl: 'Bezpośredniość' },
+      negativeLabel: { en: 'Reflection', pl: 'Refleksyjność' },
+      descEn: hpDescription(
+        hp.HP04,
+        'You answer without visible delay. Your first instinct tends to be your final answer.',
+        'Mostly direct. You engage quickly, with occasional longer pauses on specific questions.',
+        'Balanced. You sometimes act on instinct, sometimes take time to consider.',
+        'You tend to consider before committing. Longer pauses and careful reading are common.',
+        'Strong reflection pattern. You read carefully, pause before selecting, and rarely rush.',
+      ),
+      descPl: hpDescription(
+        hp.HP04,
+        'Odpowiadasz bez widocznej zwłoki. Twój pierwszy instynkt jest zazwyczaj ostateczną odpowiedzią.',
+        'Głównie bezpośredni. Angażujesz się szybko, z okazjonalnymi dłuższymi pauzami przy konkretnych pytaniach.',
+        'Zrównoważony. Czasem działasz instynktownie, czasem poświęcasz czas na namysł.',
+        'Masz tendencję do rozważania przed zaangażowaniem. Dłuższe pauzy i uważne czytanie są częste.',
+        'Silny wzorzec refleksji. Czytasz uważnie, robisz pauzy przed wyborem i rzadko się spieszysz.',
+      ),
+    },
+    {
+      id: 'HP05',
+      value: hp.HP05,
+      positiveLabel: { en: 'Stability', pl: 'Stabilność' },
+      negativeLabel: { en: 'Exploration', pl: 'Eksploracja' },
+      descEn: hpDescription(
+        hp.HP05,
+        'You engage with questions in a consistent, committed pattern. Low navigational variability.',
+        'Mostly stable. You stay with questions and follow through with limited detours.',
+        'Balanced. Some exploration behavior alongside stable engagement.',
+        'You tend to explore — swapping, exiting, and returning to revisit your path.',
+        'High exploration pattern. Your session shows significant navigational variability and path-switching.',
+      ),
+      descPl: hpDescription(
+        hp.HP05,
+        'Angażujesz się w pytania w spójny, zaangażowany wzorzec. Niska zmienność nawigacyjna.',
+        'Głównie stabilny. Pozostajesz przy pytaniach i kontynuujesz z ograniczonymi deturami.',
+        'Zrównoważony. Pewne zachowanie eksploracyjne obok stabilnego zaangażowania.',
+        'Masz tendencję do eksplorowania — wymiany, wychodzenia i powracania do ponownego odwiedzenia swojej ścieżki.',
+        'Wysoki wzorzec eksploracji. Twoja sesja pokazuje znaczącą zmienność nawigacyjną i przełączanie ścieżek.',
       ),
     },
   ];
