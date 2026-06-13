@@ -35,6 +35,7 @@ export interface UserProfile {
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
+// Web-only Google OAuth — navigates the current tab.
 export async function signInWithGoogle(): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Supabase not configured' };
   const { error } = await supabase.auth.signInWithOAuth({
@@ -42,6 +43,20 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
     options: { redirectTo: window.location.origin },
   });
   return { error: error?.message ?? null };
+}
+
+// Android PKCE: returns the authorization URL without opening a browser.
+// The caller is responsible for opening the URL and handling the callback.
+export async function getGoogleOAuthUrl(
+  redirectTo: string,
+): Promise<{ url: string | null; error: string | null }> {
+  if (!supabase) return { url: null, error: 'Supabase not configured' };
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo, skipBrowserRedirect: true },
+  });
+  if (error) return { url: null, error: error.message };
+  return { url: data?.url ?? null, error: null };
 }
 
 export async function signInWithMagicLink(email: string): Promise<{ error: string | null }> {

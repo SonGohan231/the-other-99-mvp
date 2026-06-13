@@ -35,6 +35,7 @@ import {
   saveAnswerToDb,
   upsertProfileState, incrementFreeTestsUsed,
   signOut,
+  getGoogleOAuthUrl,
 } from './lib/supabase';
 import { useT, useLang } from './context/LangContext';
 import { deriveCardPath, deriveThemeCategory, CARD_PATH_DEFINITIONS } from './utils/contentTaxonomy';
@@ -75,6 +76,11 @@ import { fetchRemoteConfig, getEffectiveRemoteConfig, type RemoteConfigResult } 
 import { computeDailyCard, getTodayDateStr, type DailyCardData } from './online/dailyCard';
 import { recordDailyCard, getReflectionHistory, clearReflectionHistory } from './online/dailyReflectionHistory';
 import { getActiveAnnouncement, dismissAnnouncement, getDismissedAnnouncements, type RemoteAnnouncement } from './online/announcement';
+import {
+  isAndroidNative, ANDROID_AUTH_SCHEME, ANDROID_AUTH_REDIRECT_URL, ANDROID_AUTH_TIMEOUT_MS,
+  type AndroidAuthPhase,
+} from './utils/platform';
+import { App as CapacitorApp } from '@capacitor/app';
 import {
   getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
   type RevealResult,
@@ -238,6 +244,13 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // Android OAuth state machine
+  const [androidAuthPhase, setAndroidAuthPhase] = useState<AndroidAuthPhase>('idle');
+  const [androidAuthError, setAndroidAuthError] = useState<string | null>(null);
+  const androidAuthTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const androidAuthPhaseRef = useRef<AndroidAuthPhase>('idle');
+  useEffect(() => { androidAuthPhaseRef.current = androidAuthPhase; }, [androidAuthPhase]);
 
   // Tracks whether an in-progress test was restored on load (prevents initial-screen effect from overriding it)
   const restoredInProgressRef = useRef(false);
@@ -561,6 +574,105 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, [isTestMode, isGuestMode]);
+
+  // ─── Android auth helpers ──────────────────────────────────────────────────────────
+  function clearAndroidAuthTimeout() {
+    if (androidAuthTimeoutRef.current != null) {
+      clearTimeout(androidAuthTimeoutRef.current);
+      androidAuthTimeoutRef.current = null;
+    }
+  }
+
+  function resetAndroidAuth() {
+    clearAndroidAuthTimeout();
+    setAndroidAuthPhase('idle');
+    setAndroidAuthError(null);
+  }
+
+  async function handleAndroidGoogleAuth() {
+    if (!supabase) {
+      setAndroidAuthPhase('failed');
+      setAndroidAuthError('Supabase not configured');
+      return;
+    }
+    resetAndroidAuth();
+    setAndroidAuthPhase('opening_browser');
+    const { url, error } = await getGoogleOAuthUrl(ANDROID_AUTH_REDIRECT_URL);
+    if (error || !url) {
+      setAndroidAuthPhase('failed');
+      setAndroidAuthError(error ?? 'Could not get sign-in URL');
+      return;
+    }
+    // Open system browser (not Chrome Custom Tab) so Android reliably forwards
+    // the custom-scheme redirect back to the app via the intent filter.
+    window.open(url, '_system');
+    setAndroidAuthPhase('waiting_for_callback');
+    androidAuthTimeoutRef.current = setTimeout(() => {
+      setAndroidAuthPhase('timeout');
+      setAndroidAuthError(null);
+    }, ANDROID_AUTH_TIMEOUT_MS);
+  }
+
+  // ─── Android OAuth deep-link callback ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!isAndroidNative() || !supabase) return;
+
+    const client = supabase;
+    let cleanup: (() => void) | null = null;
+
+    void CapacitorApp.addListener('appUrlOpen', async (event: { url: string }) => {
+      if (!event.url.startsWith(ANDROID_AUTH_SCHEME + '://')) return;
+      const phase = androidAuthPhaseRef.current;
+      if (phase === 'idle' || phase === 'authenticated') return; // spurious deep link
+      clearAndroidAuthTimeout();
+      setAndroidAuthPhase('exchanging_code');
+      setAndroidAuthError(null);
+      try {
+        const { error } = await client.auth.exchangeCodeForSession(event.url);
+        if (error) {
+          setAndroidAuthPhase('failed');
+          setAndroidAuthError(error.message);
+        } else {
+          setAndroidAuthPhase('authenticated');
+          // onAuthStateChange will trigger screen transition
+          setTimeout(() => setAndroidAuthPhase('idle'), 2000);
+        }
+      } catch (err) {
+        setAndroidAuthPhase('failed');
+        setAndroidAuthError(err instanceof Error ? err.message : 'Sign in failed');
+      }
+    }).then((handle) => {
+      cleanup = () => void handle.remove();
+    });
+
+    return () => { cleanup?.(); };
+  }, []);
+
+  // ─── Android app-resume session check (fallback for missed appUrlOpen) ────────────
+  useEffect(() => {
+    if (!isAndroidNative() || !supabase) return;
+
+    const client = supabase;
+    let cleanup: (() => void) | null = null;
+
+    void CapacitorApp.addListener('appStateChange', async (state: { isActive: boolean }) => {
+      if (!state.isActive) return;
+      const phase = androidAuthPhaseRef.current;
+      if (phase !== 'waiting_for_callback' && phase !== 'exchanging_code') return;
+      // App came back to foreground while auth pending — check if session arrived
+      const { data: { session } } = await client.auth.getSession();
+      if (session) {
+        clearAndroidAuthTimeout();
+        setAndroidAuthPhase('authenticated');
+        setUser(session.user);
+        setTimeout(() => setAndroidAuthPhase('idle'), 2000);
+      }
+    }).then((handle) => {
+      cleanup = () => void handle.remove();
+    });
+
+    return () => { cleanup?.(); };
+  }, []);
 
   // ─── Load profile after user changes ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1424,6 +1536,10 @@ export default function App() {
         <AuthScreen
           onTestMode={isTestMode || isTestModeRequested() ? () => { enableTestSession(); window.location.reload(); } : handleTestMode}
           onGuest={handleGuest}
+          androidAuthPhase={androidAuthPhase}
+          androidAuthError={androidAuthError}
+          onAndroidGoogleAuth={handleAndroidGoogleAuth}
+          onAndroidAuthReset={resetAndroidAuth}
         />
       )}
 

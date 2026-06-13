@@ -184,6 +184,142 @@ The v3 content CSVs (`public/v3/*.csv`) are copied into `android/app/src/main/as
 
 ---
 
+## How to share APK with testers
+
+The GitHub Actions APK build produces two distribution options:
+
+### Option A — GitHub pre-release (recommended)
+
+After every CI run, the workflow publishes the APK as a GitHub pre-release tagged `debug-apk-latest`. The APK is attached directly as `the-other-99-debug.apk` (not inside a zip).
+
+To download and share:
+1. Go to the repository **Releases** page → find **"Debug APK — latest"** (marked Pre-release).
+2. Click `the-other-99-debug.apk` to download the raw APK.
+3. Upload the APK to **Google Drive**.
+4. Share the Drive link (Viewer access) with the tester.
+5. Tester opens the link on their Android device → taps **Download** → opens **Files / Downloads** → taps the APK → **Install**.
+
+> **Do not send the APK file directly through Messenger or WhatsApp.** These apps may block, rename, or fail to open APK files. Google Drive sharing is the most reliable method.
+
+### Option B — GitHub Actions artifact (ZIP)
+
+The CI also uploads a `the-other-99-debug-apk` artifact (available under the workflow run's Artifacts section). This is a ZIP file, not a raw APK.
+
+Manual steps to extract and share:
+1. Go to the Actions run → Artifacts → click **the-other-99-debug-apk** to download the zip.
+2. Unzip the downloaded file — you will get `app-debug.apk`.
+3. Rename it to `the-other-99-debug.apk` for clarity.
+4. Upload to Google Drive and share the link (see Option A steps 3–5 above).
+
+### Tester install instructions
+
+Send these instructions to the tester along with the Google Drive link:
+
+> 1. Open the Google Drive link on your Android phone.
+> 2. Tap the three-dot menu → **Download**.
+> 3. Open your phone's **Files** or **Downloads** app and find `the-other-99-debug.apk`.
+> 4. Tap the file → tap **Install**.
+> 5. If prompted, allow **Install unknown apps** for the Files app (Settings → Special app access → Install unknown apps).
+> 6. Once installed, open **The Other 99** from your home screen.
+
+---
+
+## Authentication — Google Sign-In on Android (A2.1)
+
+### Auth provider
+
+**Supabase** with PKCE flow (`@supabase/supabase-js ^2.43.0`). Google OAuth is
+handled via Supabase's `signInWithOAuth` helper.
+
+### Root cause (fixed in A2.1)
+
+Inside the Capacitor WebView, `window.location.origin` resolves to `https://localhost`
+(because `androidScheme: 'https'` is set in `capacitor.config.ts`). The previous
+`redirectTo: window.location.origin` caused Google to redirect back to `https://localhost`
+after OAuth — a URL the system browser cannot route back to the installed app.
+
+### Fix
+
+The Android path now uses a **custom URI scheme deep link**:
+
+```
+app.theother99.mvp://auth-callback
+```
+
+Flow:
+1. `signInWithGoogle()` detects `isAndroidNative()` → calls `signInWithOAuth` with
+   `skipBrowserRedirect: true` and `redirectTo: app.theother99.mvp://auth-callback`
+2. The returned authorization URL is opened in a **Chrome Custom Tab** via
+   `@capacitor/browser`
+3. After Google auth, the browser is redirected to `app.theother99.mvp://auth-callback?code=...`
+4. Android intercepts the deep link (intent filter in `AndroidManifest.xml`) and fires
+   the `appUrlOpen` Capacitor event
+5. `Browser.close()` dismisses the Custom Tab
+6. `supabase.auth.exchangeCodeForSession(url)` completes the PKCE exchange
+7. `onAuthStateChange` fires — the user is authenticated inside the Android app
+
+Web login is completely unchanged — it still uses `redirectTo: window.location.origin`
+with Supabase's `detectSessionInUrl: true`.
+
+### Provider console — owner actions required
+
+These steps must be completed by the project owner before real-device Google login works:
+
+**1. Supabase Dashboard**
+- Go to: Authentication → URL Configuration → Redirect URLs
+- Add: `app.theother99.mvp://auth-callback`
+- Confirm existing web redirect URLs are still present
+
+**2. Google Cloud Console**
+- Go to: APIs & Services → Credentials → OAuth 2.0 Client ID (Web application type)
+- Confirm Authorized redirect URIs contains:
+  `https://<your-supabase-project-ref>.supabase.co/auth/v1/callback`
+- Do **not** add the custom scheme here — Supabase handles it internally
+
+> Do not share project refs or secret keys in issues or PRs.
+
+### AndroidManifest — intent filter added
+
+```xml
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="app.theother99.mvp" />
+</intent-filter>
+```
+
+This filter sits alongside the existing `MAIN`/`LAUNCHER` filter on `MainActivity`.
+`launchMode="singleTask"` (already set) ensures the existing activity instance receives
+the deep link rather than creating a new one.
+
+### Files changed in A2.1
+
+| File | Purpose |
+|---|---|
+| `src/utils/platform.ts` | `isAndroidNative()`, `ANDROID_AUTH_SCHEME`, `ANDROID_AUTH_REDIRECT_URL` |
+| `src/lib/supabase.ts` | Platform-aware `signInWithGoogle()` |
+| `src/App.tsx` | `appUrlOpen` listener — closes Custom Tab, completes PKCE |
+| `android/app/src/main/AndroidManifest.xml` | Intent filter for custom scheme |
+
+### Manual Android smoke test checklist
+
+After installing the new APK and completing provider console setup:
+
+- [ ] Tap Google login → Chrome Custom Tab opens (not a bare WebView)
+- [ ] Complete Google login → app returns automatically, Custom Tab closes
+- [ ] User is authenticated inside the Android app (not stranded in a browser)
+- [ ] Cancel login → returns safely to auth screen, no crash
+- [ ] Failed/invalid login → safe retry state, no infinite redirect
+- [ ] No black screen after callback
+- [ ] Back button during auth does not corrupt session
+- [ ] Close/reopen preserves session
+- [ ] Quiz starts, Question 1 has exactly 4 answers
+- [ ] No `[variant]` / `[wariant]` placeholder text
+- [ ] Daily Card, reflection history, and announcement (Online B1/B2) still work
+
+---
+
 ## Known limitations
 
 - **Gradle build requires Android SDK locally.** CI environments without the Android SDK can only run `npm run build` + `npx cap sync`. The APK/AAB must be built locally or in a CI environment with the Android SDK configured.

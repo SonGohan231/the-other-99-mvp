@@ -67,3 +67,34 @@ jobs:
           name: the-other-99-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
+      - name: Publish APK as GitHub pre-release (owner tester distribution)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          # Rename APK to a human-readable filename
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             android/app/build/outputs/apk/debug/the-other-99-debug.apk
+          # Delete existing pre-release tag so we can recreate it
+          gh release delete "debug-apk-latest" --yes 2>/dev/null || true
+          git push origin :refs/tags/debug-apk-latest 2>/dev/null || true
+          # Create pre-release with the raw APK attached
+          gh release create "debug-apk-latest" \
+            --title "Debug APK — latest ($(date -u '+%Y-%m-%d %H:%M UTC'))" \
+            --notes "**Branch:** \`${BRANCH}\`
+
+  Debug build for internal testing. Not for production.
+
+  **How to install:**
+  1. Download \`the-other-99-debug.apk\` below.
+  2. On your Android phone: Settings → Security → allow \*Install unknown apps\* for your file manager or browser.
+  3. Open the downloaded APK and tap Install.
+
+  **To share with a tester via Google Drive:**
+  1. Upload \`the-other-99-debug.apk\` to Google Drive.
+  2. Share the Drive link (viewer access).
+  3. Tester opens the link on their Android device → downloads → installs.
+  Do NOT send the APK file directly through Messenger — it may be blocked." \
+            --prerelease \
+            android/app/build/outputs/apk/debug/the-other-99-debug.apk
