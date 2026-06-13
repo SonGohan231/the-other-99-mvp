@@ -92,6 +92,8 @@ export function exportFullSession(extras: {
   patternEngine?: unknown;
   social_reward_layer?: unknown;
   premium_experience?: unknown;
+  remote_config?: unknown;
+  daily_card?: unknown;
 } = {}): string {
   const base = JSON.parse(exportSession());
   return JSON.stringify({
@@ -115,5 +117,7 @@ export function exportFullSession(extras: {
     pattern_engine: extras.patternEngine ?? null,
     social_reward_layer: extras.social_reward_layer ?? null,
     premium_experience: extras.premium_experience ?? null,
+    remote_config: extras.remote_config ?? null,
+    daily_card: extras.daily_card ?? null,
   }, null, 2);
 }
