@@ -71,6 +71,8 @@ import { computePatternEngine, type PatternEngineResult } from './engine/pattern
 import { computeSocialRewardLayer } from './engine/socialRewardLayer';
 import { computePremiumExperience, type PremiumExperienceResult } from './engine/premiumExperience';
 import { recordActivity, getStreak } from './utils/streak';
+import { fetchRemoteConfig, getEffectiveRemoteConfig, type RemoteConfigResult } from './online/remoteConfig';
+import { computeDailyCard, getTodayDateStr, type DailyCardData } from './online/dailyCard';
 import {
   getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
   type RevealResult,
@@ -342,6 +344,16 @@ export default function App() {
   const premiumExperienceResult: PremiumExperienceResult = useMemo(
     () => computePremiumExperience(profileState.total_profile_answers),
     [profileState.total_profile_answers],
+  );
+
+  // Remote Config + Daily Card v1
+  const [remoteConfigResult, setRemoteConfigResult] = useState<RemoteConfigResult>(() => getEffectiveRemoteConfig());
+  useEffect(() => {
+    fetchRemoteConfig().then(setRemoteConfigResult).catch(() => {});
+  }, []);
+  const dailyCardData: DailyCardData = useMemo(
+    () => computeDailyCard(getTodayDateStr(), remoteConfigResult.config, remoteConfigResult.source as 'remote' | 'cache' | 'local_fallback'),
+    [remoteConfigResult],
   );
 
   // Profile evolution card — shown in RewardScreen every 5 answers
@@ -1106,6 +1118,19 @@ export default function App() {
         milestones: premiumExperienceResult.milestones,
         discovered_signals: premiumExperienceResult.discovered_signals,
       },
+      remote_config: {
+        version: remoteConfigResult.config.version,
+        source: remoteConfigResult.source,
+        daily_card_enabled: remoteConfigResult.config.feature_flags.daily_card_enabled,
+        daily_card_show_on_dashboard: remoteConfigResult.config.feature_flags.daily_card_show_on_dashboard,
+      },
+      daily_card: {
+        version: dailyCardData.version,
+        title: dailyCardData.title,
+        body: dailyCardData.body,
+        date: dailyCardData.date,
+        source: dailyCardData.source,
+      },
     });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1406,6 +1431,7 @@ export default function App() {
           onEmergingArchetype={() => setScreen('emerging-archetype')}
           onContradiction={() => setScreen('contradiction')}
           onHumanTwin={() => setScreen('human-twin')}
+          dailyCard={dailyCardData}
         />
       )}
 

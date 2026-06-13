@@ -13,6 +13,7 @@ import { getProfileConfidence, TIER_COLOR } from '../utils/profileConfidence';
 import { getStreak } from '../utils/streak';
 import { getDailyMysteryCard } from '../utils/dailyMysteryCard';
 import { getUnlockMilestoneText } from '../utils/microReveals';
+import { type DailyCardData } from '../online/dailyCard';
 
 interface Props {
   userProfile: UserProfile;
@@ -41,6 +42,7 @@ interface Props {
   onEmergingArchetype?: () => void;
   onContradiction?: () => void;
   onHumanTwin?: () => void;
+  dailyCard?: DailyCardData | null;
 }
 
 const RARITY_LABEL_COLOR: Record<string, string> = {
@@ -84,6 +86,7 @@ export default function DashboardScreen({
   onEmergingArchetype,
   onContradiction,
   onHumanTwin,
+  dailyCard,
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
@@ -92,7 +95,7 @@ export default function DashboardScreen({
   const signalPct     = Math.min(100, Math.round((totalProfileAnswers / 100) * 100));
   const unlockCount   = Math.min(totalProfileAnswers, 99);
   const streak        = getStreak();
-  const dailyMystery  = getDailyMysteryCard();
+  const dailyMystery  = dailyCard ?? getDailyMysteryCard();
   const milestoneText = getUnlockMilestoneText(totalProfileAnswers);
 
   void feedEvents;

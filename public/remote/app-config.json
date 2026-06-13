@@ -1,0 +1,72 @@
+{
+  "version": "online_b1_remote_config_v1",
+  "feature_flags": {
+    "daily_card_enabled": true,
+    "daily_card_show_on_dashboard": true
+  },
+  "daily_card": {
+    "seed_offset": 0,
+    "cards": [
+      {
+        "title": "A small question for today.",
+        "body": "What have you been meaning to notice about yourself that you keep setting aside?"
+      },
+      {
+        "title": "Today's reflection is ready.",
+        "body": "When something bothers you, do you usually address it quickly or let it settle on its own?"
+      },
+      {
+        "title": "One quiet signal to notice today.",
+        "body": "What kind of decision have you been finding easier than expected lately?"
+      },
+      {
+        "title": "A small question for today.",
+        "body": "Is there something you value in others that you find difficult to ask for yourself?"
+      },
+      {
+        "title": "Today's reflection is ready.",
+        "body": "What gives you energy that you rarely make time for?"
+      },
+      {
+        "title": "One quiet signal to notice today.",
+        "body": "When you imagine your best day, what does it look like in the first hour?"
+      },
+      {
+        "title": "A small question for today.",
+        "body": "What have you changed your mind about in the past year?"
+      },
+      {
+        "title": "Today's reflection is ready.",
+        "body": "Which of your habits serves you, and which one are you quietly tolerating?"
+      },
+      {
+        "title": "One quiet signal to notice today.",
+        "body": "What do you tend to explain to people before they even ask?"
+      },
+      {
+        "title": "A small question for today.",
+        "body": "What does the version of you from five years ago not know about you yet?"
+      },
+      {
+        "title": "Today's reflection is ready.",
+        "body": "When do you feel most like yourself — and when do you feel furthest from it?"
+      },
+      {
+        "title": "One quiet signal to notice today.",
+        "body": "What are you curious about that feels too small to mention?"
+      },
+      {
+        "title": "A small question for today.",
+        "body": "What would you do differently if no one was watching, but you still knew?"
+      },
+      {
+        "title": "Today's reflection is ready.",
+        "body": "What kind of friction do you find yourself seeking out rather than avoiding?"
+      },
+      {
+        "title": "One quiet signal to notice today.",
+        "body": "What part of your life is moving in a direction you haven't fully named yet?"
+      }
+    ]
+  }
+}
