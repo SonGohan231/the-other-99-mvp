@@ -15,10 +15,21 @@ export interface RemoteConfigFeatureFlags {
   daily_card_show_on_dashboard: boolean;
 }
 
+export interface RemoteConfigAnnouncement {
+  enabled: boolean;
+  id: string;
+  level: string;
+  title_en: string;
+  title_pl: string;
+  body_en: string;
+  body_pl: string;
+}
+
 export interface RemoteConfig {
   version: 'online_b1_remote_config_v1';
   feature_flags: RemoteConfigFeatureFlags;
   daily_card: RemoteConfigDailyCard;
+  announcement?: RemoteConfigAnnouncement;
 }
 
 interface CachedRemoteConfig extends RemoteConfig {

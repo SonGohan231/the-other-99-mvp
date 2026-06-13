@@ -68,5 +68,14 @@
         "body": "What part of your life is moving in a direction you haven't fully named yet?"
       }
     ]
+  },
+  "announcement": {
+    "enabled": false,
+    "id": "b2-launch-v1",
+    "level": "info",
+    "title_en": "A calm update from The Other 99.",
+    "title_pl": "Spokojna aktualizacja od The Other 99.",
+    "body_en": "Daily Card content has been refreshed.",
+    "body_pl": "Treść Karty Dnia została odświeżona."
   }
 }

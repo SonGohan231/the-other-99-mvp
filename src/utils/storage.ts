@@ -94,6 +94,8 @@ export function exportFullSession(extras: {
   premium_experience?: unknown;
   remote_config?: unknown;
   daily_card?: unknown;
+  daily_reflection_history?: unknown;
+  announcement_state?: unknown;
 } = {}): string {
   const base = JSON.parse(exportSession());
   return JSON.stringify({
@@ -119,5 +121,7 @@ export function exportFullSession(extras: {
     premium_experience: extras.premium_experience ?? null,
     remote_config: extras.remote_config ?? null,
     daily_card: extras.daily_card ?? null,
+    daily_reflection_history: extras.daily_reflection_history ?? null,
+    announcement_state: extras.announcement_state ?? null,
   }, null, 2);
 }
