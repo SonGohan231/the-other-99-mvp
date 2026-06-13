@@ -184,6 +184,102 @@ The v3 content CSVs (`public/v3/*.csv`) are copied into `android/app/src/main/as
 
 ---
 
+## Authentication — Google Sign-In on Android (A2.1)
+
+### Auth provider
+
+**Supabase** with PKCE flow (`@supabase/supabase-js ^2.43.0`). Google OAuth is
+handled via Supabase's `signInWithOAuth` helper.
+
+### Root cause (fixed in A2.1)
+
+Inside the Capacitor WebView, `window.location.origin` resolves to `https://localhost`
+(because `androidScheme: 'https'` is set in `capacitor.config.ts`). The previous
+`redirectTo: window.location.origin` caused Google to redirect back to `https://localhost`
+after OAuth — a URL the system browser cannot route back to the installed app.
+
+### Fix
+
+The Android path now uses a **custom URI scheme deep link**:
+
+```
+app.theother99.mvp://auth-callback
+```
+
+Flow:
+1. `signInWithGoogle()` detects `isAndroidNative()` → calls `signInWithOAuth` with
+   `skipBrowserRedirect: true` and `redirectTo: app.theother99.mvp://auth-callback`
+2. The returned authorization URL is opened in a **Chrome Custom Tab** via
+   `@capacitor/browser`
+3. After Google auth, the browser is redirected to `app.theother99.mvp://auth-callback?code=...`
+4. Android intercepts the deep link (intent filter in `AndroidManifest.xml`) and fires
+   the `appUrlOpen` Capacitor event
+5. `Browser.close()` dismisses the Custom Tab
+6. `supabase.auth.exchangeCodeForSession(url)` completes the PKCE exchange
+7. `onAuthStateChange` fires — the user is authenticated inside the Android app
+
+Web login is completely unchanged — it still uses `redirectTo: window.location.origin`
+with Supabase's `detectSessionInUrl: true`.
+
+### Provider console — owner actions required
+
+These steps must be completed by the project owner before real-device Google login works:
+
+**1. Supabase Dashboard**
+- Go to: Authentication → URL Configuration → Redirect URLs
+- Add: `app.theother99.mvp://auth-callback`
+- Confirm existing web redirect URLs are still present
+
+**2. Google Cloud Console**
+- Go to: APIs & Services → Credentials → OAuth 2.0 Client ID (Web application type)
+- Confirm Authorized redirect URIs contains:
+  `https://<your-supabase-project-ref>.supabase.co/auth/v1/callback`
+- Do **not** add the custom scheme here — Supabase handles it internally
+
+> Do not share project refs or secret keys in issues or PRs.
+
+### AndroidManifest — intent filter added
+
+```xml
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="app.theother99.mvp" />
+</intent-filter>
+```
+
+This filter sits alongside the existing `MAIN`/`LAUNCHER` filter on `MainActivity`.
+`launchMode="singleTask"` (already set) ensures the existing activity instance receives
+the deep link rather than creating a new one.
+
+### Files changed in A2.1
+
+| File | Purpose |
+|---|---|
+| `src/utils/platform.ts` | `isAndroidNative()`, `ANDROID_AUTH_SCHEME`, `ANDROID_AUTH_REDIRECT_URL` |
+| `src/lib/supabase.ts` | Platform-aware `signInWithGoogle()` |
+| `src/App.tsx` | `appUrlOpen` listener — closes Custom Tab, completes PKCE |
+| `android/app/src/main/AndroidManifest.xml` | Intent filter for custom scheme |
+
+### Manual Android smoke test checklist
+
+After installing the new APK and completing provider console setup:
+
+- [ ] Tap Google login → Chrome Custom Tab opens (not a bare WebView)
+- [ ] Complete Google login → app returns automatically, Custom Tab closes
+- [ ] User is authenticated inside the Android app (not stranded in a browser)
+- [ ] Cancel login → returns safely to auth screen, no crash
+- [ ] Failed/invalid login → safe retry state, no infinite redirect
+- [ ] No black screen after callback
+- [ ] Back button during auth does not corrupt session
+- [ ] Close/reopen preserves session
+- [ ] Quiz starts, Question 1 has exactly 4 answers
+- [ ] No `[variant]` / `[wariant]` placeholder text
+- [ ] Daily Card, reflection history, and announcement (Online B1/B2) still work
+
+---
+
 ## Known limitations
 
 - **Gradle build requires Android SDK locally.** CI environments without the Android SDK can only run `npm run build` + `npx cap sync`. The APK/AAB must be built locally or in a CI environment with the Android SDK configured.
