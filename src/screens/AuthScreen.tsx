@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { signInWithGoogle, signInWithMagicLink, signInWithPassword, signUpWithPassword } from '../lib/supabase';
 import { useT } from '../context/LangContext';
+import { isAndroidNative, type AndroidAuthPhase } from '../utils/platform';
 
 interface Props {
   onTestMode?: () => void;
   onGuest?: () => void;
+  androidAuthPhase?: AndroidAuthPhase;
+  androidAuthError?: string | null;
+  onAndroidGoogleAuth?: () => void;
+  onAndroidAuthReset?: () => void;
 }
 
 type AuthTab = 'signin' | 'register';
 
-export default function AuthScreen({ onTestMode, onGuest }: Props) {
+export default function AuthScreen({ onTestMode, onGuest, androidAuthPhase, androidAuthError, onAndroidGoogleAuth, onAndroidAuthReset }: Props) {
   const t = useT();
   const [tab, setTab] = useState<AuthTab>('signin');
   const [email, setEmail] = useState('');
@@ -73,6 +78,12 @@ export default function AuthScreen({ onTestMode, onGuest }: Props) {
   }
 
   async function handleGoogle() {
+    // Android: delegate to App-level state machine
+    if (isAndroidNative() && onAndroidGoogleAuth) {
+      onAndroidGoogleAuth();
+      return;
+    }
+    // Web: standard Supabase redirect flow
     setGoogleError(null);
     setGoogleLoading(true);
     try {
@@ -138,6 +149,59 @@ export default function AuthScreen({ onTestMode, onGuest }: Props) {
               <br />{t.auth.sentNote}
             </p>
             <button className="btn btn-ghost" onClick={() => setSent(false)} style={{ marginTop: '8px' }}>{t.auth.back}</button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Android auth in-progress: full-screen connecting/exchanging state
+  const androidPhaseActive = isAndroidNative() && androidAuthPhase != null &&
+    (androidAuthPhase === 'opening_browser' || androidAuthPhase === 'waiting_for_callback' || androidAuthPhase === 'exchanging_code');
+  if (androidPhaseActive) {
+    const phaseLabel = androidAuthPhase === 'exchanging_code'
+      ? t.auth.androidExchanging
+      : androidAuthPhase === 'waiting_for_callback'
+        ? t.auth.androidWaiting
+        : t.auth.androidOpening;
+    return (
+      <div className="screen-centered" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 65%), var(--bg)' }}>
+        <main className="auth-inner animate-up">
+          <div className="age-gate-logo">The Other 99</div>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>{phaseLabel}</p>
+            <p className="body-sm" style={{ color: 'var(--text-muted)' }}>This may take a few seconds.</p>
+            {onAndroidAuthReset && (
+              <button className="btn btn-ghost" onClick={onAndroidAuthReset} style={{ marginTop: '8px' }}>
+                {t.auth.androidCancel}
+              </button>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Android auth error/timeout state
+  const androidPhaseError = isAndroidNative() && androidAuthPhase != null &&
+    (androidAuthPhase === 'failed' || androidAuthPhase === 'timeout' || androidAuthPhase === 'cancelled');
+  if (androidPhaseError) {
+    const errorTitle = androidAuthPhase === 'timeout' ? t.auth.androidTimeout : t.auth.androidFailed;
+    const errorNote = androidAuthPhase === 'timeout'
+      ? t.auth.androidTimeoutNote
+      : (androidAuthError ?? t.auth.genericError);
+    return (
+      <div className="screen-centered" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 65%), var(--bg)' }}>
+        <main className="auth-inner animate-up">
+          <div className="age-gate-logo">The Other 99</div>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>{errorTitle}</p>
+            <p className="body-sm" style={{ color: '#f87171' }}>{errorNote}</p>
+            {onAndroidAuthReset && (
+              <button className="btn btn-primary" onClick={onAndroidAuthReset}>
+                {t.auth.androidRetry}
+              </button>
+            )}
           </div>
         </main>
       </div>

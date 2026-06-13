@@ -184,6 +184,46 @@ The v3 content CSVs (`public/v3/*.csv`) are copied into `android/app/src/main/as
 
 ---
 
+## How to share APK with testers
+
+The GitHub Actions APK build produces two distribution options:
+
+### Option A — GitHub pre-release (recommended)
+
+After every CI run, the workflow publishes the APK as a GitHub pre-release tagged `debug-apk-latest`. The APK is attached directly as `the-other-99-debug.apk` (not inside a zip).
+
+To download and share:
+1. Go to the repository **Releases** page → find **"Debug APK — latest"** (marked Pre-release).
+2. Click `the-other-99-debug.apk` to download the raw APK.
+3. Upload the APK to **Google Drive**.
+4. Share the Drive link (Viewer access) with the tester.
+5. Tester opens the link on their Android device → taps **Download** → opens **Files / Downloads** → taps the APK → **Install**.
+
+> **Do not send the APK file directly through Messenger or WhatsApp.** These apps may block, rename, or fail to open APK files. Google Drive sharing is the most reliable method.
+
+### Option B — GitHub Actions artifact (ZIP)
+
+The CI also uploads a `the-other-99-debug-apk` artifact (available under the workflow run's Artifacts section). This is a ZIP file, not a raw APK.
+
+Manual steps to extract and share:
+1. Go to the Actions run → Artifacts → click **the-other-99-debug-apk** to download the zip.
+2. Unzip the downloaded file — you will get `app-debug.apk`.
+3. Rename it to `the-other-99-debug.apk` for clarity.
+4. Upload to Google Drive and share the link (see Option A steps 3–5 above).
+
+### Tester install instructions
+
+Send these instructions to the tester along with the Google Drive link:
+
+> 1. Open the Google Drive link on your Android phone.
+> 2. Tap the three-dot menu → **Download**.
+> 3. Open your phone's **Files** or **Downloads** app and find `the-other-99-debug.apk`.
+> 4. Tap the file → tap **Install**.
+> 5. If prompted, allow **Install unknown apps** for the Files app (Settings → Special app access → Install unknown apps).
+> 6. Once installed, open **The Other 99** from your home screen.
+
+---
+
 ## Authentication — Google Sign-In on Android (A2.1)
 
 ### Auth provider
