@@ -75,6 +75,9 @@ import { fetchRemoteConfig, getEffectiveRemoteConfig, type RemoteConfigResult } 
 import { computeDailyCard, getTodayDateStr, type DailyCardData } from './online/dailyCard';
 import { recordDailyCard, getReflectionHistory, clearReflectionHistory } from './online/dailyReflectionHistory';
 import { getActiveAnnouncement, dismissAnnouncement, getDismissedAnnouncements, type RemoteAnnouncement } from './online/announcement';
+import { isAndroidNative, ANDROID_AUTH_SCHEME } from './utils/platform';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import {
   getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
   type RevealResult,
@@ -561,6 +564,26 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, [isTestMode, isGuestMode]);
+
+  // ─── Android OAuth deep-link callback ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!isAndroidNative() || !supabase) return;
+
+    const client = supabase;
+    let cleanup: (() => void) | null = null;
+
+    void CapacitorApp.addListener('appUrlOpen', async (event: { url: string }) => {
+      if (!event.url.startsWith(ANDROID_AUTH_SCHEME + '://')) return;
+      try {
+        await Browser.close();
+        await client.auth.exchangeCodeForSession(event.url);
+      } catch { /* session exchange failed — user can retry login */ }
+    }).then((handle) => {
+      cleanup = () => void handle.remove();
+    });
+
+    return () => { cleanup?.(); };
+  }, []);
 
   // ─── Load profile after user changes ──────────────────────────────────────────────────
   useEffect(() => {

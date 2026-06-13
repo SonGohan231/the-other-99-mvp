@@ -1,4 +1,6 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { Browser } from '@capacitor/browser';
+import { isAndroidNative, ANDROID_AUTH_REDIRECT_URL } from '../utils/platform';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
@@ -37,6 +39,17 @@ export interface UserProfile {
 
 export async function signInWithGoogle(): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Supabase not configured' };
+
+  if (isAndroidNative()) {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: ANDROID_AUTH_REDIRECT_URL, skipBrowserRedirect: true },
+    });
+    if (error) return { error: error.message };
+    if (data?.url) await Browser.open({ url: data.url });
+    return { error: null };
+  }
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: window.location.origin },
