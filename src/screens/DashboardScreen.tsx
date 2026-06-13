@@ -14,6 +14,7 @@ import { getStreak } from '../utils/streak';
 import { getDailyMysteryCard } from '../utils/dailyMysteryCard';
 import { getUnlockMilestoneText } from '../utils/microReveals';
 import { type DailyCardData } from '../online/dailyCard';
+import { type RemoteAnnouncement } from '../online/announcement';
 
 interface Props {
   userProfile: UserProfile;
@@ -43,6 +44,8 @@ interface Props {
   onContradiction?: () => void;
   onHumanTwin?: () => void;
   dailyCard?: DailyCardData | null;
+  announcement?: RemoteAnnouncement | null;
+  onDismissAnnouncement?: (id: string) => void;
 }
 
 const RARITY_LABEL_COLOR: Record<string, string> = {
@@ -87,6 +90,8 @@ export default function DashboardScreen({
   onContradiction,
   onHumanTwin,
   dailyCard,
+  announcement,
+  onDismissAnnouncement,
 }: Props) {
   const t = useT();
   const [lang, setLang] = useLang();
@@ -634,6 +639,44 @@ export default function DashboardScreen({
             })}
           </div>
         </section>
+
+        {/* ── Announcement banner ───────────────── */}
+        {announcement && (
+          <section style={{ padding: '0 16px' }}>
+            <div style={{
+              padding: '12px 16px',
+              background: 'rgba(34,211,238,0.06)',
+              border: '1px solid rgba(34,211,238,0.18)',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{
+                  fontSize: '0.7rem', fontWeight: 700, color: '#22d3ee',
+                  marginBottom: '2px',
+                }}>
+                  {lang === 'pl' ? announcement.title_pl : announcement.title_en}
+                </p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                  {lang === 'pl' ? announcement.body_pl : announcement.body_en}
+                </p>
+              </div>
+              <button
+                onClick={() => onDismissAnnouncement?.(announcement.id)}
+                aria-label={lang === 'pl' ? 'Zamknij' : 'Dismiss'}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.38)', fontSize: '1rem',
+                  lineHeight: 1, padding: '2px 4px', flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* ── Daily Mystery Card ───────────────── */}
         <section style={{ padding: '0 16px' }}>

@@ -73,6 +73,8 @@ import { computePremiumExperience, type PremiumExperienceResult } from './engine
 import { recordActivity, getStreak } from './utils/streak';
 import { fetchRemoteConfig, getEffectiveRemoteConfig, type RemoteConfigResult } from './online/remoteConfig';
 import { computeDailyCard, getTodayDateStr, type DailyCardData } from './online/dailyCard';
+import { recordDailyCard, getReflectionHistory, clearReflectionHistory } from './online/dailyReflectionHistory';
+import { getActiveAnnouncement, dismissAnnouncement, getDismissedAnnouncements, type RemoteAnnouncement } from './online/announcement';
 import {
   getRevealResult, getMicroFeedback, getNextTease, isAutoAdvanceEnabled, getNextLayerInfo,
   type RevealResult,
@@ -355,6 +357,22 @@ export default function App() {
     () => computeDailyCard(getTodayDateStr(), remoteConfigResult.config, remoteConfigResult.source as 'remote' | 'cache' | 'local_fallback'),
     [remoteConfigResult],
   );
+
+  // Daily Reflection History v1 — record once per day, no network
+  useEffect(() => {
+    if (dailyCardData.date) recordDailyCard(dailyCardData);
+  }, [dailyCardData.date, dailyCardData.title]);
+
+  // Announcement v1 — local dismissal state
+  const [dismissedAnnouncementIds, setDismissedAnnouncementIds] = useState<string[]>(() => getDismissedAnnouncements());
+  const activeAnnouncement: RemoteAnnouncement | null = useMemo(
+    () => getActiveAnnouncement(remoteConfigResult.config, dismissedAnnouncementIds),
+    [remoteConfigResult, dismissedAnnouncementIds],
+  );
+  function handleDismissAnnouncement(id: string) {
+    dismissAnnouncement(id);
+    setDismissedAnnouncementIds((prev) => [...prev, id]);
+  }
 
   // Profile evolution card — shown in RewardScreen every 5 answers
   const evolutionData = useMemo(() => {
@@ -1131,6 +1149,11 @@ export default function App() {
         date: dailyCardData.date,
         source: dailyCardData.source,
       },
+      daily_reflection_history: getReflectionHistory(),
+      announcement_state: {
+        active_id: activeAnnouncement?.id ?? null,
+        dismissed_ids: dismissedAnnouncementIds,
+      },
     });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1145,6 +1168,7 @@ export default function App() {
     if (window.confirm('Reset local session? Supabase data is not affected.')) {
       resetSession();
       clearCanonicalVector();
+      clearReflectionHistory();
       persistInProgress({ currentItem: null, testAnswerIndex });
     setScreen('test-summary');
     }
@@ -1432,6 +1456,8 @@ export default function App() {
           onContradiction={() => setScreen('contradiction')}
           onHumanTwin={() => setScreen('human-twin')}
           dailyCard={dailyCardData}
+          announcement={activeAnnouncement}
+          onDismissAnnouncement={handleDismissAnnouncement}
         />
       )}
 
